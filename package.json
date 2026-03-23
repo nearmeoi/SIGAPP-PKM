@@ -1,0 +1,35 @@
+{
+  "name": "bikinmap",
+  "version": "1.0.0",
+  "description": "Get started by customizing your environment (defined in the .idx/dev.nix file) with the tools and IDE extensions you'll need for your project!",
+  "main": "script.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/githubnyabintang/bikinmap.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/githubnyabintang/bikinmap/issues"
+  },
+  "homepage": "https://github.com/githubnyabintang/bikinmap#readme",
+  "devDependencies": {
+    "laravel-vite-plugin": "^2.1.0",
+    "vite": "^8.0.0"
+  },
+  "dependencies": {
+    "@inertiajs/react": "^2.3.18",
+    "@vitejs/plugin-react": "^6.0.1",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-leaflet": "^5.0.0"
+  }
+}
