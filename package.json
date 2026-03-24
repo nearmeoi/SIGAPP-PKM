@@ -1,7 +1,7 @@
 {
-  "name": "bikinmap",
+  "name": "SIGAP-PKM",
   "version": "1.0.0",
-  "description": "Get started by customizing your environment (defined in the .idx/dev.nix file) with the tools and IDE extensions you'll need for your project!",
+  "description": "Sitem Informasi Pengabdian Kepada Masyarakat",
   "main": "script.js",
   "type": "module",
   "scripts": {
@@ -9,25 +9,24 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/githubnyabintang/bikinmap.git"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/githubnyabintang/bikinmap/issues"
-  },
-  "homepage": "https://github.com/githubnyabintang/bikinmap#readme",
   "devDependencies": {
-    "laravel-vite-plugin": "^2.1.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.27",
+    "laravel-vite-plugin": "^3.0.0",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
     "vite": "^8.0.0"
   },
   "dependencies": {
     "@inertiajs/react": "^2.3.18",
     "@vitejs/plugin-react": "^6.0.1",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0"

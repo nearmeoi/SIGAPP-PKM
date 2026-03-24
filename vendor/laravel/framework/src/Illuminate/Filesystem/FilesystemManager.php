@@ -432,14 +432,11 @@ class FilesystemManager implements FactoryContract
      *
      * @param  string  $driver
      * @param  \Closure  $callback
-     *
-     * @param-closure-this  $this  $callback
-     *
      * @return $this
      */
     public function extend($driver, Closure $callback)
     {
-        $this->customCreators[$driver] = $callback->bindTo($this, $this);
+        $this->customCreators[$driver] = $callback;
 
         return $this;
     }

@@ -1,3 +1,10 @@
+@import './landing.css';
+@import './login.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
     --primary-color: #046bd2;
     --primary-hover: #0355a7;

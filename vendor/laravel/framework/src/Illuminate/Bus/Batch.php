@@ -336,7 +336,7 @@ class Batch implements Arrayable, JsonSerializable
         $counts = $this->incrementFailedJobs($jobId);
 
         if ($counts->failedJobs === 1 && ! $this->allowsFailures()) {
-            $this->cancel($e);
+            $this->cancel();
         }
 
         if ($this->allowsFailures()) {
@@ -399,17 +399,16 @@ class Batch implements Arrayable, JsonSerializable
     /**
      * Cancel the batch.
      *
-     * @param  \Throwable|null  $exception
      * @return void
      */
-    public function cancel(?Throwable $exception = null)
+    public function cancel()
     {
         $this->repository->cancel($this->id);
 
         $container = Container::getInstance();
 
         if ($container->bound(Dispatcher::class)) {
-            $container->make(Dispatcher::class)->dispatch(new BatchCanceled($this, $exception));
+            $container->make(Dispatcher::class)->dispatch(new BatchCanceled($this));
         }
     }
 

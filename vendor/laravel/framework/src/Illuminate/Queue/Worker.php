@@ -168,10 +168,10 @@ class Worker
             // if it is we will just pause this worker for a given amount of time and
             // make sure we do not need to kill this worker process off completely.
             if (! $this->daemonShouldRun($options, $connectionName, $queue)) {
-                [$status, $reason] = $this->pauseWorker($options, $lastRestart);
+                $status = $this->pauseWorker($options, $lastRestart);
 
                 if (! is_null($status)) {
-                    return $this->stop($status, $options, $reason);
+                    return $this->stop($status, $options);
                 }
 
                 continue;
@@ -214,12 +214,12 @@ class Worker
             // Finally, we will check to see if we have exceeded our memory limits or if
             // the queue should restart based on other indications. If so, we'll stop
             // this worker and let whatever is "monitoring" it restart the process.
-            [$status, $reason] = $this->stopIfNecessary(
+            $status = $this->stopIfNecessary(
                 $options, $lastRestart, $startTime, $jobsProcessed, $job
             );
 
             if (! is_null($status)) {
-                return $this->stop($status, $options, $reason);
+                return $this->stop($status, $options);
             }
         }
     }
@@ -305,7 +305,7 @@ class Worker
      *
      * @param  \Illuminate\Queue\WorkerOptions  $options
      * @param  int  $lastRestart
-     * @return array|null
+     * @return int|null
      */
     protected function pauseWorker(WorkerOptions $options, $lastRestart)
     {
@@ -322,17 +322,17 @@ class Worker
      * @param  int  $startTime
      * @param  int  $jobsProcessed
      * @param  mixed  $job
-     * @return array|null
+     * @return int|null
      */
     protected function stopIfNecessary(WorkerOptions $options, $lastRestart, $startTime = 0, $jobsProcessed = 0, $job = null)
     {
         return match (true) {
-            $this->shouldQuit => [static::EXIT_SUCCESS, WorkerStopReason::Interrupted],
-            $this->memoryExceeded($options->memory) => [static::$memoryExceededExitCode ?? static::EXIT_MEMORY_LIMIT, WorkerStopReason::MaxMemoryExceeded],
-            $this->queueShouldRestart($lastRestart) => [static::EXIT_SUCCESS, WorkerStopReason::ReceivedRestartSignal],
-            $options->stopWhenEmpty && is_null($job) => [static::EXIT_SUCCESS, WorkerStopReason::QueueEmpty],
-            $options->maxTime && hrtime(true) / 1e9 - $startTime >= $options->maxTime => [static::EXIT_SUCCESS, WorkerStopReason::MaxTimeExceeded],
-            $options->maxJobs && $jobsProcessed >= $options->maxJobs => [static::EXIT_SUCCESS, WorkerStopReason::MaxJobsExceeded],
+            $this->shouldQuit => static::EXIT_SUCCESS,
+            $this->memoryExceeded($options->memory) => static::$memoryExceededExitCode ?? static::EXIT_MEMORY_LIMIT,
+            $this->queueShouldRestart($lastRestart) => static::EXIT_SUCCESS,
+            $options->stopWhenEmpty && is_null($job) => static::EXIT_SUCCESS,
+            $options->maxTime && hrtime(true) / 1e9 - $startTime >= $options->maxTime => static::EXIT_SUCCESS,
+            $options->maxJobs && $jobsProcessed >= $options->maxJobs => static::EXIT_SUCCESS,
             default => null
         };
     }
@@ -486,12 +486,12 @@ class Worker
 
             $this->raiseAfterJobEvent($connectionName, $job);
         } catch (Throwable $e) {
-            $exceptionOccurred = $e;
+            $exceptionOccurred = true;
 
             $this->handleJobException($connectionName, $job, $options, $e);
         } finally {
             $this->events->dispatch(new JobAttempted(
-                $connectionName, $job, $exceptionOccurred ?? null
+                $connectionName, $job, $exceptionOccurred ?? false
             ));
         }
     }
@@ -824,12 +824,11 @@ class Worker
      *
      * @param  int  $status
      * @param  WorkerOptions|null  $options
-     * @param  WorkerStopReason|null  $reason
      * @return int
      */
-    public function stop($status = 0, $options = null, $reason = null)
+    public function stop($status = 0, $options = null)
     {
-        $this->events->dispatch(new WorkerStopping($status, $options, $reason));
+        $this->events->dispatch(new WorkerStopping($status, $options));
 
         return $status;
     }

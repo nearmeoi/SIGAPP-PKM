@@ -1,137 +1,85 @@
-# 🗺️ SIGAP-P3M — Peta Sebaran Kegiatan P3M
+# SIGAP-PKM (Admin & Backend System)
 
-> Platform pemetaan interaktif untuk kegiatan Penelitian, Pengabdian, dan Pemberdayaan Masyarakat (P3M) Politeknik Pariwisata Makassar.
+Repositori ini berisi kode sumber untuk sistem backend dan administrasi **SIGAP-PKM**. Sistem ini dibangun menggunakan arsitektur monolitik modern dengan Laravel sebagai inti backend dan Inertia.js yang menjembatani *frontend* React.
 
----
+## Tech Stack Utama (Backend)
+- **Framework:** Laravel 12.x
+- **Database:** MySQL
+- **Bridge:** Inertia.js (Server-side routing)
+- **Autentikasi:** Laravel Breeze / Session-based
+- **Environment:** PHP 8.4
 
-## ✨ Fitur Utama
-
-### 🖥️ Tampilan Desktop
-- **Peta interaktif** berbasis Leaflet dengan marker kustom berwarna (🟡 Berlangsung / 🟢 Selesai)
-- **Search bar** untuk mencari lokasi kegiatan secara real-time
-- **Hamburger menu** — sidebar kiri dengan daftar kegiatan dan thumbnail
-- **Detail sidebar** — panel kanan dengan informasi lengkap kegiatan (gambar, status, deskripsi, lokasi, aksi)
-- **Glassmorphism overlay** pada peta saat sidebar aktif
-- **Form CRUD** — Tambah & Edit data kegiatan PKM dengan fitur Pick Location dari peta dan upload thumbnail
-- **Success modal** dengan animasi dan ikon
-
-### 📱 Tampilan Mobile (Fintech-style Map App)
-Tampilan mobile dirancang khusus berbeda dari desktop, terinspirasi dari aplikasi fintech/maps seperti Grab, Gojek, dan Google Maps:
-- **Peta full-screen** (100vh) — tanpa border, tanpa kotak, langsung penuh layar
-- **Bottom Tab Bar** — navigasi bawah dengan 4 tab (Beranda, Peta, Kegiatan, Akun) dengan efek glassmorphism
-- **Bottom Sheet** — panel geser dari bawah saat klik titik lokasi (swipe-to-dismiss)
-- **Daftar Kegiatan** — bottom sheet dengan thumbnail saat klik tab Kegiatan
-- Header, Footer, Hero section tersembunyi di mobile untuk pengalaman app-first
-
----
-
-## 🛠️ Tech Stack
-
-| Teknologi | Keterangan |
-|---|---|
-| **Laravel** | Backend framework (PHP) |
-| **React** | Frontend library (via Inertia.js) |
-| **Inertia.js** | SPA bridge antara Laravel & React |
-| **Leaflet** | Library peta interaktif |
-| **react-leaflet** | React wrapper untuk Leaflet |
-| **Vite** | Build tool & bundler |
-| **Font Awesome** | Icon library |
-
----
-
-## 🚀 Instalasi & Setup
-
-### Prasyarat
-- PHP >= 8.1
+## Persyaratan Sistem
+Sebelum menjalankan *project* ini, pastikan sistem Anda telah terpasang perangkat lunak berikut:
+- PHP >= 8.4
 - Composer
-- Node.js >= 18
-- NPM
+- Node.js & npm (Untuk *compile* *asset* Inertia)
+- MySQL Server
 
-### Langkah Instalasi
+## Panduan Instalasi (Development)
 
-```bash
-# Clone repository
-git clone https://github.com/githubnyabintang/bikinmap.git
-cd bikinmap
+1. **Clone repositori** dari cabang `backend`:
+   ```bash
+   git clone -b backend https://github.com/nearmeoi/sigap-pkm.git
+   cd sigap-pkm
+   ```
 
-# Install PHP dependencies
-composer install
+2. **Install dependensi PHP (Backend)**
+   ```bash
+   composer install
+   ```
 
-# Install Node dependencies
-npm install
+3. **Install dependensi Node (Frontend/Inertia assets)**
+   Bagian ini tetap diperlukan karena Laravel menggunakan Vite untuk me-*render* tampilan panel admin.
+   ```bash
+   npm install
+   ```
 
-# Copy environment file
-cp .env.example .env
+4. **Konfigurasi Environment**
+   Salin file konfigurasi bawaan Laravel dan sesuaikan pengaturan *database*-nya:
+   ```bash
+   cp .env.example .env
+   ```
+   Buka file `.env` dan atur koneksi *database*, misalnya:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=sigap_pkm
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
 
-# Generate application key
-php artisan key:generate
-```
+5. **Generate App Key**
+   ```bash
+   php artisan key:generate
+   ```
 
-### Menjalankan Development Server
+6. **Migrasi Database & Seeding**
+   Jalankan migrasi untuk membangun skema tabel sekaligus mengisi data awal (*dummy data* admin dll):
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
 
-```bash
-# Terminal 1 — Laravel Server
-php artisan serve
+7. **Jalankan Aplikasi**
+   Anda membutuhkan dua terminal yang berjalan bersamaan:
 
-# Terminal 2 — Vite Dev Server (hot reload)
-npm run dev
-```
+   *Terminal 1 (Backend PHP Server):*
+   ```bash
+   php artisan serve
+   ```
 
-Buka `http://localhost:8000` di browser.
+   *Terminal 2 (Vite Asset Bundler):*
+   ```bash
+   npm run dev
+   ```
 
-### Build untuk Production
+Aplikasi sekarang dapat diakses melalui `http://localhost:8000`.
 
-```bash
-npm run build
-```
+## � Struktur Folder Penting (Backend Context)
+- `app/Models/` — Definisi skema relasi ORM (Pengajuan, Aktivitas, Pegawai, dll).
+- `app/Http/Controllers/` — Logika bisnis REST dan *controller* pengatur rute.
+- `database/migrations/` — Skema pembangunan *database*.
+- `routes/web.php` — Titik masuk *routing* aplikasi utama.
+- `resources/js/` — Direktori komponen React untuk panel administratif (dikendalikan via Inertia).
 
----
-
-## 📁 Struktur Proyek (Frontend)
-
-```
-resources/
-├── css/
-│   ├── app.css              # Styling utama (sidebar, map, overlay, mobile)
-│   └── landing.css           # Styling landing page (hero, features, CTA)
-├── js/
-│   ├── Components/
-│   │   ├── Header.jsx        # Navbar desktop
-│   │   ├── Footer.jsx        # Footer website
-│   │   ├── MobileTabBar.jsx  # Bottom tab bar (mobile only)
-│   │   └── BottomSheet.jsx   # Bottom sheet component (mobile only)
-│   ├── Layouts/
-│   │   └── DefaultLayout.jsx # Layout wrapper (Header + Footer)
-│   └── Pages/
-│       ├── LandingPage.jsx   # Halaman utama (peta, sidebar, modals)
-│       └── MapDashboard.jsx  # Dashboard admin peta
-```
-
----
-
-## 📸 Screenshot
-
-### Desktop
-- Header mega-menu dengan branding P3M Poltekpar Makassar
-- Peta dalam kontainer 1200px dengan rounded corners dan shadow premium
-- Sidebar detail kegiatan dengan glassmorphism overlay
-
-### Mobile
-- Peta full-screen seperti aplikasi fintech
-- Bottom tab bar dengan glassmorphism
-- Bottom sheet untuk detail lokasi dengan thumbnail, deskripsi, dan tombol aksi
-
----
-
-## 📝 Lisensi
-
-Proyek ini dikembangkan untuk keperluan internal **P3M Politeknik Pariwisata Makassar**.
-
----
-
-## 👤 Developer
-
-Dikembangkan oleh:
-1. **Ir'fikri Anggara Hasbar (Project Leader)** — [@Irfikri0204](https://github.com/Irfikri0204),
-2. **Mahabintang Pallawabonang (Front-End Developer)** — [@githubnyabintang](https://github.com/githubnyabintang),
-3. **Akmal Al-Faizhal Ms. (Back-End Developer)** — [@nearmeoi](https://github.com/nearmeoi).
