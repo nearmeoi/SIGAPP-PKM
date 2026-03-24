@@ -344,21 +344,221 @@
     color: white;
 }
 
-@media (max-width: 480px) {
-    .login-body {
-        padding: 24px;
+@media (max-width: 768px) {
+    .login-page {
+        padding: 0;
+        background: #ffffff;
+        align-items: flex-start;
+    }
+
+    .login-page::before {
+        display: none;
+        /* Remove dark desktop background */
+    }
+
+    .login-container {
+        max-width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .login-card {
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
 
     .login-header {
-        padding: 24px 24px 20px;
+        background: transparent;
+        border-bottom: none;
+        padding: 60px 24px 24px;
         flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 12px;
+        align-items: flex-start;
+        gap: 16px;
     }
 
-    .brand-line,
+    .login-logo {
+        width: 56px;
+        height: 56px;
+    }
+
+    .brand-line {
+        font-size: 14px;
+        color: #0f172a;
+    }
+
     .brand-subline {
-        font-size: 11.5px;
+        font-size: 12.5px;
+    }
+
+    .login-body {
+        padding: 0 24px 32px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .login-title {
+        font-size: 28px;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+        font-size: 15px;
+        margin-bottom: 32px;
+    }
+
+    .input-wrapper input {
+        padding: 16px 16px 16px 48px;
+        border-radius: 16px;
+        font-size: 15px;
+        background-color: #f8fafc;
+        border: 1.5px solid transparent;
+    }
+
+    .input-wrapper input:focus {
+        border-color: #046bd2;
+        background-color: #ffffff;
+        box-shadow: 0 4px 20px rgba(4, 107, 210, 0.08);
+    }
+
+    .btn-login {
+        padding: 16px;
+        border-radius: 16px;
+        font-size: 16px;
+        margin-top: 24px;
+        box-shadow: 0 8px 20px rgba(4, 107, 210, 0.25);
+    }
+
+    /* Make the button stick near the bottom conceptually */
+    form {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .btn-login {
+        margin-top: auto;
+    }
+
+    .login-divider,
+    .register-prompt {
+        margin-top: 24px;
+    }
+
+    /* Transform "Back to Home" into a premium floating back button */
+    .back-to-home {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 44px;
+        height: 44px;
+        background: #f1f5f9;
+        border-radius: 50%;
+        color: #0f172a;
+        font-size: 0;
+        /* Hide text */
+        margin: 0;
+        padding: 0;
+        z-index: 50;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .back-to-home i {
+        font-size: 18px;
+        margin: 0;
+    }
+
+    .back-to-home:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+}
+
+/* ============================================
+   Role Badge & Switch — Dual Login Pages
+   ============================================ */
+
+/* Role Badge */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+
+.role-badge i {
+    font-size: 13px;
+}
+
+.role-badge-dosen {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
+    color: #4f46e5;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.role-badge-masyarakat {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Role Switch Link */
+.login-role-switch {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.role-switch-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #475569;
+    text-decoration: none;
+    border: 1.5px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.role-switch-link:hover {
+    border-color: #046bd2;
+    color: #046bd2;
+    background: rgba(4, 107, 210, 0.04);
+}
+
+.role-switch-link i {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.role-switch-link:hover i {
+    transform: scale(1.1);
+}
+
+/* Mobile adjustments for role elements */
+@media (max-width: 768px) {
+    .role-badge {
+        margin-bottom: 12px;
+    }
+
+    .role-switch-link {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        border-radius: 12px;
     }
 }

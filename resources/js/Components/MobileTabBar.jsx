@@ -4,6 +4,7 @@ const MobileTabBar = ({ activeTab = 'peta', onTabChange }) => {
     const tabs = [
         { id: 'beranda', label: 'Beranda', icon: 'fa-solid fa-house', href: 'https://p3m.poltekparmakassar.ac.id/' },
         { id: 'peta', label: 'Peta', icon: 'fa-solid fa-map-location-dot' },
+        { id: 'dashboard', label: 'Statistik', icon: 'fa-solid fa-chart-pie' },
         { id: 'kegiatan', label: 'Kegiatan', icon: 'fa-solid fa-clipboard-list' },
         { id: 'akun', label: 'Akun', icon: 'fa-solid fa-user', href: '/login' },
     ];

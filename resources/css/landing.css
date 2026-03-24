@@ -361,14 +361,405 @@
     margin-bottom: 32px;
 }
 
-/* Mobile: Hide non-map landing page sections */
+/* ============================================
+   Charts Section — Data Visualization
+   ============================================ */
+.charts-section {
+    background-color: #ffffff;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.chart-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06),
+        0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 50px -12px rgba(15, 23, 42, 0.12),
+        0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    border-color: rgba(4, 107, 210, 0.12);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 28px 0;
+}
+
+.chart-card-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    background: linear-gradient(135deg, rgba(4, 107, 210, 0.12), rgba(4, 107, 210, 0.05));
+    color: #046bd2;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover .chart-card-icon {
+    background: linear-gradient(135deg, #046bd2, #0355a7);
+    color: #ffffff;
+    transform: scale(1.05) rotate(-5deg);
+}
+
+.chart-card-icon--amber {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(245, 158, 11, 0.06));
+    color: #d97706;
+}
+
+.chart-card:hover .chart-card-icon--amber {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+}
+
+.chart-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 2px;
+    line-height: 1.3;
+}
+
+.chart-card-subtitle {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin: 0;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.chart-canvas-wrapper {
+    padding: 20px 24px 24px;
+    height: 320px;
+    position: relative;
+}
+
+@media (max-width: 1024px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 0 2%;
+    }
+}
+
+@media (max-width: 768px) {
+    .chart-canvas-wrapper {
+        height: 280px;
+        padding: 16px 16px 20px;
+    }
+
+    .chart-card-header {
+        padding: 20px 20px 0;
+    }
+
+    .chart-card-title {
+        font-size: 1rem;
+    }
+
+    .chart-card-subtitle {
+        font-size: 0.8rem;
+    }
+}
+
+/* ============================================
+   Side-by-side Layout (Map & Charts)
+   ============================================ */
+.landing-main-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 4%;
+    align-items: flex-start;
+}
+
+@media (min-width: 1100px) {
+    .landing-main-layout {
+        flex-direction: row;
+        padding: 40px 4%;
+        align-items: stretch;
+    }
+
+    .landing-map-column {
+        flex: 1.3;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .landing-charts-column {
+        flex: 1;
+        min-width: 0;
+        margin-top: 0;
+    }
+
+    .landing-charts-column .charts-grid {
+        grid-template-columns: 1fr;
+        /* Stack charts vertically */
+    }
+
+    .landing-map-column .section-header {
+        text-align: left;
+        margin-left: 0;
+        margin-bottom: 24px;
+        max-width: none;
+    }
+
+    .landing-charts-column .section-header {
+        text-align: left;
+        margin-left: 0;
+        margin-bottom: 24px;
+        max-width: none;
+    }
+
+    .landing-map-column .map-section-boxed {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        max-width: none;
+    }
+
+    .landing-charts-column .charts-section {
+        padding: 0;
+    }
+}
+
+/* Fintech Layout Overrides */
+.fintech-map-section,
+.fintech-charts-section {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.fintech-panel-header {
+    background: #ffffff;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 12px 12px 0 0;
+}
+
+.fintech-panel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fintech-panel-title .text-blue {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.fintech-map-section {
+    flex: 1;
+    /* Stretch to fill column */
+}
+
+/* Let the map take the remaining height of the card */
+.fintech-map-stretch-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.fintech-map-inner {
+    flex: 1;
+    height: auto !important;
+    min-height: 500px !important;
+    border-radius: 0 0 12px 12px !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Premium Map Legend */
+.fintech-map-legend {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e5e7eb;
+    min-width: 200px;
+    pointer-events: auto;
+}
+
+.fintech-map-legend .legend-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.fintech-map-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.fintech-map-legend .legend-item:last-child {
+    margin-bottom: 0;
+}
+
+.fintech-map-legend .legend-icon {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: inset 0 0 0 2px #ffffff, 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.fintech-map-legend .legend-text {
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .fintech-map-legend {
+        bottom: 80px;
+        left: 16px;
+        padding: 12px 16px;
+        min-width: 160px;
+    }
+
+    .fintech-map-legend .legend-title {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
+    }
+
+    .fintech-map-legend .legend-text {
+        font-size: 0.8rem;
+    }
+}
+
+@media (min-width: 1100px) {
+    .fintech-map-inner {
+        min-height: 0 !important;
+        /* Allow flex to determine height on desktop */
+    }
+}
+
+.fintech-charts-section .charts-grid {
+    padding: 24px;
+    gap: 24px;
+    grid-template-columns: 1fr;
+    max-width: none;
+    margin: 0;
+}
+
+.fintech-charts-section .chart-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 1099px) {
+    .fintech-map-section .landing-map-wrapper.map-section-boxed {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        max-width: none;
+    }
+}
+
+/* ============================================
+   Mobile: Premium Fintech Layout
+   ============================================ */
 @media (max-width: 768px) {
 
     .hero-section,
     .features-section,
     .activities-section,
-    .cta-section {
+    .cta-section,
+    /* Utility for conditional mobile tabs */
+    .mobile-hidden {
         display: none !important;
+    }
+
+    /* Full-width layout with spacers */
+    .landing-main-layout {
+        padding: 0;
+        gap: 0;
+        padding-bottom: 90px;
+    }
+
+    /* Fintech cards: edge-to-edge on mobile */
+    .fintech-map-section,
+    .fintech-charts-section {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        margin-bottom: 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* Compact panel headers */
+    .fintech-panel-header {
+        padding: 16px;
+        border-radius: 0;
+    }
+
+    .fintech-panel-title {
+        font-size: 0.95rem;
+        display: block;
+        line-height: 1.4;
+    }
+
+    .fintech-panel-title .text-blue {
+        display: block;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+
+    /* Map sizing for mobile - Full height for Tab View */
+    .fintech-map-inner {
+        height: calc(100vh - 180px) !important;
+        min-height: 400px !important;
+        border-radius: 0 !important;
+    }
+
+    .fintech-map-section {
+        margin-bottom: 24px;
+    }
+
+    .fintech-map-stretch-container {
+        height: calc(100vh - 180px);
+        min-height: 400px;
     }
 
     .landing-map-wrapper {
@@ -377,7 +768,134 @@
         overflow: visible !important;
     }
 
-    .map-picking-mode-container {
-        height: 100vh;
+    /* Legend: compact and above FAB */
+    .fintech-map-legend {
+        bottom: 80px;
+        left: 12px;
+        padding: 10px 14px;
+        min-width: 150px;
+        border-radius: 10px;
+    }
+
+    .fintech-map-legend .legend-title {
+        font-size: 0.7rem;
+        margin-bottom: 6px;
+    }
+
+    .fintech-map-legend .legend-item {
+        gap: 8px;
+        margin-bottom: 5px;
+    }
+
+    .fintech-map-legend .legend-icon {
+        width: 10px;
+        height: 10px;
+    }
+
+    .fintech-map-legend .legend-text {
+        font-size: 0.75rem;
+    }
+
+    /* Charts section: show on mobile, stack nicely */
+    .fintech-charts-section .charts-grid {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .fintech-charts-section .chart-card {
+        border-radius: 10px;
+    }
+
+    .chart-card-header {
+        padding: 16px 16px 0;
+        gap: 10px;
+    }
+
+    .chart-card-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    .chart-card-title {
+        font-size: 0.9rem;
+    }
+
+    .chart-card-subtitle {
+        font-size: 0.75rem;
+    }
+
+    .chart-canvas-wrapper {
+        height: 240px;
+        padding: 12px 12px 16px;
+    }
+
+    /* Map section boxed reset */
+    .landing-map-column .map-section-boxed {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        max-width: none;
+    }
+}
+
+/* ============================================
+   Dashboard Role Indicator Badge
+   ============================================ */
+.dashboard-role-indicator {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    animation: slideInRight 0.5s ease-out;
+}
+
+.dashboard-role-indicator i {
+    font-size: 14px;
+}
+
+.role-indicator-dosen {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
+    color: #4f46e5;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.role-indicator-masyarakat {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-role-indicator {
+        top: 12px;
+        right: 12px;
+        padding: 6px 12px;
+        font-size: 11.5px;
+        border-radius: 10px;
     }
 }
