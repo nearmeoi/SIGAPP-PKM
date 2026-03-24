@@ -9,6 +9,10 @@ Repositori ini berisi kode sumber untuk sistem backend dan administrasi **SIGAP-
 - **Autentikasi:** Laravel Breeze / Session-based
 - **Environment:** PHP 8.4
 
+## Akun Kebutuhan Tes
+- **Email:** admin@poltekpar.ac.id
+- **Password:** password
+
 ## Persyaratan Sistem
 Sebelum menjalankan *project* ini, pastikan sistem Anda telah terpasang perangkat lunak berikut:
 - PHP >= 8.4

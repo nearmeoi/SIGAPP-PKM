@@ -22,10 +22,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::get('/dashboard', [PengajuanUserController::class, 'dashboard'])->name('dashboard');
-    Route::get('/pengajuan/create', [PengajuanUserController::class, 'create'])->name('pengajuan.create');
-    Route::post('/pengajuan', [PengajuanUserController::class, 'store'])->name('pengajuan.store');
-    Route::get('/pengajuan/{id}', [PengajuanUserController::class, 'show'])->name('pengajuan.show');
+    // User and Dosen routes are temporarily diverted to Coming Soon
+    Route::get('/dashboard', fn() => Inertia::render('ComingSoon'))->name('dashboard');
+    Route::get('/pengajuan/{any?}', fn() => Inertia::render('ComingSoon'))->where('any', '.*')->name('pengajuan.index');
 
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(
         function () {
