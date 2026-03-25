@@ -54,7 +54,7 @@ const Dashboard: React.FC<any> = ({ stats, recentPengajuan, monthlyStats = Array
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Overview</h1>
-                <p className="text-zinc-500 text-[14px] mt-1">SIGAP PKM Dashboard.</p>
+                <p className="text-zinc-500 text-[14px] mt-1">SIGAP P3M Dashboard.</p>
             </div>
 
             {/* Stat Cards */}

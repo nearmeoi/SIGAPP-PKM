@@ -6,7 +6,7 @@ import { Rocket, ArrowLeft, Construction } from 'lucide-react';
 export default function ComingSoon() {
     return (
         <Layout>
-            <Head title="Coming Soon - SIGAP PKM" />
+            <Head title="Coming Soon - SIGAP P3M" />
 
             <div className="min-h-[80vh] flex items-center justify-center px-6">
                 <div className="max-w-md w-full text-center">

@@ -72,7 +72,7 @@ const ManajemenUser: React.FC<Props> = ({ users }) => {
             <div className="flex justify-between items-start mb-8">
                 <div>
                     <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Manajemen User</h1>
-                    <p className="text-zinc-500 text-[14px] mt-1">Kelola pengguna SIGAP PKM.</p>
+                    <p className="text-zinc-500 text-[14px] mt-1">Kelola pengguna SIGAP P3M.</p>
                 </div>
                 {/* <button onClick={openCreate}
                     className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium text-white shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800">
