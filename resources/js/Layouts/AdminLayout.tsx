@@ -86,7 +86,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                 {/* Brand */}
                 <div className="px-5 py-4 flex items-center gap-3 border-b border-zinc-800 flex-shrink-0">
                     <img src="/logo-poltekpar.png" alt="Poltekpar Logo" className="w-8 h-8 object-contain flex-shrink-0" />
-                    <span className="self-center text-[17px] font-bold text-white tracking-tight">SIGAP PKM</span>
+                    <span className="self-center text-[17px] font-bold text-white tracking-tight">SIGAP P3M</span>
                 </div>
 
                 {/* Nav Label */}
