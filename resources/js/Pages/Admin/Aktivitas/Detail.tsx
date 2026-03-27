@@ -6,7 +6,7 @@ import {
     Activity, ArrowLeft, Image as ImageIcon, CheckCircle, Save,
     MapPin, FileText, Trash2, Search, X, ChevronRight
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -19,6 +19,16 @@ L.Icon.Default.mergeOptions({
 
 function MapClickHandler({ onClick }: { onClick: (latlng: L.LatLng) => void }) {
     useMapEvents({ click(e) { onClick(e.latlng); } });
+    return null;
+}
+
+function FlyToPosition({ lat, lng }: { lat: number | null; lng: number | null }) {
+    const map = useMap();
+    React.useEffect(() => {
+        if (lat !== null && lng !== null) {
+            map.flyTo([lat, lng], 15, { duration: 1.2 });
+        }
+    }, [lat, lng]);
     return null;
 }
 
@@ -265,6 +275,7 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                     />
                                     {lat !== null && lng !== null && <Marker position={[lat, lng]} />}
                                     <MapClickHandler onClick={handleMapClick} />
+                                    <FlyToPosition lat={lat} lng={lng} />
                                 </MapContainer>
                             </div>
                             <p className="text-[11px] text-zinc-400">Klik pada peta atau gunakan kolom pencarian di atas untuk mengatur koordinat.</p>
