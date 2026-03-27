@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import Toast from '../Components/Toast';
 import CommandPalette from '../Components/CommandPalette';
+import ProfileDropdown from '../Components/ProfileDropdown';
 import {
     LayoutDashboard,
     Users,
@@ -225,7 +226,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-4 ml-4">
-                        <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 border border-zinc-200 shadow-sm text-[12px] font-medium">A</div>
+                        <ProfileDropdown />
                     </div>
                 </header>
 

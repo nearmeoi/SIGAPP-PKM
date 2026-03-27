@@ -272,6 +272,22 @@ Route::middleware('auth')->group(function () {
             Route::get('/arsip', [ArsipController::class, 'index'])->name('arsip.index');
             Route::post('/arsip', [ArsipController::class, 'store'])->name('arsip.store');
             Route::delete('/arsip/{id}', [ArsipController::class, 'destroy'])->name('arsip.destroy');
+
+            // Notifications (counts from existing data)
+            Route::get('/api/notifications', function () {
+                return response()->json([
+                    'pengajuan_baru' => Pengajuan::where('status_pengajuan', 'diproses')->count(),
+                    'perlu_direvisi' => Pengajuan::where('status_pengajuan', 'direvisi')->count(),
+                    'diterima' => Pengajuan::where('status_pengajuan', 'diterima')->count(),
+                    'kegiatan_berjalan' => Aktivitas::where('status_pelaksanaan', 'berjalan')->count(),
+                    'selesai' => Pengajuan::where('status_pengajuan', 'selesai')->count(),
+                ]);
+            })->name('api.notifications');
+
+            // Profile page
+            Route::get('/profile', function () {
+                return Inertia::render('Admin/Profile', ['user' => Auth::user()]);
+            })->name('profile');
         }
     );
 });
