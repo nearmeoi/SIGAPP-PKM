@@ -40,17 +40,18 @@ export default function Register() {
             <div className="login-container">
                 <div className="login-card" style={{ maxWidth: '480px' }}>
                     {/* Header Banner */}
-                    <div className="login-header">
+                    <div className="login-header login-header-wide">
                         <img
                             src="https://p3m.poltekparmakassar.ac.id/storage/2025/10/cropped-Screenshot_2024-01-15_101923-removebg-preview.png"
                             alt="Logo Poltekpar"
                             className="login-logo"
                         />
-                        <div className="login-brand-text">
-                            <span className="brand-line">PUSAT PENELITIAN DAN</span>
-                            <span className="brand-line">PENGABDIAN MASYARAKAT</span>
-                            <span className="brand-line">POLITEKNIK PARIWISATA MAKASSAR</span>
-                            <span className="brand-subline">Centre for Marine Tourism</span>
+                        <div className="login-brand-text login-brand-text-wide">
+                            <span className="brand-heading brand-heading-wide">
+                                Sistem Informasi Geospasial dan Akses Pelayanan Pengabdian Kepada Masyarakat
+                            </span>
+                            <span className="brand-heading brand-heading-wide">(SIGAP PKM)</span>
+                            <span className="brand-subheading brand-subheading-wide">Politeknik Pariwisata Makassar</span>
                         </div>
                     </div>
 

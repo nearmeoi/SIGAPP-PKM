@@ -2,6 +2,9 @@
 
 > Platform pemetaan interaktif untuk kegiatan Penelitian, Pengabdian, dan Pemberdayaan Masyarakat (P3M) Politeknik Pariwisata Makassar.
 
+> [!NOTE]
+> **Catatan Penting:** Pengembangan sisi Front-end pada branch ini merupakan hasil dari diskusi intensif dengan **Akmal** pada hari Kamis, 26 Maret 2026.
+
 ---
 
 ## ✨ Fitur Utama Frontend (UI/UX & React Components)
@@ -26,6 +29,13 @@ Pembaruan besar-besaran pada sisi Frontend menggunakan **React + Inertia.js** de
 - **Dynamic Array Inputs**: Pada form Dosen, input untuk "Personil Terlibat" (Dosen, Mahasiswa, Staff) bersifat dinamis (Bisa ditambah `+` atau dihapus `-` secara instan).
 - **Premium File Dropzone**: Drag & drop area untuk mengunggah proposal PDF atau gambar dokumentasi dengan ikon *cloud-arrow-up* / *file-pdf*.
 - **Toast Notifications**: Notifikasi pop-up cantik berwarna untuk umpan balik *Success* atau *Error* usai pengiriman form.
+
+### 🚀 Pembaruan Khusus Dashboard Dosen (v2.0)
+- **Inline Submission Card**: Integrasi form "Akses Pengajuan PKM" langsung di dalam dashboard utama untuk efisiensi input data.
+- **Synchronized Map Layout**: Layout peta yang dinamis, otomatis menyesuaikan tinggi (`stretch`) dengan kolom konten dashboard di sebelahnya.
+- **Floating Status System**: Tombol "Status Pengajuan" melayang yang ter-jangkar pada peta, menggantikan navbar statis untuk area pandang peta yang lebih luas.
+- **Side-Menu Accordion**: Menu samping yang rapi (flush-left) untuk memantau status pengajuan secara real-time tanpa mengganggu navigasi utama.
+- **Control Alignment**: Penyelarasan presisi Bar Pencarian (`MapSearchWidget`) dengan kontrol zoom peta di sisi kiri layar.
 
 ---
 

@@ -15,6 +15,10 @@ Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 })->name('register');
 
+Route::get('/submit-dokumentasi-laporan', function () {
+    return Inertia::render('Auth/SubmitDokumentasiLaporan');
+})->name('submit.dokumentasi.laporan');
+
 Route::get('/verify-email', function () {
     return Inertia::render('Auth/VerifyEmail');
 })->name('verification.notice');

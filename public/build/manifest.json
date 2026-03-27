@@ -3,8 +3,8 @@
     "file": "assets/DefaultLayout-1DTFk8zz.css",
     "src": "_DefaultLayout-1DTFk8zz.css"
   },
-  "_DefaultLayout-Bv4GW42w.js": {
-    "file": "assets/DefaultLayout-Bv4GW42w.js",
+  "_DefaultLayout-CIzQeYTJ.js": {
+    "file": "assets/DefaultLayout-CIzQeYTJ.js",
     "name": "DefaultLayout",
     "imports": [
       "_jsx-runtime-BXtfMfCG.js"
@@ -22,24 +22,24 @@
     "file": "assets/jsx-runtime-BXtfMfCG.js",
     "name": "jsx-runtime"
   },
-  "_landing-DNj6_NnU.js": {
-    "file": "assets/landing-DNj6_NnU.js",
+  "_landing-D8nklaL4.css": {
+    "file": "assets/landing-D8nklaL4.css",
+    "src": "_landing-D8nklaL4.css"
+  },
+  "_landing-Vj4wgInc.js": {
+    "file": "assets/landing-Vj4wgInc.js",
     "name": "landing",
     "imports": [
       "_jsx-runtime-BXtfMfCG.js",
       "resources/js/app.jsx"
     ],
     "css": [
-      "assets/landing-vvyp-T2s.css"
+      "assets/landing-D8nklaL4.css"
     ]
   },
-  "_landing-vvyp-T2s.css": {
-    "file": "assets/landing-vvyp-T2s.css",
-    "src": "_landing-vvyp-T2s.css"
-  },
-  "_login-Bvw1zwoH.css": {
-    "file": "assets/login-Bvw1zwoH.css",
-    "src": "_login-Bvw1zwoH.css"
+  "_login-pDyleNhk.css": {
+    "file": "assets/login-pDyleNhk.css",
+    "src": "_login-pDyleNhk.css"
   },
   "node_modules/leaflet/dist/images/layers-2x.png": {
     "file": "assets/layers-2x-Bpkbi35X.png",
@@ -62,7 +62,7 @@
     "src": "node_modules/leaflet/dist/images/marker-shadow.png"
   },
   "resources/js/Pages/Auth/Login.jsx": {
-    "file": "assets/Login-DLLsmFYv.js",
+    "file": "assets/Login-BOaZcRzp.js",
     "name": "Login",
     "src": "resources/js/Pages/Auth/Login.jsx",
     "isDynamicEntry": true,
@@ -71,19 +71,19 @@
       "resources/js/app.jsx"
     ],
     "css": [
-      "assets/login-Bvw1zwoH.css"
+      "assets/login-pDyleNhk.css"
     ]
   },
   "resources/js/Pages/Auth/LoginDosen.jsx": {
-    "file": "assets/LoginDosen-ZDa1DuGr.js",
+    "file": "assets/LoginDosen-CszQHoKQ.js",
     "name": "LoginDosen",
     "src": "resources/js/Pages/Auth/LoginDosen.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BXtfMfCG.js",
       "resources/js/app.jsx",
-      "_landing-DNj6_NnU.js",
-      "_DefaultLayout-Bv4GW42w.js"
+      "_landing-Vj4wgInc.js",
+      "_DefaultLayout-CIzQeYTJ.js"
     ],
     "css": [
       "assets/LoginDosen-M6h_yePP.css"
@@ -95,15 +95,15 @@
     ]
   },
   "resources/js/Pages/Auth/LoginMasyarakat.jsx": {
-    "file": "assets/LoginMasyarakat-ACmI00HI.js",
+    "file": "assets/LoginMasyarakat-Biv9wjmy.js",
     "name": "LoginMasyarakat",
     "src": "resources/js/Pages/Auth/LoginMasyarakat.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BXtfMfCG.js",
       "resources/js/app.jsx",
-      "_landing-DNj6_NnU.js",
-      "_DefaultLayout-Bv4GW42w.js"
+      "_landing-Vj4wgInc.js",
+      "_DefaultLayout-CIzQeYTJ.js"
     ],
     "assets": [
       "assets/marker-icon-2x-_ZA0WGCc.png",
@@ -112,7 +112,7 @@
     ]
   },
   "resources/js/Pages/Auth/Register.jsx": {
-    "file": "assets/Register-DzXf4jlp.js",
+    "file": "assets/Register-tZH4jLzc.js",
     "name": "Register",
     "src": "resources/js/Pages/Auth/Register.jsx",
     "isDynamicEntry": true,
@@ -121,11 +121,24 @@
       "resources/js/app.jsx"
     ],
     "css": [
-      "assets/login-Bvw1zwoH.css"
+      "assets/login-pDyleNhk.css"
+    ]
+  },
+  "resources/js/Pages/Auth/SubmitDokumentasiLaporan.jsx": {
+    "file": "assets/SubmitDokumentasiLaporan-D92OiWNX.js",
+    "name": "SubmitDokumentasiLaporan",
+    "src": "resources/js/Pages/Auth/SubmitDokumentasiLaporan.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_jsx-runtime-BXtfMfCG.js",
+      "resources/js/app.jsx"
+    ],
+    "css": [
+      "assets/login-pDyleNhk.css"
     ]
   },
   "resources/js/Pages/Auth/VerifyEmail.jsx": {
-    "file": "assets/VerifyEmail-F_9jMvuB.js",
+    "file": "assets/VerifyEmail-DWYxFPGl.js",
     "name": "VerifyEmail",
     "src": "resources/js/Pages/Auth/VerifyEmail.jsx",
     "isDynamicEntry": true,
@@ -135,19 +148,19 @@
     ],
     "css": [
       "assets/VerifyEmail-BgRu6rS8.css",
-      "assets/login-Bvw1zwoH.css"
+      "assets/login-pDyleNhk.css"
     ]
   },
   "resources/js/Pages/LandingPage.jsx": {
-    "file": "assets/LandingPage-CmU_yo4m.js",
+    "file": "assets/LandingPage-RG83YcP4.js",
     "name": "LandingPage",
     "src": "resources/js/Pages/LandingPage.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BXtfMfCG.js",
       "resources/js/app.jsx",
-      "_landing-DNj6_NnU.js",
-      "_DefaultLayout-Bv4GW42w.js"
+      "_landing-Vj4wgInc.js",
+      "_DefaultLayout-CIzQeYTJ.js"
     ],
     "assets": [
       "assets/marker-icon-2x-_ZA0WGCc.png",
@@ -156,13 +169,13 @@
     ]
   },
   "resources/js/Pages/MapDashboard.jsx": {
-    "file": "assets/MapDashboard-Bo0n75ch.js",
+    "file": "assets/MapDashboard-KQy-OxhF.js",
     "name": "MapDashboard",
     "src": "resources/js/Pages/MapDashboard.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BXtfMfCG.js",
-      "_DefaultLayout-Bv4GW42w.js"
+      "_DefaultLayout-CIzQeYTJ.js"
     ],
     "assets": [
       "assets/marker-icon-2x-_ZA0WGCc.png",
@@ -171,7 +184,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CbORPxlQ.js",
+    "file": "assets/app-BUSDvXBu.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -183,12 +196,13 @@
       "resources/js/Pages/Auth/LoginDosen.jsx",
       "resources/js/Pages/Auth/LoginMasyarakat.jsx",
       "resources/js/Pages/Auth/Register.jsx",
+      "resources/js/Pages/Auth/SubmitDokumentasiLaporan.jsx",
       "resources/js/Pages/Auth/VerifyEmail.jsx",
       "resources/js/Pages/LandingPage.jsx",
       "resources/js/Pages/MapDashboard.jsx"
     ],
     "css": [
-      "assets/app-DFkWStmE.css"
+      "assets/app-CDoc7lpn.css"
     ]
   }
 }

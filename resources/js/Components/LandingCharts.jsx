@@ -179,7 +179,7 @@ const statusDistributionOptions = {
 
 // ---- Component ----
 
-export default function LandingCharts() {
+export default function LandingCharts({ extraContent = null }) {
     return (
         <section className="fintech-charts-section" id="visualisasi-data">
             <div className="fintech-panel-header">
@@ -194,8 +194,8 @@ export default function LandingCharts() {
                             <i className="fa-solid fa-chart-column"></i>
                         </div>
                         <div>
-                            <h3 className="chart-card-title">Tren PKM Tahunan</h3>
-                            <p className="chart-card-subtitle">Jumlah kegiatan PKM per tahun berdasarkan status</p>
+                            <h3 className="chart-card-title">Jumlah PKM Per Tahun</h3>
+                            <p className="chart-card-subtitle">Perbandingan kegiatan PKM berdasarkan tahun pelaksanaan</p>
                         </div>
                     </div>
                     <div className="chart-canvas-wrapper">
@@ -210,14 +210,16 @@ export default function LandingCharts() {
                             <i className="fa-solid fa-chart-pie"></i>
                         </div>
                         <div>
-                            <h3 className="chart-card-title">Sebaran Status PKM</h3>
-                            <p className="chart-card-subtitle">Distribusi status berdasarkan titik lokasi peta</p>
+                            <h3 className="chart-card-title">Sebaran Lokasi PKM</h3>
+                            <p className="chart-card-subtitle">Ringkasan distribusi kegiatan PKM pada area pengabdian</p>
                         </div>
                     </div>
                     <div className="chart-canvas-wrapper">
                         <Doughnut data={statusDistributionData} options={statusDistributionOptions} />
                     </div>
                 </div>
+
+                {extraContent}
             </div>
         </section>
     );

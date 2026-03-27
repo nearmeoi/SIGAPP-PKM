@@ -11,6 +11,7 @@ import LecturerSubmissionForm from '@/Components/LecturerSubmissionForm';
 import DocumentationGallery from '@/Components/DocumentationGallery';
 import TestimonialSidebarDisplay from '@/Components/TestimonialSidebarDisplay';
 import LandingCharts from '@/Components/LandingCharts';
+import DosenSubmissionCard from '@/Components/DosenSubmissionCard';
 import '../../../css/landing.css';
 import '../../../css/lecturer-form.css';
 
@@ -66,7 +67,7 @@ const MapSearchWidget = ({ pkmData, onSelectPkm, isHidden }) => {
 
     return (
         <div className="map-search-widget" style={{
-            position: 'absolute', top: '24px', left: '80px', zIndex: 1000, width: '380px', maxWidth: 'calc(100vw - 100px)',
+            position: 'absolute', top: '24px', left: '16px', zIndex: 1000, width: '380px', maxWidth: 'calc(100vw - 32px)',
             opacity: isHidden ? 0 : 1,
             pointerEvents: isHidden ? 'none' : 'auto',
             transform: isHidden ? 'translateY(-20px)' : 'translateY(0)',
@@ -276,9 +277,9 @@ export default function LoginDosen() {
                 {/* Interactive Map & Dashboard Main Layout */}
                 <div className="landing-main-layout" style={{ paddingTop: '80px', paddingBottom: '40px' }}>
 
-                    {/* 1. Interactive Map Column (Left Side) */}
-                    <div className={`landing-map-column ${mobileActiveTab !== 'peta' ? 'mobile-hidden' : ''}`}>
-                        <section className="fintech-map-section" id="peta-sebaran" style={{ height: 'calc(100vh - 120px)', minHeight: '600px' }}>
+                    {/* 1. Interactive Map Column (Left Side) - Stretched to match right column height */}
+                    <div className={`landing-map-column ${mobileActiveTab !== 'peta' ? 'mobile-hidden' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+                        <section className="fintech-map-section" id="peta-sebaran" style={{ height: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
                             <div className="fintech-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="fintech-panel-title">
                                     Peta Sebaran Pengabdian PKM <span className="text-blue">Poltekpar Makassar</span>
@@ -291,53 +292,67 @@ export default function LoginDosen() {
                                 </div>
                             </div>
 
-                            <div className={`map-picking-mode-container fintech-map-stretch-container ${isPickingLocation ? 'map-picking-mode' : ''}`}>
-                                <div className="landing-map-wrapper map-section-boxed fintech-map-stretch-container" style={{ margin: 0, padding: 0 }}>
-                                    <div className="map-wrapper-boxed fintech-map-inner" style={{ overflow: 'hidden', position: 'relative' }}>
+                            <div className={`map-picking-mode-container fintech-map-stretch-container ${isPickingLocation ? 'map-picking-mode' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <div className="landing-map-wrapper map-section-boxed fintech-map-stretch-container" style={{ margin: 0, padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <div className="map-wrapper-boxed fintech-map-inner" style={{ overflow: 'hidden', position: 'relative', flex: 1 }}>
 
                                         <MapSearchWidget pkmData={pkmData} onSelectPkm={(pkm) => setSidebarPkm(pkm)} isHidden={!!sidebarPkm || isMenuListOpen} />
 
-                                        {/* Left Vertical Navbar (Clean and Modern) */}
-                                        <div className="left-side-navbar" style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            zIndex: 1010,
-                                            width: '72px',
-                                            height: '100%',
-                                            backgroundColor: 'white',
-                                            borderRight: (isMenuListOpen || sidebarPkm) ? 'none' : '1px solid #e2e8f0',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            padding: '20px 0',
-                                            boxShadow: (isMenuListOpen || sidebarPkm) ? 'none' : '2px 0 8px rgba(0,0,0,0.06)',
-                                            transition: 'all 0.3s ease'
-                                        }}>
-                                            <button
-                                                onClick={() => {
-                                                    if (isMenuListOpen || sidebarPkm) {
-                                                        setIsMenuListOpen(false);
-                                                        setSidebarPkm(null);
-                                                    } else {
-                                                        setIsMenuListOpen(true);
-                                                    }
-                                                }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', width: '44px', height: '44px', color: '#0f172a', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s', backgroundColor: (isMenuListOpen || sidebarPkm) ? '#f1f5f9' : 'transparent' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = (isMenuListOpen || sidebarPkm) ? '#f1f5f9' : 'transparent'}
-                                            >
-                                                <i className={`fa-solid ${(isMenuListOpen || sidebarPkm) ? 'fa-xmark' : 'fa-bars'}`} style={{ fontSize: '20px' }}></i>
-                                            </button>
+                                        <style>
+                                            {`
+                                            .floating-status-btn {
+                                                position: absolute; top: 200px; left: 16px; z-index: 1010;
+                                                background-color: white; border-radius: 12px;
+                                                box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; align-items: center;
+                                                height: 48px; width: 48px; cursor: pointer; border: 1px solid #e2e8f0;
+                                                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                                                overflow: hidden; padding: 0; box-sizing: border-box;
+                                            }
+                                            .floating-status-btn:hover, .floating-status-btn.active {
+                                                width: 180px; background-color: #f8fafc;
+                                            }
+                                            .floating-status-icon {
+                                                min-width: 48px; text-align: center; color: #7c3aed; font-size: 20px;
+                                            }
+                                            .floating-status-text {
+                                                white-space: nowrap; font-weight: 600; font-size: 14px; color: #0f172a;
+                                                opacity: 0; transition: opacity 0.2s; padding-right: 16px;
+                                            }
+                                            .floating-status-btn:hover .floating-status-text, .floating-status-btn.active .floating-status-text {
+                                                opacity: 1; transition-delay: 0.1s;
+                                            }
+                                            `}
+                                        </style>
+                                        <div
+                                            className={`floating-status-btn ${isMenuListOpen ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (isMenuListOpen) {
+                                                    setIsMenuListOpen(false);
+                                                } else {
+                                                    setIsMenuListOpen(true);
+                                                    setExpandedSection('pengajuan');
+                                                    setSidebarPkm(null);
+                                                }
+                                            }}
+                                            style={{
+                                                opacity: (sidebarPkm || isMenuListOpen) ? 0 : 1,
+                                                pointerEvents: (sidebarPkm || isMenuListOpen) ? 'none' : 'auto',
+                                                transform: (sidebarPkm || isMenuListOpen) ? 'translateY(-20px)' : 'translateY(0)'
+                                            }}
+                                        >
+                                            <div className="floating-status-icon">
+                                                <i className="fa-solid fa-file-circle-check"></i>
+                                            </div>
+                                            <span className="floating-status-text">Status Pengajuan</span>
                                         </div>
 
-                                        {/* Hamburger Menu List Panel - Master List (Accordion) */}
+                                        {/* Left Sidebar Menu Panel - Status Pengajuan Only */}
                                         <div
                                             className="left-sidebar-menu"
                                             style={{
                                                 position: 'absolute',
                                                 top: 0,
-                                                left: '72px',
+                                                left: 0,
                                                 zIndex: 1007,
                                                 width: '400px',
                                                 height: '100%',
@@ -353,202 +368,80 @@ export default function LoginDosen() {
                                             }}
                                         >
                                             {/* Sidebar Header */}
-                                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
-                                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Menu</h3>
+                                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Status Pengajuan</h3>
+                                                <button onClick={() => setIsMenuListOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', padding: '6px 12px', borderRadius: '8px', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                    <i className="fa-solid fa-arrow-left"></i> Kembali
+                                                </button>
                                             </div>
 
-                                            {/* Scrollable accordion content */}
+                                            {/* Scrollable Status Pengajuan Content */}
                                             <div style={{ overflowY: 'auto', flex: 1 }}>
-
-                                                {/* === Section 1: Daftar Kegiatan (Accordion) === */}
-                                                <div style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                    <button
-                                                        onClick={() => toggleSection('kegiatan')}
-                                                        style={{
-                                                            width: '100%', padding: '16px 24px', background: expandedSection === 'kegiatan' ? '#f8fafc' : 'white',
-                                                            border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                            transition: 'background 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = expandedSection === 'kegiatan' ? '#f8fafc' : 'white'}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <i className="fa-solid fa-list-check" style={{ color: '#2563eb', fontSize: '16px' }}></i>
+                                                <div style={{ padding: '12px 0' }}>
+                                                    {pengajuanData.length === 0 ? (
+                                                        <div style={{ padding: '24px', textAlign: 'center' }}>
+                                                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                                                                <i className="fa-solid fa-inbox" style={{ color: '#cbd5e1', fontSize: '24px' }}></i>
                                                             </div>
-                                                            <div style={{ textAlign: 'left' }}>
-                                                                <div style={{ fontWeight: '600', fontSize: '14px', color: '#0f172a' }}>Daftar Kegiatan</div>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{pkmData.length} kegiatan tersedia</div>
-                                                            </div>
+                                                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#94a3b8', marginBottom: '4px' }}>—</div>
+                                                            <div style={{ fontSize: '12.5px', color: '#94a3b8', lineHeight: '1.5' }}>Belum ada pengajuan PKM.</div>
                                                         </div>
-                                                        <i className={`fa-solid fa-chevron-${expandedSection === 'kegiatan' ? 'up' : 'down'}`} style={{ color: '#94a3b8', fontSize: '14px', transition: 'transform 0.3s' }}></i>
-                                                    </button>
-
-                                                    {/* Expandable PKM list */}
-                                                    <div style={{
-                                                        maxHeight: expandedSection === 'kegiatan' ? '600px' : '0',
-                                                        overflow: 'hidden',
-                                                        transition: 'max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-                                                    }}>
-                                                        {pkmData.map(pkm => (
-                                                            <div
-                                                                key={pkm.id}
-                                                                onClick={() => {
-                                                                    setSidebarPkm(pkm);
-                                                                }}
-                                                                style={{ padding: '14px 24px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', gap: '14px', alignItems: 'center' }}
-                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                            >
+                                                    ) : (
+                                                        pengajuanData.map(item => {
+                                                            const statusStyle = getStatusPengajuanStyle(item.status);
+                                                            return (
                                                                 <div
-                                                                    style={{
-                                                                        width: '56px', height: '56px', borderRadius: '10px', backgroundColor: '#f1f5f9', flexShrink: 0,
-                                                                        backgroundImage: pkm.thumbnail ? `url(${pkm.thumbnail})` : 'none',
-                                                                        backgroundSize: 'cover', backgroundPosition: 'center',
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.05)'
-                                                                    }}
+                                                                    key={item.id}
+                                                                    style={{ padding: '14px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '14px', alignItems: 'center' }}
                                                                 >
-                                                                    {!pkm.thumbnail && <i className="fa-solid fa-image" style={{ color: '#cbd5e1', fontSize: '20px' }}></i>}
-                                                                </div>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
-                                                                    <div style={{ fontWeight: '600', fontSize: '13.5px', color: '#0f172a', lineHeight: '1.4', marginBottom: '4px' }}>{pkm.nama}</div>
-                                                                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                                                                        <i className="fa-solid fa-location-dot" style={{ marginRight: '5px', color: '#94a3b8' }}></i>
-                                                                        {pkm.desa}, Kec. {pkm.kecamatan}
+                                                                    <div style={{
+                                                                        width: '44px', height: '44px', borderRadius: '12px',
+                                                                        backgroundColor: statusStyle.bg,
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                                    }}>
+                                                                        <i className={`fa-solid ${statusStyle.icon}`} style={{ color: statusStyle.color, fontSize: '18px' }}></i>
                                                                     </div>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
-                                                                        <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: pkm.status === 'berlangsung' ? '#f59e0b' : '#16a34a' }}></span>
-                                                                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{pkm.status === 'berlangsung' ? 'Berlangsung' : 'Selesai'}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <i className="fa-solid fa-chevron-right" style={{ color: '#cbd5e1', fontSize: '12px' }}></i>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* === Section 2: Status Pengajuan (Accordion) === */}
-                                                <div style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                    <button
-                                                        onClick={() => toggleSection('pengajuan')}
-                                                        style={{
-                                                            width: '100%', padding: '16px 24px', background: expandedSection === 'pengajuan' ? '#f8fafc' : 'white',
-                                                            border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                            transition: 'background 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = expandedSection === 'pengajuan' ? '#f8fafc' : 'white'}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <i className="fa-solid fa-file-circle-check" style={{ color: '#7c3aed', fontSize: '16px' }}></i>
-                                                            </div>
-                                                            <div style={{ textAlign: 'left' }}>
-                                                                <div style={{ fontWeight: '600', fontSize: '14px', color: '#0f172a' }}>Status Pengajuan</div>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{pengajuanData.length > 0 ? `${pengajuanData.length} pengajuan` : 'Belum ada pengajuan'}</div>
-                                                            </div>
-                                                        </div>
-                                                        <i className={`fa-solid fa-chevron-${expandedSection === 'pengajuan' ? 'up' : 'down'}`} style={{ color: '#94a3b8', fontSize: '14px', transition: 'transform 0.3s' }}></i>
-                                                    </button>
-
-                                                    {/* Expandable Pengajuan list */}
-                                                    <div style={{
-                                                        maxHeight: expandedSection === 'pengajuan' ? '600px' : '0',
-                                                        overflow: 'hidden',
-                                                        transition: 'max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-                                                    }}>
-                                                        {pengajuanData.length === 0 ? (
-                                                            <div style={{ padding: '24px', textAlign: 'center' }}>
-                                                                <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                                                                    <i className="fa-solid fa-inbox" style={{ color: '#cbd5e1', fontSize: '24px' }}></i>
-                                                                </div>
-                                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#94a3b8', marginBottom: '4px' }}>—</div>
-                                                                <div style={{ fontSize: '12.5px', color: '#94a3b8', lineHeight: '1.5' }}>Belum ada pengajuan PKM.<br />Tekan tombol <strong>+</strong> untuk mengajukan.</div>
-                                                            </div>
-                                                        ) : (
-                                                            pengajuanData.map(item => {
-                                                                const statusStyle = getStatusPengajuanStyle(item.status);
-                                                                return (
-                                                                    <div
-                                                                        key={item.id}
-                                                                        style={{ padding: '14px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '14px', alignItems: 'center' }}
-                                                                    >
-                                                                        <div style={{
-                                                                            width: '44px', height: '44px', borderRadius: '12px',
-                                                                            backgroundColor: statusStyle.bg,
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                                                        }}>
-                                                                            <i className={`fa-solid ${statusStyle.icon}`} style={{ color: statusStyle.color, fontSize: '18px' }}></i>
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ fontWeight: '600', fontSize: '13.5px', color: '#0f172a', lineHeight: '1.4', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.judul}</div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                                            <span style={{
+                                                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                                                fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px',
+                                                                                color: statusStyle.color,
+                                                                                backgroundColor: statusStyle.bg,
+                                                                                padding: '3px 10px', borderRadius: '20px'
+                                                                            }}>
+                                                                                <i className={`fa-solid ${statusStyle.icon}`} style={{ fontSize: '10px' }}></i>
+                                                                                {statusStyle.label}
+                                                                            </span>
+                                                                            <span style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{item.tanggal}</span>
                                                                         </div>
-                                                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                                                            <div style={{ fontWeight: '600', fontSize: '13.5px', color: '#0f172a', lineHeight: '1.4', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.judul}</div>
-                                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                                                                <span style={{
-                                                                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                                                                    fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px',
-                                                                                    color: statusStyle.color,
-                                                                                    backgroundColor: statusStyle.bg,
-                                                                                    padding: '3px 10px', borderRadius: '20px'
-                                                                                }}>
-                                                                                    <i className={`fa-solid ${statusStyle.icon}`} style={{ fontSize: '10px' }}></i>
-                                                                                    {statusStyle.label}
-                                                                                </span>
-                                                                                <span style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{item.tanggal}</span>
-                                                                            </div>
-                                                                            {item.status === 'ditangguhkan' && (
-                                                                                <button
-                                                                                    onClick={() => { /* TODO: open edit form with item data */ }}
-                                                                                    style={{
-                                                                                        marginTop: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: '600',
-                                                                                        color: '#b45309', backgroundColor: '#fef3c7', border: '1px solid #fde68a',
-                                                                                        borderRadius: '8px', cursor: 'pointer', display: 'inline-flex',
-                                                                                        alignItems: 'center', gap: '6px', transition: 'all 0.2s'
-                                                                                    }}
-                                                                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde68a'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(180,83,9,0.15)'; }}
-                                                                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef3c7'; e.currentTarget.style.boxShadow = 'none'; }}
-                                                                                >
-                                                                                    <i className="fa-solid fa-pen-to-square" style={{ fontSize: '11px' }}></i>
-                                                                                    Edit Pengajuan
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
+                                                                        {item.status === 'ditangguhkan' && (
+                                                                            <button
+                                                                                onClick={() => { /* TODO: open edit form with item data */ }}
+                                                                                style={{
+                                                                                    marginTop: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: '600',
+                                                                                    color: '#b45309', backgroundColor: '#fef3c7', border: '1px solid #fde68a',
+                                                                                    borderRadius: '8px', cursor: 'pointer', display: 'inline-flex',
+                                                                                    alignItems: 'center', gap: '6px', transition: 'all 0.2s'
+                                                                                }}
+                                                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde68a'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(180,83,9,0.15)'; }}
+                                                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef3c7'; e.currentTarget.style.boxShadow = 'none'; }}
+                                                                            >
+                                                                                <i className="fa-solid fa-pen-to-square" style={{ fontSize: '11px' }}></i>
+                                                                                Edit Pengajuan
+                                                                            </button>
+                                                                        )}
                                                                     </div>
-                                                                );
-                                                            })
-                                                        )}
-                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
                                                 </div>
-
-                                                {/* === Section 3: Submit Link Dokumentasi & Laporan (Button to open modal) === */}
-                                                <div style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                    <button
-                                                        onClick={() => setIsLinkModalOpen(true)}
-                                                        style={{
-                                                            width: '100%', padding: '16px 24px', background: 'white',
-                                                            border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                            transition: 'background 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <i className="fa-solid fa-link" style={{ color: '#d97706', fontSize: '16px' }}></i>
-                                                            </div>
-                                                            <div style={{ textAlign: 'left' }}>
-                                                                <div style={{ fontWeight: '600', fontSize: '14px', color: '#0f172a' }}>Submit Link</div>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Dokumentasi & Laporan</div>
-                                                            </div>
-                                                        </div>
-                                                        <i className="fa-solid fa-arrow-up-right-from-square" style={{ color: '#94a3b8', fontSize: '14px' }}></i>
-                                                    </button>
-                                                </div>
-
                                             </div>
                                         </div>
 
-                                        <MapContainer center={[-5.132, 119.49]} zoom={15} className="map-container">
+                                        <MapContainer center={[-2.5, 118]} zoom={5} minZoom={4} maxBounds={[[-15, 90], [10, 145]]} className="map-container">
                                             <TileLayer
                                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -582,14 +475,6 @@ export default function LoginDosen() {
                                         </div>
 
                                         <div className={`map-overlay ${sidebarPkm || isMenuListOpen ? 'active' : ''}`} onClick={() => { setSidebarPkm(null); setIsMenuListOpen(false); }}></div>
-
-                                        {/* FAB "+" Button — Will open Dosen PKM form */}
-                                        <div className="fab-wrapper">
-                                            <button className="fab" onClick={handleFabClick}>
-                                                <span className="fab-label">Buat Pengajuan</span>
-                                                <i className="fa-solid fa-plus"></i>
-                                            </button>
-                                        </div>
 
                                         <aside className={`sidebar ${!sidebarPkm ? 'sidebar-hidden' : ''}`}>
                                             <div className="dashboard-content" style={{ position: 'relative' }}>
@@ -644,7 +529,7 @@ export default function LoginDosen() {
 
                     {/* 2. Data Visualization Charts Column (Right Side) */}
                     <div className={`landing-charts-column ${mobileActiveTab !== 'dashboard' ? 'mobile-hidden' : ''}`}>
-                        <LandingCharts />
+                        <LandingCharts extraContent={<DosenSubmissionCard />} />
                     </div>
                 </div>
 
