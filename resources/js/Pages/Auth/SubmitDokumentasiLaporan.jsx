@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import ActionFeedbackDialog from '@/Components/ActionFeedbackDialog';
 
 import '../../../css/login.css';
 
@@ -18,8 +19,21 @@ export default function SubmitDokumentasiLaporan() {
     const [pkmQuery, setPkmQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [errors, setErrors] = useState({});
-    const [submitted, setSubmitted] = useState(false);
+    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success', title: '', message: '' });
     const [processing, setProcessing] = useState(false);
+    const requiredSubmissionIssues = [];
+
+    if (!formData.pkmId) requiredSubmissionIssues.push('Kegiatan PKM wajib dipilih terlebih dahulu.');
+    if (!formData.linkDokumentasi.trim()) requiredSubmissionIssues.push('Link dokumentasi wajib diisi.');
+    if (!formData.linkLaporan.trim()) requiredSubmissionIssues.push('Link laporan wajib diisi.');
+    const hasStartedSubmission = Boolean(
+        formData.pkmId ||
+        pkmQuery.trim() ||
+        formData.linkDokumentasi.trim() ||
+        formData.linkLaporan.trim()
+    );
+
+    const isSubmitDisabled = processing || requiredSubmissionIssues.length > 0;
 
     const filteredPkm = pkmOptions.filter((pkm) =>
         pkm.name.toLowerCase().includes(pkmQuery.toLowerCase()) ||
@@ -68,7 +82,12 @@ export default function SubmitDokumentasiLaporan() {
         setProcessing(true);
         window.setTimeout(() => {
             setProcessing(false);
-            setSubmitted(true);
+            setFeedbackDialog({
+                show: true,
+                type: 'success',
+                title: 'Link Berhasil Dikirim',
+                message: 'Tautan dokumentasi dan laporan kegiatan PKM sudah berhasil dikirim untuk diperiksa lebih lanjut.',
+            });
             setFormData({
                 pkmId: '',
                 linkDokumentasi: '',
@@ -103,27 +122,15 @@ export default function SubmitDokumentasiLaporan() {
                         <h1 className="login-title">Submit Dokumentasi & Laporan</h1>
                         <p className="login-subtitle">Lengkapi form berikut untuk mengirim tautan dokumentasi kegiatan PKM.</p>
 
-                        {submitted ? (
-                            <div className="auth-success-box" aria-live="polite">
-                                <div className="auth-success-icon">
-                                    <i className="fa-solid fa-check"></i>
+                        <form onSubmit={handleSubmit} noValidate>
+                            {(Object.values(errors).some(Boolean) || (hasStartedSubmission && requiredSubmissionIssues.length > 0)) && (
+                                <div className="auth-error-box" aria-live="assertive">
+                                    <i className="fa-solid fa-circle-exclamation"></i>
+                                    <span>{requiredSubmissionIssues[0] ?? 'Form belum bisa dikirim. Masih ada kolom yang belum diisi, silakan lengkapi terlebih dahulu.'}</span>
                                 </div>
-                                <h2>Link telah berhasil terkirim</h2>
-                                <p>Dokumentasi dan laporan kegiatan PKM sudah berhasil dikirim. Silakan tunggu proses pemeriksaan berikutnya dari tim terkait.</p>
-                                <button type="button" className="btn-login" onClick={() => setSubmitted(false)}>
-                                    Kirim Lagi <i className="fa-solid fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} noValidate>
-                                {Object.values(errors).some(Boolean) && (
-                                    <div className="auth-error-box" aria-live="assertive">
-                                        <i className="fa-solid fa-circle-exclamation"></i>
-                                        <span>Form belum bisa dikirim. Masih ada kolom yang belum diisi, silakan lengkapi terlebih dahulu.</span>
-                                    </div>
-                                )}
+                            )}
 
-                                <div className="input-group">
+                            <div className="input-group">
                                     <label htmlFor="pkmSearch">Pilih Kegiatan PKM</label>
                                     <div className="input-wrapper input-wrapper-search">
                                         <input
@@ -175,9 +182,9 @@ export default function SubmitDokumentasiLaporan() {
                                     )}
                                     {errors.pkmId && <span className="invalid-feedback">{errors.pkmId}</span>}
                                     <span className="form-helper-text">Wajib diisi. Ketik nama kegiatan lalu pilih hasil yang sesuai.</span>
-                                </div>
+                            </div>
 
-                                <div className="input-group">
+                            <div className="input-group">
                                     <label htmlFor="linkDokumentasi">Link Dokumentasi</label>
                                     <div className="input-wrapper">
                                         <input
@@ -193,9 +200,9 @@ export default function SubmitDokumentasiLaporan() {
                                     </div>
                                     <span className="form-helper-text">Wajib diisi. Masukkan link dokumentasi kegiatan yang dapat diakses oleh reviewer.</span>
                                     {errors.linkDokumentasi && <span className="invalid-feedback">{errors.linkDokumentasi}</span>}
-                                </div>
+                            </div>
 
-                                <div className="input-group" style={{ marginBottom: '28px' }}>
+                            <div className="input-group" style={{ marginBottom: '28px' }}>
                                     <label htmlFor="linkLaporan">Link Laporan</label>
                                     <div className="input-wrapper">
                                         <input
@@ -211,21 +218,20 @@ export default function SubmitDokumentasiLaporan() {
                                     </div>
                                     <span className="form-helper-text">Wajib diisi. Masukkan link laporan akhir kegiatan.</span>
                                     {errors.linkLaporan && <span className="invalid-feedback">{errors.linkLaporan}</span>}
-                                </div>
+                            </div>
 
-                                <button type="submit" className="btn-login" disabled={processing}>
-                                    {processing ? (
-                                        <>
-                                            Memproses <i className="fa-solid fa-spinner fa-spin"></i>
-                                        </>
-                                    ) : (
-                                        <>
-                                            Kirim Link <i className="fa-solid fa-paper-plane"></i>
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                        )}
+                            <button type="submit" className="btn-login" disabled={isSubmitDisabled}>
+                                {processing ? (
+                                    <>
+                                        Memproses <i className="fa-solid fa-spinner fa-spin"></i>
+                                    </>
+                                ) : (
+                                    <>
+                                        Kirim Link <i className="fa-solid fa-paper-plane"></i>
+                                    </>
+                                )}
+                            </button>
+                        </form>
 
                     </div>
                 </div>
@@ -234,6 +240,14 @@ export default function SubmitDokumentasiLaporan() {
                     <i className="fa-solid fa-arrow-left"></i> Kembali ke Beranda
                 </Link>
             </div>
+
+            <ActionFeedbackDialog
+                show={feedbackDialog.show}
+                type={feedbackDialog.type}
+                title={feedbackDialog.title}
+                message={feedbackDialog.message}
+                onClose={() => setFeedbackDialog({ ...feedbackDialog, show: false })}
+            />
         </div>
     );
 }

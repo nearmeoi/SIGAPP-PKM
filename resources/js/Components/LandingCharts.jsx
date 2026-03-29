@@ -74,7 +74,9 @@ const yearlyTrendData = {
     ],
 };
 
-const yearlyTrendOptions = {
+// ---- Chart 2: Sebaran Status PKM Berdasarkan Titik Lokasi (Doughnut) ----
+// Segments correspond to the exact map marker locations + status
+const buildYearlyTrendOptions = (compactMobile = false) => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -83,8 +85,8 @@ const yearlyTrendOptions = {
             labels: {
                 usePointStyle: true,
                 pointStyle: 'circle',
-                padding: 20,
-                font: { size: 13, weight: '600', family: "'Segoe UI', sans-serif" },
+                padding: compactMobile ? 14 : 20,
+                font: { size: compactMobile ? 11 : 13, weight: '600', family: "'Segoe UI', sans-serif" },
                 color: COLORS.textMuted,
             },
         },
@@ -106,7 +108,7 @@ const yearlyTrendOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                font: { size: 12, weight: '600' },
+                font: { size: compactMobile ? 11 : 12, weight: '600' },
                 color: COLORS.textMuted,
             },
         },
@@ -115,17 +117,20 @@ const yearlyTrendOptions = {
             grid: { color: COLORS.grid },
             ticks: {
                 stepSize: 2,
-                font: { size: 12 },
+                font: { size: compactMobile ? 11 : 12 },
                 color: COLORS.textMuted,
             },
         },
     },
-};
+});
 
-// ---- Chart 2: Sebaran Status PKM Berdasarkan Titik Lokasi (Doughnut) ----
-// Segments correspond to the exact map marker locations + status
-const statusDistributionData = {
-    labels: [
+const buildStatusDistributionData = (compactMobile = false) => ({
+    labels: compactMobile ? [
+        'Kripik Pisang - Bira',
+        'Sanitasi - Tamalanrea Indah',
+        'Kegiatan Lainnya (Selesai)',
+        'Kegiatan Lainnya (Aktif)',
+    ] : [
         'Kripik Pisang - Bira (Selesai)',
         'Sanitasi Lingkungan - Tamalanrea Indah (Berlangsung)',
         'Kegiatan Lainnya (Selesai)',
@@ -145,22 +150,22 @@ const statusDistributionData = {
             hoverOffset: 14,
         },
     ],
-};
+});
 
-const statusDistributionOptions = {
+const buildStatusDistributionOptions = (compactMobile = false) => ({
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '62%',
+    cutout: compactMobile ? '66%' : '62%',
     plugins: {
         legend: {
             position: 'bottom',
             labels: {
                 usePointStyle: true,
                 pointStyle: 'circle',
-                padding: 16,
-                font: { size: 12, weight: '600', family: "'Segoe UI', sans-serif" },
+                padding: compactMobile ? 12 : 16,
+                font: { size: compactMobile ? 10 : 12, weight: '600', family: "'Segoe UI', sans-serif" },
                 color: COLORS.textMuted,
-                boxWidth: 10,
+                boxWidth: compactMobile ? 8 : 10,
             },
         },
         title: { display: false },
@@ -175,11 +180,15 @@ const statusDistributionOptions = {
             },
         },
     },
-};
+});
 
 // ---- Component ----
 
-export default function LandingCharts({ extraContent = null }) {
+export default function LandingCharts({ compactMobile = false }) {
+    const yearlyTrendOptions = buildYearlyTrendOptions(compactMobile);
+    const statusDistributionData = buildStatusDistributionData(compactMobile);
+    const statusDistributionOptions = buildStatusDistributionOptions(compactMobile);
+
     return (
         <section className="fintech-charts-section" id="visualisasi-data">
             <div className="fintech-panel-header">
@@ -218,8 +227,6 @@ export default function LandingCharts({ extraContent = null }) {
                         <Doughnut data={statusDistributionData} options={statusDistributionOptions} />
                     </div>
                 </div>
-
-                {extraContent}
             </div>
         </section>
     );

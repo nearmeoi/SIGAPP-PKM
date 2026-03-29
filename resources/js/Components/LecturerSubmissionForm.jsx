@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import Toast from './Toast';
+import ActionFeedbackDialog from './ActionFeedbackDialog';
+
+const getFilledTeamMembers = (members = []) => members.filter((member) => member.trim());
 
 export default function LecturerSubmissionForm({ onClose }) {
     const { data, setData, post, processing: inertiaProcessing, errors, setError, clearErrors, reset } = useForm({
@@ -35,7 +37,24 @@ export default function LecturerSubmissionForm({ onClose }) {
 
     // --- UI State ---
     const [mockProcessing, setMockProcessing] = useState(false);
-    const [toast, setToast] = useState({ show: false, type: 'success', title: '', message: '' });
+    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success', title: '', message: '' });
+    const requiredSubmissionIssues = [];
+
+    if (!data.judul_proyek.trim()) requiredSubmissionIssues.push('Judul proyek wajib diisi.');
+    if (!data.nama_dosen.trim()) requiredSubmissionIssues.push('Ketua kelompok wajib diisi.');
+    if (!data.lokasi.trim()) requiredSubmissionIssues.push('Lokasi pengabdian wajib diisi.');
+    if (
+        getFilledTeamMembers(data.dosen_terlibat).length === 0 &&
+        getFilledTeamMembers(data.staff_terlibat).length === 0 &&
+        getFilledTeamMembers(data.mahasiswa_terlibat).length === 0
+    ) {
+        requiredSubmissionIssues.push('Isi minimal satu nama anggota pada salah satu bagian tim pelaksana.');
+    }
+    if (!data.sumber_dana) requiredSubmissionIssues.push('Sumber dana wajib dipilih.');
+    if (!String(data.total_RAB).trim()) requiredSubmissionIssues.push('Total anggaran wajib diisi.');
+    if (!data.tanggal_mulai) requiredSubmissionIssues.push('Tanggal mulai wajib diisi.');
+    if (!data.tanggal_selesai) requiredSubmissionIssues.push('Tanggal selesai wajib diisi.');
+    if (!data.proposal) requiredSubmissionIssues.push('Proposal wajib diunggah.');
 
     // --- Submission Logic (MOCK FOR UI/UX TESTING) ---
     const handleSubmit = (e) => {
@@ -47,9 +66,22 @@ export default function LecturerSubmissionForm({ onClose }) {
         if (!data.judul_proyek) { setError('judul_proyek', 'Judul proyek wajib diisi'); hasErrors = true; }
         if (!data.nama_dosen) { setError('nama_dosen', 'Ketua kelompok wajib diisi'); hasErrors = true; }
         if (!data.lokasi) { setError('lokasi', 'Lokasi pengabdian wajib diisi'); hasErrors = true; }
+        if (
+            getFilledTeamMembers(data.dosen_terlibat).length === 0 &&
+            getFilledTeamMembers(data.staff_terlibat).length === 0 &&
+            getFilledTeamMembers(data.mahasiswa_terlibat).length === 0
+        ) {
+            setError('dosen_terlibat', 'Isi minimal satu anggota pada dosen, staf, atau mahasiswa.');
+            hasErrors = true;
+        }
+        if (!data.sumber_dana) { setError('sumber_dana', 'Sumber dana wajib dipilih.'); hasErrors = true; }
+        if (!String(data.total_RAB).trim()) { setError('total_RAB', 'Total anggaran wajib diisi.'); hasErrors = true; }
+        if (!data.tanggal_mulai) { setError('tanggal_mulai', 'Tanggal mulai wajib diisi.'); hasErrors = true; }
+        if (!data.tanggal_selesai) { setError('tanggal_selesai', 'Tanggal selesai wajib diisi.'); hasErrors = true; }
+        if (!data.proposal) { setError('proposal', 'Proposal wajib diunggah.'); hasErrors = true; }
 
         if (hasErrors) {
-            setToast({ show: true, type: 'error', title: 'Validasi Gagal', message: 'Harap periksa kembali isian yang wajib diisi (bergaris merah).' });
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Siap Dikirim', message: 'Masih ada data wajib yang belum lengkap. Silakan periksa kembali bagian yang diperlukan.' });
             return;
         }
 
@@ -61,17 +93,29 @@ export default function LecturerSubmissionForm({ onClose }) {
             setMockProcessing(false);
 
             // 3. Show Success Toast
-            setToast({ show: true, type: 'success', title: 'Berhasil', message: 'Pengajuan PKM Anda berhasil dikirim.' });
+            setFeedbackDialog({ show: true, type: 'success', title: 'Pengajuan Berhasil Dikirim', message: 'Pengajuan PKM Anda sudah berhasil dikirim dan siap diproses lebih lanjut.' });
 
-            // Close modal after toast clears (3s)
             setTimeout(() => {
                 reset();
-                onClose();
-            }, 3000);
+            }, 300);
         }, 1500);
     };
 
     const isProcessing = inertiaProcessing || mockProcessing;
+    const hasStartedSubmission = Boolean(
+        data.judul_proyek.trim() ||
+        data.nama_dosen.trim() ||
+        data.lokasi.trim() ||
+        data.sumber_dana ||
+        String(data.total_RAB).trim() ||
+        data.tanggal_mulai ||
+        data.tanggal_selesai ||
+        data.proposal ||
+        getFilledTeamMembers(data.dosen_terlibat).length ||
+        getFilledTeamMembers(data.staff_terlibat).length ||
+        getFilledTeamMembers(data.mahasiswa_terlibat).length
+    );
+    const isSubmitDisabled = isProcessing || requiredSubmissionIssues.length > 0;
 
     return (
         <div className="fintech-modal-overlay">
@@ -376,23 +420,37 @@ export default function LecturerSubmissionForm({ onClose }) {
                     </div>
 
                     <div className="fintech-modal-footer">
+                        {hasStartedSubmission && requiredSubmissionIssues.length > 0 && (
+                            <div className="form-validation-alert" style={{ width: '100%', marginTop: 0, marginBottom: '12px' }}>
+                                <i className="fa-solid fa-triangle-exclamation"></i>
+                                <div>
+                                    <strong>Form belum bisa dikirim</strong>
+                                    <p>{requiredSubmissionIssues[0]}</p>
+                                </div>
+                            </div>
+                        )}
                         <button type="button" className="btn-modal-cancel" onClick={onClose} disabled={isProcessing}>
                             Batal
                         </button>
-                        <button type="submit" className={`btn-modal-submit ${isProcessing ? 'btn-loading' : ''}`} disabled={isProcessing}>
+                        <button type="submit" className={`btn-modal-submit ${isProcessing ? 'btn-loading' : ''}`} disabled={isSubmitDisabled}>
                             Kirim Pengajuan <i className="fa-solid fa-paper-plane"></i>
                         </button>
                     </div>
                 </form>
             </div>
 
-            {/* Premium Toast Component Rendered Here */}
-            <Toast
-                show={toast.show}
-                type={toast.type}
-                title={toast.title}
-                message={toast.message}
-                onClose={() => setToast({ ...toast, show: false })}
+            <ActionFeedbackDialog
+                show={feedbackDialog.show}
+                type={feedbackDialog.type}
+                title={feedbackDialog.title}
+                message={feedbackDialog.message}
+                onClose={() => {
+                    const wasSuccess = feedbackDialog.type === 'success';
+                    setFeedbackDialog({ ...feedbackDialog, show: false });
+                    if (wasSuccess) {
+                        onClose();
+                    }
+                }}
             />
         </div>
     );

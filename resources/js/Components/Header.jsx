@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, usePage } from '@inertiajs/react';
 
 const menuItems = [
     {
@@ -50,6 +51,8 @@ const menuItems = [
 const Header = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [submenuOpen, setSubmenuOpen] = useState(null);
+    const { url = '' } = usePage();
+    const showLogoutButton = url.startsWith('/login/dosen') || url.startsWith('/login/masyarakat');
 
     const toggleMobileMenu = () => {
         setMobileMenuOpen((prev) => {
@@ -140,9 +143,21 @@ const Header = () => {
                 </nav>
 
                 <div className="header-controls">
-                    <a href="/login" className="btn-primary" style={{ padding: '8px 20px', fontSize: '14px', borderRadius: '99px', textDecoration: 'none' }}>
-                        Login
-                    </a>
+                    {showLogoutButton ? (
+                        <Link
+                            href="/logout"
+                            method="post"
+                            as="button"
+                            className="btn-primary"
+                            style={{ padding: '8px 20px', fontSize: '14px', borderRadius: '99px', textDecoration: 'none' }}
+                        >
+                            Logout
+                        </Link>
+                    ) : (
+                        <a href="/login" className="btn-primary" style={{ padding: '8px 20px', fontSize: '14px', borderRadius: '99px', textDecoration: 'none' }}>
+                            Login
+                        </a>
+                    )}
                     <button type="button" className="header-control-button header-control-primary" aria-label="Quick menu">
                         <i className="fa-solid fa-align-justify"></i>
                     </button>

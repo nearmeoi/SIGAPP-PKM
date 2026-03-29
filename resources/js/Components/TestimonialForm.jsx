@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useForm } from '@inertiajs/react';
-import Toast from './Toast';
+import ActionFeedbackDialog from './ActionFeedbackDialog';
 import '../../css/masyarakat-form.css'; // Consistent styling with GeneralSubmissionForm
 
 export default function TestimonialForm({ onClose }) {
@@ -13,7 +13,21 @@ export default function TestimonialForm({ onClose }) {
     });
 
     const [mockProcessing, setMockProcessing] = useState(false);
-    const [toast, setToast] = useState({ show: false, type: 'success', title: '', message: '' });
+    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success', title: '', message: '' });
+    const requiredSubmissionIssues = [];
+
+    if (!data.nama.trim()) requiredSubmissionIssues.push('Nama lengkap wajib diisi.');
+    if (!data.jabatan.trim()) requiredSubmissionIssues.push('Jabatan atau peran wajib diisi.');
+    if (data.rating === 0) requiredSubmissionIssues.push('Rating wajib dipilih sebelum testimoni dikirim.');
+    if (!data.ulasan.trim()) requiredSubmissionIssues.push('Ulasan testimoni wajib diisi.');
+    const hasStartedSubmission = Boolean(
+        data.nama.trim() ||
+        data.jabatan.trim() ||
+        data.rating > 0 ||
+        data.ulasan.trim()
+    );
+
+    const isSubmitDisabled = inertiaProcessing || mockProcessing || requiredSubmissionIssues.length > 0;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -26,22 +40,16 @@ export default function TestimonialForm({ onClose }) {
         if (!data.ulasan) { setError('ulasan', 'Ulasan testimoni wajib diisi'); hasErrors = true; }
 
         if (hasErrors) {
-            setToast({ show: true, type: 'error', title: 'Validasi Gagal', message: 'Harap lengkapi semua field yang diwajibkan.' });
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Siap Dikirim', message: 'Lengkapi seluruh field wajib sebelum mengirim testimoni.' });
             return;
         }
 
         setMockProcessing(true);
         setTimeout(() => {
             setMockProcessing(false);
-            setToast({ show: true, type: 'success', title: 'Berhasil', message: 'Testimoni Anda berhasil dikirim.' });
-            setTimeout(() => {
-                reset();
-                onClose();
-            }, 3000);
+            setFeedbackDialog({ show: true, type: 'success', title: 'Testimoni Berhasil Dikirim', message: 'Terima kasih, testimoni Anda sudah berhasil kami terima.' });
         }, 1500);
     };
-
-    const isProcessing = inertiaProcessing || mockProcessing;
 
     const renderInteractiveStars = () => {
         const stars = [];
@@ -140,9 +148,18 @@ export default function TestimonialForm({ onClose }) {
                         </div>
 
                         <div className="form-actions" style={{ borderTop: 'none', paddingTop: '10px' }}>
-                            <button type="button" className="btn-form-cancel" onClick={onClose} disabled={isProcessing}>Batal</button>
-                            <button type="submit" className={`btn-form-submit ${isProcessing ? 'btn-loading' : ''}`} disabled={isProcessing}>
-                                {isProcessing ? (
+                            {hasStartedSubmission && requiredSubmissionIssues.length > 0 && (
+                                <div className="form-validation-alert" style={{ marginTop: 0, marginBottom: '12px' }}>
+                                    <i className="fa-solid fa-triangle-exclamation"></i>
+                                    <div>
+                                        <strong>Testimoni belum bisa dikirim</strong>
+                                        <p>{requiredSubmissionIssues[0]}</p>
+                                    </div>
+                                </div>
+                            )}
+                            <button type="button" className="btn-form-cancel" onClick={onClose} disabled={inertiaProcessing || mockProcessing}>Batal</button>
+                            <button type="submit" className={`btn-form-submit ${inertiaProcessing || mockProcessing ? 'btn-loading' : ''}`} disabled={isSubmitDisabled}>
+                                {inertiaProcessing || mockProcessing ? (
                                     <><i className="fa-solid fa-spinner fa-spin"></i> Memproses...</>
                                 ) : (
                                     <><i className="fa-solid fa-paper-plane"></i> Kirim Testimoni</>
@@ -153,12 +170,19 @@ export default function TestimonialForm({ onClose }) {
                 </div>
             </div>
 
-            <Toast
-                show={toast.show}
-                type={toast.type}
-                title={toast.title}
-                message={toast.message}
-                onClose={() => setToast({ ...toast, show: false })}
+            <ActionFeedbackDialog
+                show={feedbackDialog.show}
+                type={feedbackDialog.type}
+                title={feedbackDialog.title}
+                message={feedbackDialog.message}
+                onClose={() => {
+                    const wasSuccess = feedbackDialog.type === 'success';
+                    setFeedbackDialog({ ...feedbackDialog, show: false });
+                    if (wasSuccess) {
+                        reset();
+                        onClose();
+                    }
+                }}
             />
         </div>,
         document.body

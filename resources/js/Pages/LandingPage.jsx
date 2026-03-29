@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Layout from '@/Layouts/DefaultLayout';
-import MobileTabBar from '@/Components/MobileTabBar';
-import BottomSheet from '@/Components/BottomSheet';
 import LandingCharts from '@/Components/LandingCharts';
 import DocumentationGallery from '@/Components/DocumentationGallery';
+import LandingPageMobile from '@/Components/LandingPageMobile';
 import TestimonialSidebarDisplay from '@/Components/TestimonialSidebarDisplay';
+import ActionFeedbackDialog from '@/Components/ActionFeedbackDialog';
+import { resolvePublicPkmData } from '@/data/sigapData';
 
 import '../../css/landing.css';
 
@@ -49,6 +50,26 @@ function MapEvents({ isPickingLocation, onLocationPicked, setSidebarPkm }) {
             }
         },
     });
+    return null;
+}
+
+function MapSizeInvalidator({ watchKey }) {
+    const map = useMap();
+
+    useEffect(() => {
+        const runInvalidate = () => {
+            map.invalidateSize({ animate: false, pan: false });
+        };
+
+        const frameId = window.requestAnimationFrame(runInvalidate);
+        const timeoutId = window.setTimeout(runInvalidate, 180);
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            window.clearTimeout(timeoutId);
+        };
+    }, [map, watchKey]);
+
     return null;
 }
 
@@ -183,54 +204,53 @@ const PublicAccessNoticeCard = () => {
     );
 };
 
+const MapSummaryOverlay = ({ totalPkm, totalSelesai, totalBerlangsung, isHidden }) => (
+    <div className={`landing-map-info-overlay ${isHidden ? 'is-hidden' : ''}`} aria-label="Ringkasan peta PKM">
+        <div className="landing-map-info-legend">
+            <div className="legend-title">LEGENDA</div>
+            <div className="legend-item">
+                <span className="legend-icon" style={{ backgroundColor: '#16a34a' }}></span>
+                <span className="legend-text">PKM Selesai</span>
+            </div>
+            <div className="legend-item">
+                <span className="legend-icon" style={{ backgroundColor: '#f59e0b' }}></span>
+                <span className="legend-text">PKM Berlangsung</span>
+            </div>
+        </div>
+
+        <div className="landing-map-floating-stats">
+            <div className="landing-map-stat-card compact">
+                <span className="landing-map-stat-label">Total PKM</span>
+                <strong className="landing-map-stat-value">{totalPkm}</strong>
+            </div>
+            <div className="landing-map-stat-card compact">
+                <span className="landing-map-stat-label">PKM Selesai</span>
+                <strong className="landing-map-stat-value">{totalSelesai}</strong>
+            </div>
+            <div className="landing-map-stat-card compact">
+                <span className="landing-map-stat-label">PKM Berlangsung</span>
+                <strong className="landing-map-stat-value">{totalBerlangsung}</strong>
+            </div>
+        </div>
+    </div>
+);
+
 // ----------------------------------------------------
 // Main Landing Page Component
 // ----------------------------------------------------
 
-export default function LandingPage() {
-    const [pkmData, setPkmData] = useState([
-        {
-            id: 1,
-            nama: 'Pemberdayaan UMKM Kripik Pisang',
-            tahun: 2025,
-            status: 'selesai',
-            deskripsi: 'Program pendampingan pemasaran digital dan perbaikan kemasan untuk industri rumah tangga kripik pisang di wilayah Tamalanrea.',
-            thumbnail: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400',
-            laporan: '',
-            dokumentasi: 'https://drive.google.com/',
-            provinsi: 'Sulawesi Selatan',
-            kabupaten: 'Makassar',
-            kecamatan: 'Tamalanrea',
-            desa: 'Bira',
-            lat: -5.135,
-            lng: 119.495,
-        },
-        {
-            id: 2,
-            nama: 'Edukasi Sanitasi Lingkungan',
-            tahun: 2026,
-            status: 'berlangsung',
-            deskripsi: 'Penyuluhan mengenai pentingnya memilah sampah organik dan non-organik serta pembuatan bank sampah mandiri tingkat RW.',
-            thumbnail: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=400',
-            laporan: '',
-            dokumentasi: '',
-            provinsi: 'Sulawesi Selatan',
-            kabupaten: 'Makassar',
-            kecamatan: 'Tamalanrea',
-            desa: 'Tamalanrea Indah',
-            lat: -5.13,
-            lng: 119.485,
-        },
-    ]);
+export default function LandingPage({ publicPkmData = null }) {
+    const [isMobileViewport, setIsMobileViewport] = useState(() => (
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+    ));
+    const [pkmData, setPkmData] = useState(() => resolvePublicPkmData(publicPkmData));
 
     const [sidebarPkm, setSidebarPkm] = useState(null);
-    const [isMenuListOpen, setIsMenuListOpen] = useState(false);
-    const [mobileActiveTab, setMobileActiveTab] = useState('peta');
-    const [mobileBottomSheet, setMobileBottomSheet] = useState(null); // 'detail' | 'kegiatan' | null
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [isPickingLocation, setIsPickingLocation] = useState(false);
     const [isModalHiddenTemporarily, setIsModalHiddenTemporarily] = useState(false);
+    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success', title: '', message: '' });
     const [formData, setFormData] = useState({
         id: null, nama: '', tahun: 2026, status: 'berlangsung', deskripsi: '', thumbnail: '', laporan: '', dokumentasi: '', provinsi: '', kabupaten: '', kecamatan: '', desa: '', lat: '', lng: '',
     });
@@ -239,7 +259,6 @@ export default function LandingPage() {
     const [expandedSection, setExpandedSection] = useState(null); // 'kegiatan' | null
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkFormData, setLinkFormData] = useState({ pkmId: '', linkDokumentasi: '', linkLaporan: '' });
-    const [linkFormSubmitted, setLinkFormSubmitted] = useState(false);
 
     const toggleSection = (section) => {
         setExpandedSection(prev => prev === section ? null : section);
@@ -249,14 +268,43 @@ export default function LandingPage() {
         setLinkFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const dataEntryIssues = [];
+    if (!formData.nama.trim()) dataEntryIssues.push('Nama kegiatan PKM wajib diisi.');
+    if (!String(formData.tahun).trim()) dataEntryIssues.push('Tahun kegiatan wajib dipilih.');
+    if (!formData.status) dataEntryIssues.push('Status kegiatan wajib dipilih.');
+    if (!formData.deskripsi.trim()) dataEntryIssues.push('Deskripsi kegiatan wajib diisi.');
+    if (!formData.id && !formData.thumbnail) dataEntryIssues.push('Thumbnail gambar wajib dipilih untuk data PKM baru.');
+    if (!formData.provinsi.trim()) dataEntryIssues.push('Provinsi wajib diisi.');
+    if (!formData.kabupaten.trim()) dataEntryIssues.push('Kabupaten atau kota wajib diisi.');
+    if (!formData.kecamatan.trim()) dataEntryIssues.push('Kecamatan wajib diisi.');
+    if (!formData.desa.trim()) dataEntryIssues.push('Desa atau kelurahan wajib diisi.');
+    if (!String(formData.lat).trim() || !String(formData.lng).trim()) dataEntryIssues.push('Lokasi pada peta wajib dipilih terlebih dahulu.');
+    const hasStartedDataEntry = Boolean(
+        formData.nama.trim() ||
+        formData.deskripsi.trim() ||
+        formData.thumbnail ||
+        formData.provinsi.trim() ||
+        formData.kabupaten.trim() ||
+        formData.kecamatan.trim() ||
+        formData.desa.trim() ||
+        String(formData.lat).trim() ||
+        String(formData.lng).trim()
+    );
+
+    const linkSubmissionIssues = [];
+    if (!linkFormData.pkmId) linkSubmissionIssues.push('Pilih kegiatan PKM terlebih dahulu.');
+    if (!linkFormData.linkDokumentasi.trim() && !linkFormData.linkLaporan.trim()) linkSubmissionIssues.push('Isi minimal satu tautan dokumentasi atau laporan sebelum mengirim.');
+    const hasStartedLinkSubmission = Boolean(linkFormData.pkmId || linkFormData.linkDokumentasi.trim() || linkFormData.linkLaporan.trim());
+
     const handleLinkFormSubmit = (e) => {
         e.preventDefault();
-        if (!linkFormData.pkmId) {
-            alert('Silakan pilih kegiatan terlebih dahulu.');
-            return;
-        }
-        if (!linkFormData.linkDokumentasi && !linkFormData.linkLaporan) {
-            alert('Silakan isi minimal satu link.');
+        if (linkSubmissionIssues.length > 0) {
+            setFeedbackDialog({
+                show: true,
+                type: 'error',
+                title: 'Link Belum Bisa Dikirim',
+                message: linkSubmissionIssues[0],
+            });
             return;
         }
         // Update the pkmData with the submitted links
@@ -270,35 +318,18 @@ export default function LandingPage() {
             }
             return item;
         }));
-        setLinkFormSubmitted(true);
-        setTimeout(() => {
-            setLinkFormSubmitted(false);
-            setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' });
-            setIsLinkModalOpen(false);
-        }, 2500);
+        setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' });
+        setIsLinkModalOpen(false);
+        setFeedbackDialog({
+            show: true,
+            type: 'success',
+            title: 'Link Berhasil Dikirim',
+            message: 'Tautan dokumentasi dan laporan sudah berhasil diperbarui pada kegiatan PKM terkait.',
+        });
     };
 
     const handleMarkerClick = (pkm) => {
-        if (window.innerWidth <= 768) {
-            setSidebarPkm(pkm);
-            setMobileBottomSheet('detail');
-        } else {
-            setSidebarPkm(pkm);
-        }
-    };
-
-    const handleMobileTabChange = (tabId) => {
-        setMobileActiveTab(tabId);
-        if (tabId === 'kegiatan') {
-            setMobileBottomSheet('kegiatan');
-        }
-    };
-
-    const closeMobileBottomSheet = () => {
-        setMobileBottomSheet(null);
-        if (mobileActiveTab === 'kegiatan') {
-            setMobileActiveTab('peta');
-        }
+        setSidebarPkm(pkm);
     };
 
     const handleEditPKM = (pkm) => {
@@ -343,8 +374,13 @@ export default function LandingPage() {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        if (!formData.id && !formData.thumbnail) {
-            alert('Silakan pilih thumbnail gambar terlebih dahulu.');
+        if (dataEntryIssues.length > 0) {
+            setFeedbackDialog({
+                show: true,
+                type: 'error',
+                title: 'Data Belum Bisa Disimpan',
+                message: dataEntryIssues[0],
+            });
             return;
         }
 
@@ -356,12 +392,50 @@ export default function LandingPage() {
         }
 
         handleCloseModal();
-        setIsSuccessModalOpen(true);
+        setFeedbackDialog({
+            show: true,
+            type: 'success',
+            title: 'Data Berhasil Disimpan',
+            message: 'Data PKM berhasil disimpan ke peta dan siap ditampilkan pada dashboard.',
+        });
     };
 
     const totalPkm = pkmData.length;
-    const totalKabupaten = new Set(pkmData.map((item) => item.kabupaten)).size;
+    const totalSelesai = pkmData.filter((item) => item.status === 'selesai').length;
     const totalBerlangsung = pkmData.filter((item) => item.status === 'berlangsung').length;
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const mediaQuery = window.matchMedia('(max-width: 768px)');
+        const updateViewport = (event) => {
+            setIsMobileViewport(event.matches);
+        };
+
+        setIsMobileViewport(mediaQuery.matches);
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', updateViewport);
+            return () => mediaQuery.removeEventListener('change', updateViewport);
+        }
+
+        mediaQuery.addListener(updateViewport);
+        return () => mediaQuery.removeListener(updateViewport);
+    }, []);
+
+    if (isMobileViewport) {
+        return (
+            <Layout
+                mainClassName="site-main-content site-main-content--landing-balanced"
+                mainStyle={{ flex: '0 0 auto' }}
+            >
+                <Head title="Beranda - P3M Poltekpar Makassar" />
+                <LandingPageMobile pkmData={pkmData} />
+            </Layout>
+        );
+    }
 
     return (
         <Layout
@@ -371,212 +445,127 @@ export default function LandingPage() {
             <Head title="Beranda - P3M Poltekpar Makassar" />
 
             <div className="landing-page">
-                <div className="landing-main-layout">
-                    {/* 1. Interactive Map Section */}
-                    <div className={`landing-map-column ${mobileActiveTab !== 'peta' ? 'mobile-hidden' : ''}`}>
-                        <section className="fintech-map-section" id="peta-sebaran">
-                            <div className="fintech-panel-header">
-                                <h2 className="fintech-panel-title">Peta Sebaran Pengabdian PKM <span className="text-blue">Poltekpar Makassar</span></h2>
-                            </div>
+                <div className="landing-map-row">
+                    <section className="fintech-map-section landing-map-panel" id="peta-sebaran">
+                        <div className="fintech-panel-header">
+                            <h2 className="fintech-panel-title">Peta Sebaran Pengabdian PKM <span className="text-blue">Poltekpar Makassar</span></h2>
+                        </div>
 
-                            <div className={`map-picking-mode-container fintech-map-stretch-container ${isPickingLocation ? 'map-picking-mode' : ''}`}>
-                                <div className="landing-map-wrapper map-section-boxed fintech-map-stretch-container" style={{ margin: 0, padding: 0 }}>
-                                    <div className="map-wrapper-boxed fintech-map-inner" style={{ overflow: 'hidden', position: 'relative' }}>
+                        <div className={`landing-map-shell map-picking-mode-container ${isPickingLocation ? 'map-picking-mode' : ''}`}>
+                            <div className="map-wrapper-boxed landing-map-canvas" style={{ overflow: 'hidden', position: 'relative' }}>
 
-                                        <MapSearchWidget pkmData={pkmData} onSelectPkm={(pkm) => setSidebarPkm(pkm)} isHidden={!!sidebarPkm} />
+                                <MapSearchWidget
+                                    pkmData={pkmData}
+                                    onSelectPkm={(pkm) => {
+                                        setSidebarPkm(pkm);
+                                    }}
+                                    isHidden={!!sidebarPkm}
+                                />
 
-                                        <MapContainer
-                                            center={[-2.5, 118]}
-                                            zoom={5}
-                                            minZoom={4}
-                                            maxBounds={[[-15, 90], [10, 145]]}
-                                            className="map-container"
-                                        >
-                                            <TileLayer
-                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                            />
-                                            {pkmData.map((pkm) => (
-                                                <Marker
-                                                    key={pkm.id}
-                                                    position={[pkm.lat, pkm.lng]}
-                                                    icon={createCustomIcon(pkm.status)}
-                                                    eventHandlers={{ click: () => handleMarkerClick(pkm) }}
-                                                />
-                                            ))}
-                                            <MapEvents
-                                                isPickingLocation={isPickingLocation}
-                                                onLocationPicked={onLocationPicked}
-                                                setSidebarPkm={setSidebarPkm}
-                                            />
-                                        </MapContainer>
+                                <MapContainer
+                                    center={[-2.5, 118]}
+                                    zoom={5}
+                                    minZoom={4}
+                                    maxBounds={[[-15, 90], [10, 145]]}
+                                    className="map-container"
+                                    style={{ width: '100%', height: '100%' }}
+                                >
+                                    <MapSizeInvalidator watchKey={`${sidebarPkm?.id ?? 'none'}-${pkmData.length}`} />
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                    {pkmData.map((pkm) => (
+                                        <Marker
+                                            key={pkm.id}
+                                            position={[pkm.lat, pkm.lng]}
+                                            icon={createCustomIcon(pkm.status)}
+                                            eventHandlers={{ click: () => handleMarkerClick(pkm) }}
+                                        />
+                                    ))}
+                                    <MapEvents
+                                        isPickingLocation={isPickingLocation}
+                                        onLocationPicked={onLocationPicked}
+                                        setSidebarPkm={setSidebarPkm}
+                                    />
+                                </MapContainer>
 
-                                        <div className="landing-map-bottom-overlay">
-                                            <div className="fintech-map-legend">
-                                                <div className="legend-title">LEGENDA:</div>
-                                                <div className="legend-item">
-                                                    <span className="legend-icon" style={{ backgroundColor: '#16a34a' }}></span>
-                                                    <span className="legend-text">PKM Selesai</span>
-                                                </div>
-                                                <div className="legend-item">
-                                                    <span className="legend-icon" style={{ backgroundColor: '#f59e0b' }}></span>
-                                                    <span className="legend-text">PKM Berlangsung</span>
-                                                </div>
-                                            </div>
+                                <MapSummaryOverlay
+                                    totalPkm={totalPkm}
+                                    totalSelesai={totalSelesai}
+                                    totalBerlangsung={totalBerlangsung}
+                                    isHidden={!!sidebarPkm}
+                                />
 
-                                            <div className="landing-map-stats">
-                                                <div className="landing-map-stat-card">
-                                                    <span className="landing-map-stat-label">Total PKM</span>
-                                                    <strong className="landing-map-stat-value">{totalPkm}</strong>
-                                                </div>
-                                                <div className="landing-map-stat-card">
-                                                    <span className="landing-map-stat-label">Kab/Kota</span>
-                                                    <strong className="landing-map-stat-value">{totalKabupaten}</strong>
-                                                </div>
-                                                <div className="landing-map-stat-card">
-                                                    <span className="landing-map-stat-label">Berlangsung</span>
-                                                    <strong className="landing-map-stat-value">{totalBerlangsung}</strong>
-                                                </div>
-                                            </div>
-                                            <div className="landing-map-bottom-spacer" aria-hidden="true"></div>
-                                        </div>
-
-                                        <div className={`map-overlay ${sidebarPkm ? 'active' : ''}`} onClick={() => setSidebarPkm(null)}></div>
+                                <div className={`map-overlay ${sidebarPkm ? 'active' : ''}`} onClick={() => setSidebarPkm(null)}></div>
 
 
-                                        <aside className={`sidebar ${!sidebarPkm ? 'sidebar-hidden' : ''}`}>
-                                            <div className="dashboard-content" style={{ position: 'relative' }}>
-                                                {sidebarPkm && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => setSidebarPkm(null)}
-                                                            className="sidebar-close-button"
-                                                            title="Tutup Detail"
-                                                        >
-                                                            <i className="fa-solid fa-xmark" style={{ fontSize: '16px' }}></i>
-                                                        </button>
-                                                        <div className="location-card">
-                                                            <div
-                                                                className={`card-image-wrapper ${sidebarPkm.thumbnail ? 'has-image' : ''}`}
-                                                                style={sidebarPkm.thumbnail ? { backgroundImage: `url(${sidebarPkm.thumbnail})` } : {}}
-                                                            >
-                                                                {!sidebarPkm.thumbnail && <i className="fa-solid fa-image"></i>}
-                                                            </div>
+                                <aside className={`sidebar ${!sidebarPkm ? 'sidebar-hidden' : ''}`}>
+                                    <div className="dashboard-content" style={{ position: 'relative' }}>
+                                        {sidebarPkm && (
+                                            <>
+                                                <button
+                                                    onClick={() => setSidebarPkm(null)}
+                                                    className="sidebar-close-button"
+                                                    title="Tutup Detail"
+                                                >
+                                                    <i className="fa-solid fa-xmark" style={{ fontSize: '16px' }}></i>
+                                                </button>
+                                                <div className="location-card">
+                                                    <div
+                                                        className={`card-image-wrapper ${sidebarPkm.thumbnail ? 'has-image' : ''}`}
+                                                        style={sidebarPkm.thumbnail ? { backgroundImage: `url(${sidebarPkm.thumbnail})` } : {}}
+                                                    >
+                                                        {!sidebarPkm.thumbnail && <i className="fa-solid fa-image"></i>}
+                                                    </div>
 
-                                                            <div className="card-body">
-                                                                <div className="card-header-flex">
-                                                                    <h2 className="card-title">{sidebarPkm.nama}</h2>
-                                                                    <span className="card-year">{sidebarPkm.tahun}</span>
-                                                                </div>
-
-                                                                <div className={`card-status ${getStatusBadge(sidebarPkm.status)}`}>
-                                                                    <i className={`fa-solid ${getStatusIcon(sidebarPkm.status)}`}></i> {getStatusText(sidebarPkm.status)}
-                                                                </div>
-
-                                                                <p className="card-description">{sidebarPkm.deskripsi}</p>
-
-                                                                <DocumentationGallery status={sidebarPkm.status} />
-                                                                <TestimonialSidebarDisplay status={sidebarPkm.status} />
-
-                                                                <div className="card-location">
-                                                                    <i className="fa-solid fa-map-pin"></i> {sidebarPkm.desa}, Kec. {sidebarPkm.kecamatan},{' '}
-                                                                    {sidebarPkm.kabupaten}, {sidebarPkm.provinsi}
-                                                                </div>
-                                                            </div>
+                                                    <div className="card-body">
+                                                        <div className="card-header-flex">
+                                                            <h2 className="card-title">{sidebarPkm.nama}</h2>
+                                                            <span className="card-year">{sidebarPkm.tahun}</span>
                                                         </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </aside>
+
+                                                        <div className={`card-status ${getStatusBadge(sidebarPkm.status)}`}>
+                                                            <i className={`fa-solid ${getStatusIcon(sidebarPkm.status)}`}></i> {getStatusText(sidebarPkm.status)}
+                                                        </div>
+
+                                                        <p className="card-description">{sidebarPkm.deskripsi}</p>
+
+                                                        <DocumentationGallery status={sidebarPkm.status} />
+                                                        <TestimonialSidebarDisplay status={sidebarPkm.status} />
+
+                                                        <div className="card-location">
+                                                            <i className="fa-solid fa-map-pin"></i> {sidebarPkm.desa}, Kec. {sidebarPkm.kecamatan},{' '}
+                                                            {sidebarPkm.kabupaten}, {sidebarPkm.provinsi}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-                                </div>
+                                </aside>
                             </div>
-                        </section>
+                        </div>
+                    </section>
+                </div>
+
+                <div className="landing-insight-layout">
+                    <div className="landing-insight-left">
+                        <div className="landing-insight-card landing-dashboard-card">
+                            <LandingCharts />
+                        </div>
                     </div>
 
-                    {/* 2. Data Visualization Charts Section */}
-                    <div className={`landing-charts-column ${mobileActiveTab !== 'dashboard' ? 'mobile-hidden' : ''}`}>
-                        <LandingCharts extraContent={<PublicAccessNoticeCard />} />
+                    <div className="landing-insight-right landing-dashboard-companion">
+                        <div className="landing-access-merged-card">
+                            <PublicAccessNoticeCard />
+                        </div>
                     </div>
                 </div>
 
                 {/* Mobile Bottom Sheet — Location Detail */}
-                <BottomSheet
-                    isOpen={mobileBottomSheet === 'detail'}
-                    onClose={() => { closeMobileBottomSheet(); setSidebarPkm(null); }}
-                    title={sidebarPkm?.nama}
-                >
-                    {sidebarPkm && (
-                        <div className="mobile-detail-content">
-                            <div className="mobile-detail-image" style={sidebarPkm.thumbnail ? { backgroundImage: `url(${sidebarPkm.thumbnail})` } : {}}>
-                                {!sidebarPkm.thumbnail && <i className="fa-solid fa-image" style={{ fontSize: '2rem', color: '#cbd5e1' }}></i>}
-                            </div>
-                            <div className="mobile-detail-body">
-                                <div className="mobile-detail-meta">
-                                    <span className={`card-status ${getStatusBadge(sidebarPkm.status)}`}>
-                                        <i className={`fa-solid ${getStatusIcon(sidebarPkm.status)}`}></i> {getStatusText(sidebarPkm.status)}
-                                    </span>
-                                    <span className="card-year">{sidebarPkm.tahun}</span>
-                                </div>
-                                <p className="mobile-detail-desc">{sidebarPkm.deskripsi}</p>
-
-                                <DocumentationGallery status={sidebarPkm.status} />
-                                <TestimonialSidebarDisplay status={sidebarPkm.status} />
-
-                                <div className="mobile-detail-location">
-                                    <i className="fa-solid fa-map-pin"></i>
-                                    <span>{sidebarPkm.desa}, Kec. {sidebarPkm.kecamatan}, {sidebarPkm.kabupaten}, {sidebarPkm.provinsi}</span>
-                                </div>
-                                <div className="mobile-detail-actions">
-                                    <button className="mobile-action-btn primary" onClick={() => window.open(`https://maps.google.com/?q=${sidebarPkm.lat},${sidebarPkm.lng}`)}>
-                                        <i className="fa-solid fa-location-arrow"></i> Rute
-                                    </button>
-                                    <button className="mobile-action-btn secondary" onClick={() => sidebarPkm.laporan && window.open(sidebarPkm.laporan)} disabled={!sidebarPkm.laporan}>
-                                        <i className="fa-solid fa-file-alt"></i> Laporan
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </BottomSheet>
 
                 {/* Mobile Bottom Sheet — Daftar Kegiatan */}
-                <BottomSheet
-                    isOpen={mobileBottomSheet === 'kegiatan'}
-                    onClose={closeMobileBottomSheet}
-                    title="Daftar Kegiatan"
-                >
-                    <div className="mobile-kegiatan-list">
-                        {pkmData.map((pkm) => (
-                            <div
-                                key={pkm.id}
-                                className="mobile-kegiatan-item"
-                                onClick={() => {
-                                    setSidebarPkm(pkm);
-                                    setMobileBottomSheet('detail');
-                                    setMobileActiveTab('peta');
-                                }}
-                            >
-                                <div className="mobile-kegiatan-thumb" style={pkm.thumbnail ? { backgroundImage: `url(${pkm.thumbnail})` } : {}}>
-                                    {!pkm.thumbnail && <i className="fa-solid fa-image" style={{ color: '#cbd5e1', fontSize: '20px' }}></i>}
-                                </div>
-                                <div className="mobile-kegiatan-info">
-                                    <div className="mobile-kegiatan-name">{pkm.nama}</div>
-                                    <div className="mobile-kegiatan-loc">
-                                        <i className="fa-solid fa-location-dot"></i> {pkm.desa}, Kec. {pkm.kecamatan}
-                                    </div>
-                                    <div className="mobile-kegiatan-status">
-                                        <span className={`status-dot ${pkm.status}`}></span>
-                                        <span>{pkm.status === 'berlangsung' ? 'Berlangsung' : 'Selesai'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </BottomSheet>
-
-                {/* Mobile Bottom Tab Bar */}
-                <MobileTabBar activeTab={mobileActiveTab} onTabChange={handleMobileTabChange} />
 
                 {/* Data Entry Modals from existing Map structure */}
                 {isModalOpen && !isModalHiddenTemporarily && (
@@ -782,94 +771,88 @@ export default function LandingPage() {
                     </div>
                 )}
 
-                {isSuccessModalOpen && (
-                    <div className="modal-overlay" style={{ zIndex: 3000 }}>
-                        <div className="success-content">
-                            <div className="success-icon-container">
-                                <i className="fa-solid fa-check success-check"></i>
-                            </div>
-                            <h2 style={{ fontSize: '1.625rem', fontWeight: 700, margin: '0 0 12px 0' }}>Berhasil!</h2>
-                            <p style={{ color: '#64748b', marginBottom: '32px' }}>Data PKM berhasil disimpan ke peta.</p>
-                            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setIsSuccessModalOpen(false)}>
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Submit Link Dokumentasi & Laporan Modal */}
                 {isLinkModalOpen && (
                     <div className="modal-overlay">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h2>Submit Link Dokumentasi & Laporan</h2>
-                                <button className="close-btn" onClick={() => { setIsLinkModalOpen(false); setLinkFormSubmitted(false); setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' }); }}>
+                                <button className="close-btn" onClick={() => { setIsLinkModalOpen(false); setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' }); }}>
                                     <i className="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
 
-                            {linkFormSubmitted ? (
-                                <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-                                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                                        <i className="fa-solid fa-check" style={{ color: '#16a34a', fontSize: '32px' }}></i>
-                                    </div>
-                                    <h3 style={{ fontWeight: '700', fontSize: '20px', color: '#0f172a', marginBottom: '8px' }}>Link Berhasil Dikirim!</h3>
-                                    <p style={{ fontSize: '14px', color: '#64748b' }}>Data kegiatan telah diperbarui.</p>
+                            <form className="modal-body" onSubmit={handleLinkFormSubmit}>
+                                <div className="form-group">
+                                    <label htmlFor="linkPkmId">Pilih Kegiatan</label>
+                                    <select
+                                        id="linkPkmId"
+                                        value={linkFormData.pkmId}
+                                        onChange={(e) => handleLinkFormChange('pkmId', e.target.value)}
+                                        required
+                                    >
+                                        <option value="">-- Pilih Kegiatan --</option>
+                                        {pkmData.map(pkm => (
+                                            <option key={pkm.id} value={pkm.id}>{pkm.nama}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                            ) : (
-                                <form className="modal-body" onSubmit={handleLinkFormSubmit}>
-                                    <div className="form-group">
-                                        <label htmlFor="linkPkmId">Pilih Kegiatan</label>
-                                        <select
-                                            id="linkPkmId"
-                                            value={linkFormData.pkmId}
-                                            onChange={(e) => handleLinkFormChange('pkmId', e.target.value)}
-                                            required
-                                        >
-                                            <option value="">-- Pilih Kegiatan --</option>
-                                            {pkmData.map(pkm => (
-                                                <option key={pkm.id} value={pkm.id}>{pkm.nama}</option>
-                                            ))}
-                                        </select>
-                                    </div>
 
-                                    <div className="form-group">
-                                        <label htmlFor="linkDokumentasi">Link Dokumentasi</label>
-                                        <input
-                                            type="url"
-                                            id="linkDokumentasi"
-                                            value={linkFormData.linkDokumentasi}
-                                            onChange={(e) => handleLinkFormChange('linkDokumentasi', e.target.value)}
-                                            placeholder="https://drive.google.com/..."
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label htmlFor="linkLaporan">Link Laporan</label>
-                                        <input
-                                            type="url"
-                                            id="linkLaporan"
-                                            value={linkFormData.linkLaporan}
-                                            onChange={(e) => handleLinkFormChange('linkLaporan', e.target.value)}
-                                            placeholder="https://drive.google.com/..."
-                                        />
-                                    </div>
-                                </form>
-                            )}
-
-                            {!linkFormSubmitted && (
-                                <div className="modal-footer">
-                                    <button type="button" className="btn-secondary" onClick={() => { setIsLinkModalOpen(false); setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' }); }}>
-                                        Batal
-                                    </button>
-                                    <button type="button" className="btn-primary" onClick={handleLinkFormSubmit}>
-                                        <i className="fa-solid fa-paper-plane"></i> Kirim Link
-                                    </button>
+                                <div className="form-group">
+                                    <label htmlFor="linkDokumentasi">Link Dokumentasi</label>
+                                    <input
+                                        type="url"
+                                        id="linkDokumentasi"
+                                        value={linkFormData.linkDokumentasi}
+                                        onChange={(e) => handleLinkFormChange('linkDokumentasi', e.target.value)}
+                                        placeholder="https://drive.google.com/..."
+                                    />
                                 </div>
-                            )}
+
+                                <div className="form-group">
+                                    <label htmlFor="linkLaporan">Link Laporan</label>
+                                    <input
+                                        type="url"
+                                        id="linkLaporan"
+                                        value={linkFormData.linkLaporan}
+                                        onChange={(e) => handleLinkFormChange('linkLaporan', e.target.value)}
+                                        placeholder="https://drive.google.com/..."
+                                    />
+                                </div>
+
+                                {hasStartedLinkSubmission && linkSubmissionIssues.length > 0 && (
+                                    <div className="form-validation-alert" style={{ marginTop: '4px', marginBottom: '0' }}>
+                                        <i className="fa-solid fa-triangle-exclamation"></i>
+                                        <div>
+                                            <strong>Link belum bisa dikirim</strong>
+                                            <p>{linkSubmissionIssues[0]}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </form>
+
+                            <div className="modal-footer">
+                                <button type="button" className="btn-secondary" onClick={() => { setIsLinkModalOpen(false); setLinkFormData({ pkmId: '', linkDokumentasi: '', linkLaporan: '' }); }}>
+                                    Batal
+                                </button>
+                                <button type="button" className="btn-primary" onClick={handleLinkFormSubmit} disabled={linkSubmissionIssues.length > 0}>
+                                    <i className="fa-solid fa-paper-plane"></i> Kirim Link
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
+
+                <ActionFeedbackDialog
+                    show={feedbackDialog.show}
+                    type={feedbackDialog.type}
+                    title={feedbackDialog.title}
+                    message={feedbackDialog.message}
+                    onClose={() => {
+                        setFeedbackDialog({ ...feedbackDialog, show: false });
+                        setIsSuccessModalOpen(false);
+                    }}
+                />
             </div>
         </Layout>
     );

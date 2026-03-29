@@ -3,6 +3,7 @@ import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Layout from '@/Layouts/DefaultLayout';
+import ActionFeedbackDialog from '@/Components/ActionFeedbackDialog';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -86,6 +87,7 @@ export default function MapDashboard() {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [isPickingLocation, setIsPickingLocation] = useState(false);
     const [isModalHiddenTemporarily, setIsModalHiddenTemporarily] = useState(false);
+    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success', title: '', message: '' });
     const [formData, setFormData] = useState({
         id: null,
         nama: '',
@@ -102,6 +104,28 @@ export default function MapDashboard() {
         lat: '',
         lng: '',
     });
+    const dataEntryIssues = [];
+    if (!formData.nama.trim()) dataEntryIssues.push('Nama kegiatan PKM wajib diisi.');
+    if (!String(formData.tahun).trim()) dataEntryIssues.push('Tahun kegiatan wajib dipilih.');
+    if (!formData.status) dataEntryIssues.push('Status kegiatan wajib dipilih.');
+    if (!formData.deskripsi.trim()) dataEntryIssues.push('Deskripsi kegiatan wajib diisi.');
+    if (!formData.id && !formData.thumbnail) dataEntryIssues.push('Thumbnail gambar wajib dipilih untuk data PKM baru.');
+    if (!formData.provinsi.trim()) dataEntryIssues.push('Provinsi wajib diisi.');
+    if (!formData.kabupaten.trim()) dataEntryIssues.push('Kabupaten atau kota wajib diisi.');
+    if (!formData.kecamatan.trim()) dataEntryIssues.push('Kecamatan wajib diisi.');
+    if (!formData.desa.trim()) dataEntryIssues.push('Desa atau kelurahan wajib diisi.');
+    if (!String(formData.lat).trim() || !String(formData.lng).trim()) dataEntryIssues.push('Lokasi pada peta wajib dipilih terlebih dahulu.');
+    const hasStartedDataEntry = Boolean(
+        formData.nama.trim() ||
+        formData.deskripsi.trim() ||
+        formData.thumbnail ||
+        formData.provinsi.trim() ||
+        formData.kabupaten.trim() ||
+        formData.kecamatan.trim() ||
+        formData.desa.trim() ||
+        String(formData.lat).trim() ||
+        String(formData.lng).trim()
+    );
 
     const handleMarkerClick = (pkm) => {
         setSidebarPkm(pkm);
@@ -165,8 +189,13 @@ export default function MapDashboard() {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        if (!formData.id && !formData.thumbnail) {
-            alert('Silakan pilih thumbnail gambar terlebih dahulu.');
+        if (dataEntryIssues.length > 0) {
+            setFeedbackDialog({
+                show: true,
+                type: 'error',
+                title: 'Data Belum Bisa Disimpan',
+                message: dataEntryIssues[0],
+            });
             return;
         }
 
@@ -178,7 +207,12 @@ export default function MapDashboard() {
         }
 
         handleCloseModal();
-        setIsSuccessModalOpen(true);
+        setFeedbackDialog({
+            show: true,
+            type: 'success',
+            title: 'Data Berhasil Disimpan',
+            message: 'Data PKM berhasil disimpan ke peta dan siap ditampilkan pada dashboard.',
+        });
     };
 
     return (
@@ -453,10 +487,19 @@ export default function MapDashboard() {
                         </form>
 
                         <div className="modal-footer">
+                            {hasStartedDataEntry && dataEntryIssues.length > 0 && (
+                                <div className="form-validation-alert" style={{ width: '100%', marginTop: 0, marginBottom: '12px' }}>
+                                    <i className="fa-solid fa-triangle-exclamation"></i>
+                                    <div>
+                                        <strong>Data belum bisa disimpan</strong>
+                                        <p>{dataEntryIssues[0]}</p>
+                                    </div>
+                                </div>
+                            )}
                             <button type="button" className="btn-secondary" onClick={handleCloseModal}>
                                 Batal
                             </button>
-                            <button type="button" className="btn-primary" onClick={handleSubmit}>
+                            <button type="button" className="btn-primary" onClick={handleSubmit} disabled={dataEntryIssues.length > 0}>
                                 <i className="fa-solid fa-save"></i> Simpan Data
                             </button>
                         </div>
@@ -470,20 +513,16 @@ export default function MapDashboard() {
                 </div>
             )}
 
-            {isSuccessModalOpen && (
-                <div className="modal-overlay" style={{ zIndex: 3000 }}>
-                    <div className="success-content">
-                        <div className="success-icon-container">
-                            <i className="fa-solid fa-check success-check"></i>
-                        </div>
-                        <h2>Berhasil!</h2>
-                        <p>Data PKM berhasil disimpan ke peta.</p>
-                        <button className="btn-primary" onClick={() => setIsSuccessModalOpen(false)}>
-                            Tutup
-                        </button>
-                    </div>
-                </div>
-            )}
+            <ActionFeedbackDialog
+                show={feedbackDialog.show}
+                type={feedbackDialog.type}
+                title={feedbackDialog.title}
+                message={feedbackDialog.message}
+                onClose={() => {
+                    setFeedbackDialog({ ...feedbackDialog, show: false });
+                    setIsSuccessModalOpen(false);
+                }}
+            />
         </Layout>
     );
 }

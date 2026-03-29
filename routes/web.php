@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,3 +31,10 @@ Route::get('/login/dosen', function () {
 Route::get('/login/masyarakat', function () {
     return Inertia::render('Auth/LoginMasyarakat');
 })->name('login.masyarakat');
+
+Route::post('/logout', function (Request $request) {
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login');
+})->name('logout');
