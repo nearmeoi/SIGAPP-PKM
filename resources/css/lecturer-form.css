@@ -160,8 +160,8 @@
 
 .fintech-input:focus {
     background: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    border-color: #046bd2;
+    box-shadow: 0 0 0 4px rgba(4, 107, 210, 0.12);
 }
 
 .fintech-input::placeholder {
@@ -469,7 +469,7 @@
 
 .submission-main-tab.is-active {
     background: linear-gradient(135deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.98));
-    box-shadow: 0 20px 30px -26px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 20px 30px -26px rgba(4, 107, 210, 0.34);
 }
 
 .submission-main-tab-icon {

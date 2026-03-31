@@ -5,13 +5,17 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Layout from '@/Layouts/DefaultLayout';
 import LandingCharts from '@/Components/LandingCharts';
+import MapLegend from '@/Components/MapLegend';
 import DocumentationGallery from '@/Components/DocumentationGallery';
 import LandingPageMobile from '@/Components/LandingPageMobile';
 import TestimonialSidebarDisplay from '@/Components/TestimonialSidebarDisplay';
 import ActionFeedbackDialog from '@/Components/ActionFeedbackDialog';
+import CTABanner from '@/Components/CTABanner';
 import { resolvePublicPkmData } from '@/data/sigapData';
+import { createPkmMarkerIcon } from '@/data/pkmMapVisuals';
 
 import '../../css/landing.css';
+import '../../css/navbar.css';
 
 // Leaflet Setup
 delete L.Icon.Default.prototype._getIconUrl;
@@ -24,21 +28,6 @@ L.Icon.Default.mergeOptions({
 const getStatusBadge = (status) => status === 'berlangsung' ? 'status-open' : 'status-closed';
 const getStatusIcon = (status) => status === 'berlangsung' ? 'fa-spinner fa-spin' : 'fa-check-double';
 const getStatusText = (status) => status === 'berlangsung' ? 'Berlangsung' : 'Selesai';
-
-const createCustomIcon = (status) => {
-    const markerColor = status === 'berlangsung' ? '#f59e0b' : '#16a34a';
-    return L.divIcon({
-        className: 'custom-leaflet-marker',
-        html: `
-            <div class="marker-pin" style="background-color: ${markerColor}">
-                <i class="fa-solid fa-hands-holding-child"></i>
-            </div>
-            <div class="marker-pulse" style="border-color: ${markerColor}"></div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-    });
-};
 
 function MapEvents({ isPickingLocation, onLocationPicked, setSidebarPkm }) {
     useMapEvents({
@@ -145,78 +134,11 @@ const MapSearchWidget = ({ pkmData, onSelectPkm, isHidden }) => {
     );
 };
 
-const PublicAccessNoticeCard = () => {
-    const previewFields = [
-        'Nama Lengkap / Perwakilan',
-        'Institusi / Organisasi',
-        'Lokasi Kegiatan',
-        'Alamat Email',
-        'Nomor WhatsApp',
-    ];
 
-    return (
-        <div className="chart-card public-access-card">
-            <div className="chart-card-header public-access-card-header">
-                <div className="chart-card-icon public-access-card-icon">
-                    <i className="fa-solid fa-user-lock"></i>
-                </div>
-                <div>
-                    <h3 className="chart-card-title">Akses Pengajuan PKM</h3>
-                    <p className="chart-card-subtitle">Informasi untuk masyarakat umum yang ingin membuat pengajuan</p>
-                </div>
-            </div>
-
-            <div className="public-access-card-body">
-                <div className="public-access-preview-shell">
-                    <div className="public-access-preview-blur">
-                        <div className="public-access-form-mock">
-                            {previewFields.map((field) => (
-                                <div key={field} className="public-access-form-row">
-                                    <label>{field}</label>
-                                    <div className="public-access-form-input"></div>
-                                </div>
-                            ))}
-                            <div className="public-access-form-row">
-                                <label>Kebutuhan / Permintaan</label>
-                                <div className="public-access-form-input public-access-form-input-textarea"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="public-access-preview-overlay"></div>
-                    <div className="public-access-copy">
-                        <h4>Form pengajuan PKM tersedia setelah Anda masuk ke akun.</h4>
-                        <p>
-                            Untuk membuat pengajuan, silahkan klik{' '}
-                            <Link href="/login" className="public-inline-link">
-                                login
-                            </Link>.
-                        </p>
-                        <p>
-                            Belum punya akun, silahkan{' '}
-                            <Link href="/register" className="public-inline-link">
-                                daftar
-                            </Link>.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const MapSummaryOverlay = ({ totalPkm, totalSelesai, totalBerlangsung, isHidden }) => (
     <div className={`landing-map-info-overlay ${isHidden ? 'is-hidden' : ''}`} aria-label="Ringkasan peta PKM">
-        <div className="landing-map-info-legend">
-            <div className="legend-title">LEGENDA</div>
-            <div className="legend-item">
-                <span className="legend-icon" style={{ backgroundColor: '#16a34a' }}></span>
-                <span className="legend-text">PKM Selesai</span>
-            </div>
-            <div className="legend-item">
-                <span className="legend-icon" style={{ backgroundColor: '#f59e0b' }}></span>
-                <span className="legend-text">PKM Berlangsung</span>
-            </div>
-        </div>
+        <MapLegend className="landing-map-legend-card" />
 
         <div className="landing-map-floating-stats">
             <div className="landing-map-stat-card compact">
@@ -479,7 +401,7 @@ export default function LandingPage({ publicPkmData = null }) {
                                         <Marker
                                             key={pkm.id}
                                             position={[pkm.lat, pkm.lng]}
-                                            icon={createCustomIcon(pkm.status)}
+                                            icon={createPkmMarkerIcon(pkm)}
                                             eventHandlers={{ click: () => handleMarkerClick(pkm) }}
                                         />
                                     ))}
@@ -549,19 +471,14 @@ export default function LandingPage({ publicPkmData = null }) {
                     </section>
                 </div>
 
-                <div className="landing-insight-layout">
-                    <div className="landing-insight-left">
-                        <div className="landing-insight-card landing-dashboard-card">
-                            <LandingCharts />
-                        </div>
-                    </div>
-
-                    <div className="landing-insight-right landing-dashboard-companion">
-                        <div className="landing-access-merged-card">
-                            <PublicAccessNoticeCard />
-                        </div>
+                <div className="landing-insight-layout--fullwidth" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px 28px', boxSizing: 'border-box' }}>
+                    <div className="landing-insight-card landing-dashboard-card">
+                        <LandingCharts pkmData={pkmData} />
                     </div>
                 </div>
+
+                {/* Dynamic CTA Banner */}
+                <CTABanner />
 
                 {/* Mobile Bottom Sheet — Location Detail */}
 

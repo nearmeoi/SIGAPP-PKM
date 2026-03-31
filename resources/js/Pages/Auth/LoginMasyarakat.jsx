@@ -9,13 +9,14 @@ import BottomSheet from '@/Components/BottomSheet';
 import DocumentationGallery from '@/Components/DocumentationGallery';
 import TestimonialSidebarDisplay from '@/Components/TestimonialSidebarDisplay';
 import LandingCharts from '@/Components/LandingCharts';
-import MasyarakatSubmissionCard from '@/Components/MasyarakatSubmissionCard';
+import MapLegend from '@/Components/MapLegend';
 import LoginMasyarakatMobile from '@/Components/LoginMasyarakatMobile';
 import {
     resolveUserPkmData,
     resolveUserSubmissionData,
     resolveUserSubmissionHistory,
 } from '@/data/sigapData';
+import { createPkmMarkerIcon } from '@/data/pkmMapVisuals';
 import '../../../css/landing.css';
 import '../../../css/lecturer-form.css';
 
@@ -29,22 +30,6 @@ L.Icon.Default.mergeOptions({
 const getStatusBadge = (status) => status === 'berlangsung' ? 'status-open' : 'status-closed';
 const getStatusIcon = (status) => status === 'berlangsung' ? 'fa-spinner fa-spin' : 'fa-check-double';
 const getStatusText = (status) => status === 'berlangsung' ? 'Berlangsung' : 'Selesai';
-
-const createCustomIcon = (status) => {
-    const markerColor = status === 'berlangsung' ? '#f59e0b' : '#16a34a';
-
-    return L.divIcon({
-        className: 'custom-leaflet-marker',
-        html: `
-            <div class="marker-pin" style="background-color: ${markerColor}">
-                <i class="fa-solid fa-hands-holding-child"></i>
-            </div>
-            <div class="marker-pulse" style="border-color: ${markerColor}"></div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-    });
-};
 
 const getStatusPengajuanStyle = (status) => {
     switch (status) {
@@ -68,6 +53,14 @@ const getStatusPengajuanStyle = (status) => {
     }
 };
 
+const createPengajuanDateLabel = () => (
+    new Intl.DateTimeFormat('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    }).format(new Date())
+);
+
 function MapEvents({ setSidebarPkm, setIsMenuListOpen }) {
     useMapEvents({
         click() {
@@ -75,7 +68,6 @@ function MapEvents({ setSidebarPkm, setIsMenuListOpen }) {
             setIsMenuListOpen(false);
         },
     });
-
     return null;
 }
 
@@ -187,17 +179,7 @@ const MapSearchWidget = ({ pkmData, onSelectPkm, isHidden }) => {
 
 const MapSummaryOverlay = ({ totalPkm, totalSelesai, totalBerlangsung, isHidden }) => (
     <div className={`landing-map-info-overlay ${isHidden ? 'is-hidden' : ''}`} aria-label="Ringkasan peta PKM">
-        <div className="landing-map-info-legend">
-            <div className="legend-title">LEGENDA</div>
-            <div className="legend-item">
-                <span className="legend-icon" style={{ backgroundColor: '#16a34a' }}></span>
-                <span className="legend-text">PKM Selesai</span>
-            </div>
-            <div className="legend-item">
-                <span className="legend-icon" style={{ backgroundColor: '#f59e0b' }}></span>
-                <span className="legend-text">PKM Berlangsung</span>
-            </div>
-        </div>
+        <MapLegend className="landing-map-legend-card" />
 
         <div className="landing-map-floating-stats">
             <div className="landing-map-stat-card compact">
@@ -236,13 +218,12 @@ const StatusPengajuanPanel = ({ isOpen, onClose, pengajuanData }) => (
                         <i className="fa-solid fa-inbox"></i>
                     </span>
                     <strong>Belum ada pengajuan PKM</strong>
-                    <p>Form pengajuan masyarakat di panel kanan bisa langsung digunakan untuk membuat pengajuan baru.</p>
+                    <p>Halaman akun masyarakat ini menampilkan ringkasan sebaran PKM dan status pengajuan terbaru Anda.</p>
                 </div>
             ) : (
                 <div className="dosen-status-list">
                     {pengajuanData.map((item) => {
                         const statusStyle = getStatusPengajuanStyle(item.status);
-
                         return (
                             <div key={item.id} className="dosen-status-item">
                                 <span className="dosen-status-icon" style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}>
@@ -273,13 +254,9 @@ export default function LoginMasyarakat({
     userSubmissionData = null,
     userSubmissionHistory = null,
 }) {
-    const [isMobileViewport, setIsMobileViewport] = useState(() => {
-        if (typeof window === 'undefined') {
-            return false;
-        }
-
-        return window.matchMedia('(max-width: 768px)').matches;
-    });
+    const [isMobileViewport, setIsMobileViewport] = useState(() => (
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+    ));
     const [pkmData] = useState(() => resolveUserPkmData(userPkmData));
     const [sidebarPkm, setSidebarPkm] = useState(null);
     const [isMenuListOpen, setIsMenuListOpen] = useState(false);
@@ -294,7 +271,6 @@ export default function LoginMasyarakat({
             setMobileBottomSheet('detail');
             return;
         }
-
         setSidebarPkm(pkm);
         setIsMenuListOpen(false);
     };
@@ -317,10 +293,11 @@ export default function LoginMasyarakat({
     const totalSelesai = pkmData.filter((item) => item.status === 'selesai').length;
     const totalBerlangsung = pkmData.filter((item) => item.status === 'berlangsung').length;
     const latestPengajuan = pengajuanData[0] ?? null;
+    const hasSubmissionHistory = pengajuanData.length > 0;
+    const pengajuanHref = '/pengajuan?role=masyarakat&view=form';
+    const cekStatusHref = hasSubmissionHistory ? '/pengajuan?role=masyarakat&view=status' : pengajuanHref;
     const currentSubmissionStatus = latestPengajuan?.status ?? 'belum_diajukan';
-    const latestPengajuanStatus = getStatusPengajuanStyle(currentSubmissionStatus);
-    const isPkmStatusMode = ['berlangsung', 'selesai'].includes(currentSubmissionStatus);
-    const currentPkmStatusData = isPkmStatusMode
+    const currentPkmStatusData = ['berlangsung', 'selesai'].includes(currentSubmissionStatus)
         ? pkmData.find((item) => item.status === currentSubmissionStatus) ?? null
         : null;
 
@@ -355,19 +332,19 @@ export default function LoginMasyarakat({
         }
 
         const mediaQuery = window.matchMedia('(max-width: 768px)');
-        const handleViewportChange = (event) => {
+        const updateViewport = (event) => {
             setIsMobileViewport(event.matches);
         };
 
         setIsMobileViewport(mediaQuery.matches);
 
-        if (typeof mediaQuery.addEventListener === 'function') {
-            mediaQuery.addEventListener('change', handleViewportChange);
-            return () => mediaQuery.removeEventListener('change', handleViewportChange);
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', updateViewport);
+            return () => mediaQuery.removeEventListener('change', updateViewport);
         }
 
-        mediaQuery.addListener(handleViewportChange);
-        return () => mediaQuery.removeListener(handleViewportChange);
+        mediaQuery.addListener(updateViewport);
+        return () => mediaQuery.removeListener(updateViewport);
     }, []);
 
     if (isMobileViewport) {
@@ -402,47 +379,14 @@ export default function LoginMasyarakat({
             <div className="landing-page login-dosen-page">
                 <div className={`landing-map-row ${mobileActiveTab !== 'peta' ? 'mobile-hidden' : ''}`}>
                     <section className="fintech-map-section landing-map-panel" id="peta-sebaran">
-                        <div className="fintech-panel-header dosen-map-panel-header">
-                            <div className="dosen-map-header-side dosen-map-header-side-left">
-                                <h2 className="fintech-panel-title dosen-map-panel-title">
-                                    Peta Sebaran Pengabdian PKM <span className="text-blue">Poltekpar Makassar</span>
-                                </h2>
-                            </div>
-
-                            <button
-                                type="button"
-                                className="dosen-map-status-inline"
-                                onClick={() => {
-                                    setIsMenuListOpen(true);
-                                    setSidebarPkm(null);
-                                }}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-                            >
-                                <span
-                                    className="dosen-map-status-icon"
-                                    style={{
-                                        backgroundColor: latestPengajuanStatus.bg,
-                                        color: latestPengajuanStatus.color,
-                                    }}
-                                >
-                                    <i className={`fa-solid ${latestPengajuanStatus.icon}`}></i>
-                                </span>
-                                <span className="dosen-map-status-label">{isPkmStatusMode ? 'Status PKM:' : 'Status pengajuan:'}</span>
-                                <span className="dosen-map-status-value" style={{ color: latestPengajuanStatus.color }}>
-                                    {latestPengajuanStatus.label}
-                                </span>
-                            </button>
-
-                            <div className="dosen-map-header-side dosen-map-header-side-right">
-                                <div className="landing-role-badge">
-                                    <i className="fa-solid fa-users"></i>
-                                    <span>Akun Masyarakat</span>
-                                </div>
-                            </div>
+                        <div className="fintech-panel-header">
+                            <h2 className="fintech-panel-title">
+                                Peta Sebaran Pengabdian PKM <span className="text-blue">Poltekpar Makassar</span>
+                            </h2>
                         </div>
 
                         <div className="landing-map-shell">
-                            <div className="map-wrapper-boxed landing-map-canvas dosen-map-canvas" style={{ overflow: 'hidden', position: 'relative' }}>
+                            <div className="map-wrapper-boxed landing-map-canvas" style={{ overflow: 'hidden', position: 'relative' }}>
                                 <MapSearchWidget
                                     pkmData={pkmData}
                                     onSelectPkm={(pkm) => {
@@ -475,7 +419,7 @@ export default function LoginMasyarakat({
                                         <Marker
                                             key={pkm.id}
                                             position={[pkm.lat, pkm.lng]}
-                                            icon={createCustomIcon(pkm.status)}
+                                            icon={createPkmMarkerIcon(pkm)}
                                             eventHandlers={{ click: () => handleMarkerClick(pkm) }}
                                         />
                                     ))}
@@ -545,29 +489,45 @@ export default function LoginMasyarakat({
                     </section>
                 </div>
 
-                <div className={`landing-insight-layout ${mobileActiveTab !== 'dashboard' ? 'mobile-hidden' : ''}`}>
-                    <div className="landing-insight-left">
-                        <div className="landing-insight-card landing-dashboard-card">
-                            <LandingCharts />
-                        </div>
-                    </div>
-
-                    <div className="landing-insight-right">
-                        <div className="landing-access-merged-card login-dosen-access-card">
-                            <MasyarakatSubmissionCard
-                                submissionStatus={currentSubmissionStatus}
-                                latestSubmission={latestPengajuan}
-                                pkmStatusData={currentPkmStatusData}
-                                pkmListData={pkmData}
-                                submissionHistory={submissionHistoryData}
-                                onUpdateSubmissionStatus={handleUpdateLatestPengajuanStatus}
-                                onSubmitted={(submission) => {
-                                    setPengajuanData((previous) => [submission, ...previous]);
-                                }}
-                            />
-                        </div>
-                    </div>
+                <div
+                    className={`${mobileActiveTab !== 'dashboard' ? 'mobile-hidden' : ''} landing-insight-layout--fullwidth`}
+                    style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px 28px', boxSizing: 'border-box' }}
+                >
+                    <LandingCharts pkmData={pkmData} />
                 </div>
+
+                <section className="cta-banner login-dosen-cta" id="cta-pengajuan-masyarakat">
+                    <div className="cta-banner__content">
+                        <div className="cta-banner__icon-wrap">
+                            <i className="fa-solid fa-paper-plane"></i>
+                        </div>
+                        <h2 className="cta-banner__title">
+                            {hasSubmissionHistory ? 'Kelola pengajuan PKM Anda' : 'Mau melakukan pengajuan PKM?'}
+                        </h2>
+                        <p className="cta-banner__subtitle">
+                            {hasSubmissionHistory
+                                ? 'Buka halaman pengajuan untuk membuat pengajuan baru atau cek status untuk melihat pengajuan masyarakat yang sudah pernah dikirim.'
+                                : 'Karena belum ada pengajuan yang tersimpan, tombol pengajuan dan cek status sama-sama akan membuka halaman pengajuan.'}
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
+                            <a href={pengajuanHref} className="cta-banner__btn cta-banner__btn--auth">
+                                <i className="fa-solid fa-file-circle-plus"></i>
+                                <span>Buka Halaman Pengajuan</span>
+                            </a>
+                            <a
+                                href={cekStatusHref}
+                                className="cta-banner__btn"
+                                style={{
+                                    background: hasSubmissionHistory ? '#0f172a' : '#e2e8f0',
+                                    color: hasSubmissionHistory ? '#ffffff' : '#334155',
+                                }}
+                            >
+                                <i className="fa-solid fa-magnifying-glass"></i>
+                                <span>Cek Status</span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
 
                 <BottomSheet
                     isOpen={mobileBottomSheet === 'detail'}
