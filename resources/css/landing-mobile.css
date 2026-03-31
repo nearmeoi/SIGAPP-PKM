@@ -363,6 +363,9 @@
     right: 14px;
     bottom: 24px;
     z-index: 920;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
@@ -370,6 +373,11 @@
     opacity: 0;
     transform: translateY(12px);
     pointer-events: none;
+}
+
+.landing-mobile-map-legend-card,
+.landing-mobile-map-stats {
+    pointer-events: auto;
 }
 
 .landing-mobile-map-legend {
@@ -418,8 +426,6 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    padding-top: 9px;
-    border-top: 1px solid rgba(191, 219, 254, 0.7);
 }
 
 .landing-mobile-map-stat {

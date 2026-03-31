@@ -40,6 +40,7 @@ export default function DosenSubmissionCard({
     pkmStatusData = null,
     pkmListData = [],
     submissionHistory = [],
+    hideMainTabNav = false,
 }) {
     const { data, setData, processing: inertiaProcessing, errors, setError, clearErrors, reset } = useForm({
         nama_dosen: '',
@@ -553,9 +554,9 @@ export default function DosenSubmissionCard({
                         </div>
                     </div>
 
-                    {renderMainTabNav()}
+                    {!hideMainTabNav && renderMainTabNav()}
 
-                    {mainTab === 'arsip' ? (
+                    {!hideMainTabNav && mainTab === 'arsip' ? (
                         <div className="public-access-card-body" style={{ padding: '0 24px 24px' }}>
                             {renderSubmissionHub()}
                         </div>
@@ -676,9 +677,9 @@ export default function DosenSubmissionCard({
                         </div>
                     </div>
 
-                    {renderMainTabNav()}
+                    {!hideMainTabNav && renderMainTabNav()}
 
-                    {mainTab === 'arsip' ? (
+                    {!hideMainTabNav && mainTab === 'arsip' ? (
                         <div className="public-access-card-body" style={{ padding: '0 24px 24px' }}>
                             {renderSubmissionHub()}
                         </div>
@@ -781,9 +782,9 @@ export default function DosenSubmissionCard({
                 </div>
             </div>
 
-            {renderMainTabNav()}
+            {!hideMainTabNav && renderMainTabNav()}
 
-            {mainTab === 'arsip' ? (
+            {!hideMainTabNav && mainTab === 'arsip' ? (
                 <div className="public-access-card-body" style={{ padding: '0 24px 24px' }}>
                     {renderSubmissionHub()}
                 </div>

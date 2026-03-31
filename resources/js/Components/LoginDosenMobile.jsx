@@ -3,10 +3,12 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents, ZoomControl } fr
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LandingCharts from './LandingCharts';
+import MapLegend from './MapLegend';
 import DocumentationGallery from './DocumentationGallery';
 import TestimonialSidebarDisplay from './TestimonialSidebarDisplay';
 import DosenSubmissionCard from './DosenSubmissionCard';
 import MobileSplashScreen from './MobileSplashScreen';
+import { createPkmMarkerIcon } from '@/data/pkmMapVisuals';
 import '../../css/landing-mobile.css';
 import '../../css/login-dosen-mobile.css';
 
@@ -145,21 +147,6 @@ function MobileStatusSummary({ statusInfo, compact = false }) {
         </div>
     );
 }
-
-const createCustomIcon = (status) => {
-    const markerColor = status === 'berlangsung' ? '#f59e0b' : '#16a34a';
-    return L.divIcon({
-        className: 'custom-leaflet-marker',
-        html: `
-            <div class="marker-pin" style="background-color: ${markerColor}">
-                <i class="fa-solid fa-hands-holding-child"></i>
-            </div>
-            <div class="marker-pulse" style="border-color: ${markerColor}"></div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-    });
-};
 
 function MobileMapEvents({ onMapClick }) {
     useMapEvents({
@@ -360,7 +347,7 @@ function MobileDashboardPanel() {
     return (
         <section className="landing-mobile-screen landing-mobile-screen--dashboard">
             <div className="landing-mobile-dashboard-shell">
-                <LandingCharts compactMobile />
+                <LandingCharts compactMobile pkmData={pkmData} />
             </div>
         </section>
     );
@@ -406,7 +393,7 @@ function MobileMapPanel({ pkmData, selectedPkm, onSelectPkm, onClosePkm, totals 
                             <Marker
                                 key={pkm.id}
                                 position={[pkm.lat, pkm.lng]}
-                                icon={createCustomIcon(pkm.status)}
+                                icon={createPkmMarkerIcon(pkm)}
                                 eventHandlers={{ click: () => onSelectPkm(pkm) }}
                             />
                         ))}
@@ -414,32 +401,20 @@ function MobileMapPanel({ pkmData, selectedPkm, onSelectPkm, onClosePkm, totals 
                     </MapContainer>
 
                     <div className={`landing-mobile-map-summary ${selectedPkm ? 'is-hidden' : ''}`}>
-                        <div className="landing-mobile-map-legend">
-                            <div className="landing-mobile-map-legend-row">
-                                <span className="legend-title">Legenda</span>
-                                <div className="legend-item">
-                                    <span className="legend-icon" style={{ backgroundColor: '#16a34a' }}></span>
-                                    <span>PKM Selesai</span>
-                                </div>
-                                <div className="legend-item">
-                                    <span className="legend-icon" style={{ backgroundColor: '#f59e0b' }}></span>
-                                    <span>PKM Berlangsung</span>
-                                </div>
-                            </div>
+                        <MapLegend compact className="landing-mobile-map-legend-card" />
 
-                            <div className="landing-mobile-map-stats">
-                                <div className="landing-mobile-map-stat">
-                                    <span>Total PKM</span>
-                                    <strong>{totals.totalPkm}</strong>
-                                </div>
-                                <div className="landing-mobile-map-stat">
-                                    <span>PKM Selesai</span>
-                                    <strong>{totals.totalSelesai}</strong>
-                                </div>
-                                <div className="landing-mobile-map-stat">
-                                    <span>PKM Berlangsung</span>
-                                    <strong>{totals.totalBerlangsung}</strong>
-                                </div>
+                        <div className="landing-mobile-map-stats">
+                            <div className="landing-mobile-map-stat">
+                                <span>Total PKM</span>
+                                <strong>{totals.totalPkm}</strong>
+                            </div>
+                            <div className="landing-mobile-map-stat">
+                                <span>PKM Selesai</span>
+                                <strong>{totals.totalSelesai}</strong>
+                            </div>
+                            <div className="landing-mobile-map-stat">
+                                <span>PKM Berlangsung</span>
+                                <strong>{totals.totalBerlangsung}</strong>
                             </div>
                         </div>
                     </div>

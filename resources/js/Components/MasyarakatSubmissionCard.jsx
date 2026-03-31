@@ -57,6 +57,7 @@ export default function MasyarakatSubmissionCard({
     onSubmitted,
     onUpdateSubmissionStatus,
     hideInlineStatusPanel = false,
+    hideMainTabNav = false,
 }) {
     const [mainTab, setMainTab] = useState('pengajuan');
     const [expandedHubSections, setExpandedHubSections] = useState({
@@ -101,6 +102,7 @@ export default function MasyarakatSubmissionCard({
     );
 
     const isSubmitDisabled = isMockSubmitting || requiredSubmissionIssues.length > 0;
+    const statusStyle = getSubmissionStatusStyle(submissionStatus);
 
     const handleFileChange = (event) => {
         const nextFile = event.target.files?.[0] ?? null;
@@ -713,9 +715,9 @@ export default function MasyarakatSubmissionCard({
                         </div>
                     </div>
 
-                    {renderMainTabNav()}
+                    {!hideMainTabNav && renderMainTabNav()}
 
-                    {mainTab === 'arsip' ? (
+                    {!hideMainTabNav && mainTab === 'arsip' ? (
                         renderArchiveTab()
                     ) : (
                         <div
@@ -834,9 +836,9 @@ export default function MasyarakatSubmissionCard({
                     </div>
                 </div>
 
-                {renderMainTabNav()}
+                {!hideMainTabNav && renderMainTabNav()}
 
-                {mainTab === 'arsip' ? (
+                {!hideMainTabNav && mainTab === 'arsip' ? (
                     renderArchiveTab()
                 ) : (
                     <div className="public-access-card-body" style={{ padding: '0 24px 24px' }}>
@@ -937,9 +939,9 @@ export default function MasyarakatSubmissionCard({
                 </div>
             </div>
 
-            {renderMainTabNav()}
+            {!hideMainTabNav && renderMainTabNav()}
 
-            {mainTab === 'arsip' ? renderArchiveTab() : renderSubmissionTab()}
+            {!hideMainTabNav && mainTab === 'arsip' ? renderArchiveTab() : renderSubmissionTab()}
 
             <ActionFeedbackDialog
                 show={feedbackDialog.show}
