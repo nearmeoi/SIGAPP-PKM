@@ -10,12 +10,21 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::latest()->paginate(15);
+        $users = User::when($request->search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        })
+        ->latest()
+        ->paginate(15)
+        ->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
+            'filters' => [
+                'search' => $request->search ?? '',
+            ],
         ]);
     }
 

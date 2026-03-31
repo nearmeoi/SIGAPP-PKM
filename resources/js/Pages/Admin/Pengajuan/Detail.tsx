@@ -6,7 +6,7 @@ import {
     FileText, ExternalLink, FolderOpen, CheckCircle, X, Clock,
     AlertCircle, RefreshCw, Plus, Trash2, Users, ArrowLeft,
     MapPin, Calendar, DollarSign, Building, Save, Image as ImageIcon, Activity,
-    Banknote, Sparkles
+    Banknote, Sparkles, Pencil, Check, Phone
 } from 'lucide-react';
 
 interface Pegawai { id_pegawai: number; nama_pegawai: string; nip?: string; }
@@ -19,6 +19,7 @@ interface Pengajuan {
     judul_kegiatan: string;
     kebutuhan?: string;
     instansi_mitra?: string;
+    no_telepon?: string;
     sumber_dana?: string;
     total_anggaran: number;
     tgl_mulai?: string;
@@ -30,7 +31,7 @@ interface Pengajuan {
     surat_permohonan?: string;
     rab?: string;
     user?: { name: string; email: string };
-    jenis_pkm?: { nama_jenis: string };
+    jenis_pkm?: { id_jenis_pkm: number; nama_jenis: string };
     provinsi?: string;
     kota_kabupaten?: string;
     kecamatan?: string;
@@ -39,13 +40,14 @@ interface Pengajuan {
     latitude?: number;
     longitude?: number;
     tim_kegiatan?: TimKegiatan[];
-    aktivitas?: Aktivitas; // hasOne — singular, not array
+    aktivitas?: Aktivitas; // hasOne - singular, not array
     arsip?: Arsip[];
 }
 
 interface Props {
     pengajuan: Pengajuan;
     listPegawai: Pegawai[];
+    listJenisPkm: { id_jenis_pkm: number; nama_jenis: string; }[];
 }
 
 const statusConfig: Record<string, { label: string; text: string; bg: string; dot: string }> = {
@@ -53,20 +55,17 @@ const statusConfig: Record<string, { label: string; text: string; bg: string; do
     diterima: { label: 'Diterima', text: 'text-emerald-700', bg: 'bg-emerald-50', dot: 'bg-emerald-400' },
     direvisi: { label: 'Revisi', text: 'text-amber-700', bg: 'bg-amber-50', dot: 'bg-amber-400' },
     ditolak: { label: 'Ditolak', text: 'text-red-700', bg: 'bg-red-50', dot: 'bg-red-400' },
+    // selesai is a legacy status shown read-only
     selesai: { label: 'Selesai', text: 'text-indigo-700', bg: 'bg-indigo-50', dot: 'bg-indigo-400' },
 };
 
-const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
+const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
     const [catatan, setCatatan] = useState(pengajuan.catatan_admin || '');
     const [selectedAction, setSelectedAction] = useState<string>('');
     const [timModal, setTimModal] = useState(false);
+    const [memberType, setMemberType] = useState<'dosen' | 'staff' | 'mahasiswa'>('dosen');
     const [timForm, setTimForm] = useState({ id_pegawai: '', nama_mahasiswa: '', peran_tim: '' });
-    const [statusAktivitas, setStatusAktivitas] = useState<string>(
-        pengajuan.aktivitas
-            ? pengajuan.aktivitas.status_pelaksanaan
-            : 'persiapan'
-    );
-    const [thumbnailAktivitas, setThumbnailAktivitas] = useState<File | null>(null);
+    const [catatanError, setCatatanError] = useState('');
 
     // Confirm dialog state
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; action: () => void }>({
@@ -77,23 +76,10 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
     const closeConfirm = () => setConfirmDialog(prev => ({ ...prev, open: false }));
     const execConfirm = () => { confirmDialog.action(); closeConfirm(); };
 
-    const [catatanError, setCatatanError] = useState('');
-
-    const handleSimpanPengaturan = () => {
-        if (!pengajuan.aktivitas) return;
-        const formData = new FormData();
-        formData.append('status_pelaksanaan', statusAktivitas);
-        formData.append('_method', 'PUT');
-        if (thumbnailAktivitas) {
-            formData.append('thumbnail', thumbnailAktivitas);
-        }
-        router.post(`/admin/aktivitas/${pengajuan.aktivitas.id_aktivitas}`, formData);
-    };
-
     const st = statusConfig[pengajuan.status_pengajuan] || statusConfig.diproses;
 
     const formatDate = (dateStr?: string) => {
-        if (!dateStr) return '—';
+        if (!dateStr) return '-';
         return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     };
 
@@ -132,6 +118,15 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
     const hasCatatan = catatan.trim().length > 0;
     const canSubmit = selectedAction && (!isCatatanRequired || hasCatatan);
 
+    const onUpdateField = (field: string, value: any) => {
+        router.put(`/admin/pengajuan/${pengajuan.id_pengajuan}`, {
+            [field]: value
+        }, {
+            preserveScroll: true,
+            onError: (err) => alert('Gagal memperbarui data: ' + JSON.stringify(err))
+        });
+    };
+
     return (
         <AdminLayout title="">
             {/* Back Bar */}
@@ -140,9 +135,16 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                     <ArrowLeft size={16} />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-[20px] font-bold text-zinc-900 leading-tight truncate">{pengajuan.judul_kegiatan}</h1>
+                    <div className="flex items-center group relative mb-1">
+                        <EditableInfoField
+                            label=""
+                            value={pengajuan.judul_kegiatan}
+                            type="textarea"
+                            onSave={(val) => onUpdateField('judul_kegiatan', val)}
+                        />
+                    </div>
                     <p className="text-[13px] text-zinc-500 mt-1">
-                        Disubmit oleh <span className="font-medium text-zinc-700">{pengajuan.user?.name || '—'}</span>
+                        Disubmit oleh <span className="font-medium text-zinc-700">{pengajuan.user?.name || '-'}</span>
                         {pengajuan.created_at && ` pada tanggal ${formatDate(pengajuan.created_at)}`}
                         <span className="mx-2 text-zinc-300">•</span>
                         <span className="font-mono">#{pengajuan.id_pengajuan.toString().padStart(2, '0')}</span>
@@ -164,29 +166,64 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                             <Activity size={16} className="text-zinc-400" />
                         </div>
                         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                            <InfoField label="Kategori" value={pengajuan.jenis_pkm?.nama_jenis} icon={<FileText size={16} />} />
-                            <InfoField label="Instansi Mitra" value={pengajuan.instansi_mitra} icon={<Building size={16} />} />
-                            <InfoField label="Sumber Dana" value={pengajuan.sumber_dana} icon={<Banknote size={16} />} />
-                            <InfoField
-                                label="Periode Kegiatan"
-                                value={`${formatDate(pengajuan.tgl_mulai)} — ${formatDate(pengajuan.tgl_selesai)}`}
+                            <EditableInfoField
+                                label="Kategori"
+                                value={pengajuan.jenis_pkm?.id_jenis_pkm || ''}
+                                type="select"
+                                options={listJenisPkm.map(j => ({ value: j.id_jenis_pkm, label: j.nama_jenis }))}
+                                icon={<FileText size={16} />}
+                                onSave={(val) => onUpdateField('id_jenis_pkm', val)}
+                            />
+                            <EditableInfoField
+                                label="Instansi Mitra"
+                                value={pengajuan.instansi_mitra}
+                                icon={<Building size={16} />}
+                                onSave={(val) => onUpdateField('instansi_mitra', val)}
+                            />
+                            <EditableInfoField
+                                label="Sumber Dana"
+                                value={pengajuan.sumber_dana}
+                                icon={<Banknote size={16} />}
+                                onSave={(val) => onUpdateField('sumber_dana', val)}
+                            />
+                            <EditableInfoField
+                                label="No. Telepon"
+                                value={pengajuan.no_telepon}
+                                icon={<Phone size={16} />}
+                                onSave={(val) => onUpdateField('no_telepon', val)}
+                            />
+                            <EditableInfoField
+                                label="Tanggal Mulai"
+                                value={pengajuan.tgl_mulai?.split('T')[0]}
+                                type="date"
                                 icon={<Calendar size={16} />}
+                                onSave={(val) => onUpdateField('tgl_mulai', val)}
+                            />
+                            <EditableInfoField
+                                label="Tanggal Selesai"
+                                value={pengajuan.tgl_selesai?.split('T')[0]}
+                                type="date"
+                                icon={<Calendar size={16} />}
+                                onSave={(val) => onUpdateField('tgl_selesai', val)}
                             />
                         </div>
                     </div>
 
                     {/* Kebutuhan Card */}
-                    {pengajuan.kebutuhan && (
-                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
-                                <h2 className="text-[15px] font-semibold text-zinc-900">Kebutuhan PKM</h2>
-                                <Sparkles size={16} className="text-zinc-400" />
-                            </div>
-                            <div className="p-6">
-                                <p className="text-[14px] text-zinc-700 leading-relaxed font-medium whitespace-pre-wrap">{pengajuan.kebutuhan}</p>
-                            </div>
+                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                            <h2 className="text-[15px] font-semibold text-zinc-900">Kebutuhan PKM</h2>
+                            <Sparkles size={16} className="text-zinc-400" />
                         </div>
-                    )}
+                        <div className="p-6">
+                            <EditableInfoField
+                                label=""
+                                value={pengajuan.kebutuhan}
+                                type="textarea"
+                                onSave={(val) => onUpdateField('kebutuhan', val)}
+                            />
+                        </div>
+                    </div>
 
                     {/* Tim PKM */}
                     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -210,8 +247,8 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                                             {(tim.pegawai?.nama_pegawai || tim.nama_mahasiswa || '?').charAt(0).toUpperCase()}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-[14px] font-semibold text-zinc-900 truncate">{tim.pegawai?.nama_pegawai || tim.nama_mahasiswa || '—'}</div>
-                                            <div className="text-[12px] font-medium text-zinc-500 mt-0.5">{tim.peran_tim || '—'}</div>
+                                            <div className="text-[14px] font-semibold text-zinc-900 truncate">{tim.pegawai?.nama_pegawai || tim.nama_mahasiswa || '-'}</div>
+                                            <div className="text-[12px] font-medium text-zinc-500 mt-0.5">{tim.peran_tim || '-'}</div>
                                         </div>
                                         <button onClick={() => handleRemoveTim(tim.id_tim)} className="w-9 h-9 flex items-center justify-center rounded-md border border-transparent text-zinc-300 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
                                             <Trash2 size={16} />
@@ -223,21 +260,19 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                     </div>
 
                     {/* Lokasi */}
-                    {pengajuan.provinsi && (
-                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
-                                <h2 className="text-[15px] font-semibold text-zinc-900">Lokasi Pelaksanaan</h2>
-                                <MapPin size={16} className="text-zinc-400" />
-                            </div>
-                            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                                <InfoField label="Provinsi" value={pengajuan.provinsi} icon={<MapPin size={16} />} />
-                                <InfoField label="Kota / Kabupaten" value={pengajuan.kota_kabupaten} icon={<MapPin size={16} />} />
-                                {pengajuan.kecamatan && <InfoField label="Kecamatan" value={pengajuan.kecamatan} icon={<MapPin size={16} />} />}
-                                {pengajuan.kelurahan_desa && <InfoField label="Kelurahan / Desa" value={pengajuan.kelurahan_desa} icon={<MapPin size={16} />} />}
-                                {pengajuan.alamat_lengkap && <InfoField label="Alamat Lengkap" value={pengajuan.alamat_lengkap} icon={<MapPin size={16} />} />}
-                            </div>
+                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
+                            <h2 className="text-[15px] font-semibold text-zinc-900">Lokasi Pelaksanaan</h2>
+                            <MapPin size={16} className="text-zinc-400" />
                         </div>
-                    )}
+                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                            <EditableInfoField label="Provinsi" value={pengajuan.provinsi} icon={<MapPin size={16} />} onSave={(val) => onUpdateField('provinsi', val)} />
+                            <EditableInfoField label="Kota / Kabupaten" value={pengajuan.kota_kabupaten} icon={<MapPin size={16} />} onSave={(val) => onUpdateField('kota_kabupaten', val)} />
+                            <EditableInfoField label="Kecamatan" value={pengajuan.kecamatan} icon={<MapPin size={16} />} onSave={(val) => onUpdateField('kecamatan', val)} />
+                            <EditableInfoField label="Kelurahan / Desa" value={pengajuan.kelurahan_desa} icon={<MapPin size={16} />} onSave={(val) => onUpdateField('kelurahan_desa', val)} />
+                            <EditableInfoField label="Alamat Lengkap" value={pengajuan.alamat_lengkap} type="textarea" icon={<MapPin size={16} />} onSave={(val) => onUpdateField('alamat_lengkap', val)} />
+                        </div>
+                    </div>
 
                     {/* Dokumen Lampiran */}
                     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mb-6">
@@ -247,28 +282,16 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                         </div>
                         <div className="p-6 space-y-4">
                             {[
-                                { label: 'Proposal', url: pengajuan.proposal },
-                                { label: 'Surat Permohonan', url: pengajuan.surat_permohonan },
-                                { label: 'RAB', url: pengajuan.rab },
+                                { label: 'Proposal', url: pengajuan.proposal, field: 'proposal' },
+                                { label: 'Surat Permohonan', url: pengajuan.surat_permohonan, field: 'surat_permohonan' },
+                                { label: 'RAB', url: pengajuan.rab, field: 'rab' },
                             ].map(doc => (
-                                <div key={doc.label}>
-                                    <label className="text-[12px] font-semibold text-zinc-500 block mb-1.5">{doc.label}</label>
-                                    {doc.url ? (
-                                        <a href={doc.url} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center justify-between w-full bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 text-[13px] text-indigo-600 font-medium hover:bg-zinc-100 hover:border-zinc-300 transition-all shadow-sm group">
-                                            <div className="flex items-center gap-3 truncate">
-                                                <FileText size={16} className="text-zinc-400 group-hover:text-indigo-500" />
-                                                <span className="truncate">Buka File {doc.label}</span>
-                                            </div>
-                                            <ExternalLink size={14} className="text-zinc-400" />
-                                        </a>
-                                    ) : (
-                                        <div className="flex items-center gap-3 w-full bg-zinc-50/50 border border-zinc-100 rounded-lg px-4 py-2.5 text-[13px] text-zinc-400 cursor-not-allowed italic">
-                                            <X size={16} className="text-zinc-300" />
-                                            Belum diunggah
-                                        </div>
-                                    )}
-                                </div>
+                                <EditableUrl
+                                    key={doc.label}
+                                    label={doc.label}
+                                    url={doc.url}
+                                    onSave={(val) => onUpdateField(doc.field, val)}
+                                />
                             ))}
                         </div>
 
@@ -290,7 +313,7 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
 
                     {/* Keputusan Verifikasi */}
                     {pengajuan.status_pengajuan !== 'selesai' && (
-                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden sticky top-6">
+                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
                                 <h2 className="text-[14px] font-semibold text-zinc-900">Verifikasi Berkas</h2>
                             </div>
@@ -342,60 +365,12 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                                     disabled={!canSubmit}
                                     className={`w-full flex justify-center items-center gap-2 py-3 rounded-xl text-[14px] font-bold transition-all mt-2 ${canSubmit ? 'bg-zinc-900 text-white hover:bg-zinc-800 shadow-md ring-1 ring-black/10' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'}`}
                                 >
-                                    <Save size={16} /> Simpan Keputusan
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Pengaturan Aktivitas (hanya jika diterima/selesai) */}
-                    {['diterima', 'selesai'].includes(pengajuan.status_pengajuan) && (
-                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-2">
-                                <Activity size={16} className="text-zinc-500" />
-                                <h2 className="text-[14px] font-semibold text-zinc-900">Konfigurasi Maps</h2>
-                            </div>
-                            <div className="p-6 space-y-6">
-                                {/* Thumbnail Upload */}
-                                <div>
-                                    <label className="block text-[12px] font-medium text-zinc-600 mb-2">Display Thumbnail <span className="text-zinc-400 font-normal text-[11px]">(opsional)</span></label>
-                                    <label htmlFor="thumb-upload" className="flex items-center gap-3 px-4 py-3 border border-dashed border-zinc-300 bg-zinc-50 rounded-lg cursor-pointer hover:border-zinc-400 hover:bg-zinc-100 transition-all shadow-sm">
-                                        {thumbnailAktivitas ? (
-                                            <>
-                                                <CheckCircle size={18} className="text-zinc-700 flex-shrink-0" />
-                                                <span className="text-[13px] font-medium text-zinc-800 truncate">{thumbnailAktivitas.name}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ImageIcon size={18} className="text-zinc-400 flex-shrink-0" />
-                                                <span className="text-[13px] text-zinc-500">Pilih gambar visual... <span className="text-zinc-800 font-medium ml-1">Browse</span></span>
-                                            </>
-                                        )}
-                                        <input id="thumb-upload" type="file" className="sr-only" accept="image/*" onChange={e => setThumbnailAktivitas(e.target.files?.[0] || null)} />
-                                    </label>
-                                </div>
-                                {/* Status Pelaksanaan */}
-                                <div>
-                                    <label className="block text-[12px] font-medium text-zinc-600 mb-2">Status Pelaksanaan (Warna Pin)</label>
-                                    <select value={statusAktivitas} onChange={e => setStatusAktivitas(e.target.value)}
-                                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 transition-all cursor-pointer shadow-sm">
-                                        <option value="persiapan">🟡 Persiapan (Pin Kuning)</option>
-                                        <option value="berjalan">🔵 Berjalan (Pin Biru)</option>
-                                        <option value="selesai">🟢 Selesai (Pin Hijau)</option>
-                                    </select>
-                                </div>
-
-                                <button
-                                    onClick={handleSimpanPengaturan}
-                                    className="w-full flex justify-center items-center gap-2 py-2.5 rounded-lg text-[13px] font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
-                                >
-                                    <Save size={16} /> Update Konfigurasi
+                                    Verifikasi
                                 </button>
                             </div>
                         </div>
                     )}
                 </div>
-
             </div>
 
             {/* Tim PKM Modal */}
@@ -407,27 +382,56 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai }) => {
                             <h3 className="text-[16px] font-bold text-zinc-900">Tambah Anggota Tim</h3>
                             <button onClick={() => setTimModal(false)} className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 transition-colors"><X size={18} /></button>
                         </div>
-                        <form onSubmit={handleAddTim} className="p-6 space-y-5">
-                            <div>
-                                <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">Pilih Pegawai / Dosen</label>
-                                <select value={timForm.id_pegawai} onChange={e => setTimForm({ ...timForm, id_pegawai: e.target.value })}
-                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 transition-all cursor-pointer shadow-sm">
-                                    <option value="">— Tidak Ada —</option>
-                                    {listPegawai.map(p => <option key={p.id_pegawai} value={p.id_pegawai}>{p.nama_pegawai} {p.nip ? `(${p.nip})` : ''}</option>)}
-                                </select>
+                        <form onSubmit={handleAddTim} className="p-6">
+
+                            {/* Member Type Selection */}
+                            <div className="flex bg-zinc-100 p-1 rounded-lg mb-6">
+                                {(['dosen', 'staff', 'mahasiswa'] as const).map(type => (
+                                    <button
+                                        type="button"
+                                        key={type}
+                                        onClick={() => {
+                                            setMemberType(type);
+                                            setTimForm({ id_pegawai: '', nama_mahasiswa: '', peran_tim: '' });
+                                        }}
+                                        className={`flex-1 py-1.5 text-[13px] font-semibold rounded-md capitalize transition-all ${memberType === type ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
                             </div>
-                            <div>
-                                <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">Nama Mahasiswa</label>
-                                <input value={timForm.nama_mahasiswa} onChange={e => setTimForm({ ...timForm, nama_mahasiswa: e.target.value })}
-                                    placeholder="Kosongkan jika bukan mahasiswa"
-                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm" />
+
+                            <div className="space-y-5">
+                                {(memberType === 'dosen' || memberType === 'staff') && (
+                                    <div>
+                                        <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">
+                                            Pilih {memberType === 'dosen' ? 'Dosen' : 'Staff'} <span className="text-red-500">*</span>
+                                        </label>
+                                        <select value={timForm.id_pegawai} onChange={e => setTimForm({ ...timForm, id_pegawai: e.target.value })} required
+                                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 transition-all cursor-pointer shadow-sm">
+                                            <option value="">- Pilih -</option>
+                                            {listPegawai.map(p => <option key={p.id_pegawai} value={p.id_pegawai}>{p.nama_pegawai} {p.nip ? `(${p.nip})` : ''}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {memberType === 'mahasiswa' && (
+                                    <div>
+                                        <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">Nama Mahasiswa <span className="text-red-500">*</span></label>
+                                        <input value={timForm.nama_mahasiswa} onChange={e => setTimForm({ ...timForm, nama_mahasiswa: e.target.value })} required
+                                            placeholder="Masukkan nama lengkap mahasiswa"
+                                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm" />
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">Peran Tim <span className="text-red-500">*</span></label>
+                                    <input value={timForm.peran_tim} onChange={e => setTimForm({ ...timForm, peran_tim: e.target.value })} required
+                                        placeholder="Contoh: Ketua, Anggota, Tim Survei, dsb."
+                                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm" />
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-[13px] font-semibold text-zinc-700 block mb-1.5">Peran Tim <span className="text-red-500">*</span></label>
-                                <input value={timForm.peran_tim} onChange={e => setTimForm({ ...timForm, peran_tim: e.target.value })} required
-                                    placeholder="Contoh: Ketua, Anggota, dsb."
-                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[13px] text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm" />
-                            </div>
+
                             <div className="flex gap-3 pt-4 border-t border-zinc-100 mt-6">
                                 <button type="submit" className="flex-1 py-2.5 rounded-lg text-[13px] font-bold text-white bg-zinc-900 hover:bg-zinc-800 shadow-md transition-colors">Tambahkan</button>
                                 <button type="button" onClick={() => setTimModal(false)} className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 shadow-sm transition-colors">Batal</button>
@@ -454,9 +458,112 @@ const InfoField: React.FC<{ label: string; value?: string | null; icon?: React.R
         {icon && <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 flex-shrink-0 shadow-sm">{icon}</div>}
         <div className="flex-1 min-w-0">
             <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">{label}</div>
-            <div className="text-[14px] font-medium text-zinc-900 leading-tight">{value || '—'}</div>
+            <div className="text-[14px] font-medium text-zinc-900 leading-tight">{value || '-'}</div>
         </div>
     </div>
 );
+
+const EditableInfoField: React.FC<{
+    label: string; value?: string | number | null; icon?: React.ReactNode;
+    type?: 'text' | 'number' | 'select' | 'date' | 'textarea'; options?: { value: string | number, label: string }[];
+    onSave: (val: any) => void;
+}> = ({ label, value, icon, type = 'text', options = [], onSave }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempValue, setTempValue] = useState<any>(value || '');
+
+    const handleSave = () => {
+        setIsEditing(false);
+        if (tempValue !== value) {
+            onSave(type === 'number' ? Number(tempValue) : tempValue);
+        }
+    };
+    const handleCancel = () => {
+        setIsEditing(false);
+        setTempValue(value || '');
+    };
+
+    const displayValue = type === 'select'
+        ? (options.find(o => o.value == value)?.label || value || '-')
+        : (value || '-');
+
+    return (
+        <div className="flex items-start gap-4 group">
+            {icon && <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 flex-shrink-0 shadow-sm">{icon}</div>}
+            <div className="flex-1 min-w-0 relative">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">{label}</div>
+                {isEditing ? (
+                    <div className="flex items-center gap-2 mt-1 -ml-1">
+                        {type === 'select' ? (
+                            <select value={tempValue} onChange={e => setTempValue(e.target.value)} className="flex-1 text-[13px] rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 py-1.5 px-2 outline-none border bg-white">
+                                <option value="">- Pilih -</option>
+                                {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                        ) : type === 'textarea' ? (
+                            <textarea value={tempValue} onChange={e => setTempValue(e.target.value)} rows={3} className="flex-1 text-[13px] rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 py-1.5 px-2 outline-none border bg-white resize-y" />
+                        ) : (
+                            <input type={type} value={tempValue} onChange={e => setTempValue(e.target.value)} className="flex-1 text-[13px] rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 py-1.5 px-2 outline-none border bg-white" />
+                        )}
+                        <button onClick={handleSave} className="bg-zinc-900 text-white p-1.5 rounded-md hover:bg-zinc-800 transition-colors"><Check size={14} /></button>
+                        <button onClick={handleCancel} className="bg-zinc-100 text-zinc-600 p-1.5 rounded-md hover:bg-zinc-200 border border-zinc-200 transition-colors"><X size={14} /></button>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <div className="text-[14px] font-medium text-zinc-900 leading-tight">{displayValue}</div>
+                        <button onClick={() => { setTempValue(value || ''); setIsEditing(true); }} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-indigo-600 transition-opacity p-1 bg-zinc-50 hover:bg-zinc-100 rounded-md border border-zinc-200">
+                            <Pencil size={12} />
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const EditableUrl: React.FC<{ label: string; url?: string | null; onSave: (val: string) => void }> = ({ label, url, onSave }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempUrl, setTempUrl] = useState(url || '');
+
+    const handleSave = () => {
+        setIsEditing(false);
+        if (tempUrl !== url) onSave(tempUrl);
+    };
+
+    return (
+        <div className="group relative">
+            <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[12px] font-semibold text-zinc-500 block">{label}</label>
+                {!isEditing && (
+                    <button onClick={() => { setTempUrl(url || ''); setIsEditing(true); }} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-indigo-600 transition-opacity p-1 bg-zinc-50 hover:bg-zinc-100 rounded-md border border-zinc-200">
+                        <Pencil size={12} />
+                    </button>
+                )}
+            </div>
+
+            {isEditing ? (
+                <div className="flex items-center gap-2">
+                    <input type="url" value={tempUrl} onChange={e => setTempUrl(e.target.value)} placeholder="https://..." className="flex-1 text-[13px] rounded-md border-zinc-300 shadow-sm focus:border-indigo-500 py-2 px-3 outline-none border bg-white" />
+                    <button onClick={handleSave} className="bg-zinc-900 text-white p-2 rounded-md hover:bg-zinc-800 transition-colors"><Check size={16} /></button>
+                    <button onClick={() => setIsEditing(false)} className="bg-zinc-100 text-zinc-600 p-2 rounded-md hover:bg-zinc-200 border border-zinc-200 transition-colors"><X size={16} /></button>
+                </div>
+            ) : (
+                url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-between w-full bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 text-[13px] text-indigo-600 font-medium hover:bg-zinc-100 hover:border-zinc-300 transition-all shadow-sm">
+                        <div className="flex items-center gap-3 truncate">
+                            <FileText size={16} className="text-zinc-400" />
+                            <span className="truncate">Buka File {label}</span>
+                        </div>
+                        <ExternalLink size={14} className="text-zinc-400" />
+                    </a>
+                ) : (
+                    <div className="flex items-center gap-3 w-full bg-zinc-50/50 border border-zinc-100 rounded-lg px-4 py-2.5 text-[13px] text-zinc-400 italic">
+                        <X size={16} className="text-zinc-300" />
+                        Belum diunggah
+                    </div>
+                )
+            )}
+        </div>
+    );
+};
 
 export default Detail;

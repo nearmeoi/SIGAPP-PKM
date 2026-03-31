@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
@@ -21,23 +21,30 @@ interface PaginatedData {
 
 interface Props {
     users: PaginatedData;
+    filters: {
+        search: string;
+    };
 }
 
-const ManajemenUser: React.FC<Props> = ({ users }) => {
+const ManajemenUser: React.FC<Props> = ({ users, filters }) => {
     const data = users.data || [];
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
-    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
+    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'masyarakat' });
 
-    const filtered = data.filter(u =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase())
-    );
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== filters.search) {
+                router.get('/admin/users', { search }, { preserveState: true, replace: true });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
 
     const openCreate = () => {
         setEditId(null);
-        setForm({ name: '', email: '', password: '', role: 'user' });
+        setForm({ name: '', email: '', password: '', role: 'masyarakat' });
         setModalOpen(true);
     };
 
@@ -83,10 +90,10 @@ const ManajemenUser: React.FC<Props> = ({ users }) => {
                     <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Manajemen User</h1>
                     <p className="text-zinc-500 text-[14px] mt-1">Kelola pengguna SIGAP P3M.</p>
                 </div>
-                {/* <button onClick={openCreate}
+                <button onClick={openCreate}
                     className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium text-white shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800">
                     <Plus size={16} /> Tambah User
-                </button> */}
+                </button>
             </div>
 
             {/* Table Container */}
@@ -117,13 +124,13 @@ const ManajemenUser: React.FC<Props> = ({ users }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
-                            {filtered.length === 0 ? (
+                            {data.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="py-12 text-center text-zinc-400 text-[13px]">
                                         Tidak ada data.
                                     </td>
                                 </tr>
-                            ) : filtered.map((user) => (
+                            ) : data.map((user) => (
                                 <tr key={user.id_user} className="hover:bg-zinc-50/50 transition-colors group">
                                     <td className="py-3 px-6">
                                         <div className="flex items-center gap-3">
@@ -198,7 +205,7 @@ const ManajemenUser: React.FC<Props> = ({ users }) => {
                                     <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">Role</label>
                                     <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
                                         className="w-full rounded-md border border-zinc-200 px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 text-zinc-900 transition-all bg-white">
-                                        <option value="user">Masyarakat</option>
+                                        <option value="masyarakat">Masyarakat</option>
                                         <option value="admin">Admin</option>
                                         <option value="dosen">Dosen</option>
                                     </select>

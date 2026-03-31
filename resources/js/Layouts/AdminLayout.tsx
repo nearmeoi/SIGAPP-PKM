@@ -17,6 +17,7 @@ import {
     ChevronRight,
     FileText,
     UserCircle,
+    Command,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -34,7 +35,7 @@ interface NavItem {
 const navItems: NavItem[] = [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { label: 'Pengajuan', href: '/admin/pengajuan', icon: FileText },
-    { label: 'Kegiatan', href: '/admin/aktivitas', icon: Activity },
+    { label: 'Aktivitas', href: '/admin/aktivitas', icon: Activity },
     {
         label: 'Database',
         icon: Database,
@@ -86,7 +87,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     const isActive = (href?: string) => {
         if (!href || href === '#') return false;
         if (href === '/admin') return url === '/admin' || url === '/admin/dashboard';
-        return url.startsWith(href);
+        return url === href || url.startsWith(`${href}/`);
     };
 
     const isChildrenActive = (childrenItems?: { href: string }[]) => {
@@ -97,7 +98,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     const [openDropdowns, setOpenDropdowns] = React.useState<Record<string, boolean>>(() => {
         const init: Record<string, boolean> = {};
         navItems.forEach(item => {
-            if (item.children) init[item.label] = isChildrenActive(item.children) || true; // Keep open by default if you want
+            if (item.children) init[item.label] = isChildrenActive(item.children);
         });
         return init;
     });
@@ -221,7 +222,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                                 className="w-full bg-zinc-50 hover:bg-zinc-100 pl-9 pr-12 py-1.5 rounded-md border border-zinc-200 text-[13px] text-zinc-700 placeholder-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-300 transition-all cursor-pointer"
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-60">
-                                <kbd className="hidden sm:inline-block bg-white border border-zinc-200 rounded px-1.5 py-0.5 text-[10px] font-sans font-medium text-zinc-500 shadow-sm">⌘K</kbd>
+                                <kbd className="hidden sm:flex items-center gap-0.5 bg-white border border-zinc-200 rounded px-1.5 py-0.5 text-[10px] font-sans font-medium text-zinc-500 shadow-sm">
+                                    <Command size={10} />K
+                                </kbd>
                             </div>
                         </div>
                     </div>

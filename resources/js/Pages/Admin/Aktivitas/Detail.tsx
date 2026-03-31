@@ -190,7 +190,7 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                 <label className="block text-[13px] font-semibold text-zinc-700 mb-2">Status Pelaksanaan</label>
                                 <select value={statusAktivitas} onChange={e => setStatusAktivitas(e.target.value)}
                                     className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-[14px] font-medium text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all cursor-pointer shadow-sm">
-                                    <option value="belum_mulai">⚪ Belum Mulai</option>
+                                    <option value="belum_mulai"> Belum Mulai</option>
                                     <option value="persiapan">🟡 Persiapan</option>
                                     <option value="berjalan">🔵 Berjalan</option>
                                     <option value="selesai">🟢 Selesai</option>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
@@ -28,6 +28,9 @@ interface PaginatedData {
 
 interface Props {
     listArsip: PaginatedData;
+    filters: {
+        search: string;
+    };
 }
 
 const jenisOptions = [
@@ -44,9 +47,9 @@ const jenisLabel: Record<string, string> = {
     dokumen_lain: 'Dokumen Lain',
 };
 
-const ArsipPage: React.FC<Props> = ({ listArsip }) => {
+const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
     const [previewItem, setPreviewItem] = useState<ArsipItem | null>(null);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
     const [form, setForm] = useState({
         id_pengajuan: '',
@@ -58,10 +61,14 @@ const ArsipPage: React.FC<Props> = ({ listArsip }) => {
 
     const items = listArsip.data || [];
 
-    const filtered = items.filter(a =>
-        (a.nama_dokumen || '').toLowerCase().includes(search.toLowerCase()) ||
-        (a.pengajuan?.judul_kegiatan || '').toLowerCase().includes(search.toLowerCase())
-    );
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== filters.search) {
+                router.get('/admin/arsip', { search }, { preserveState: true, replace: true });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -128,11 +135,11 @@ const ArsipPage: React.FC<Props> = ({ listArsip }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
-                            {filtered.length === 0 ? (
+                            {items.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="py-12 text-center text-zinc-400 font-medium text-[13px]">Tidak ada dokumen arsip yang ditemukan.</td>
                                 </tr>
-                            ) : filtered.map((a) => (
+                            ) : items.map((a) => (
                                 <tr key={a.id_arsip} className="hover:bg-zinc-50/50 transition-colors group">
                                     <td className="py-4 px-6">
                                         <div className="flex items-center gap-3">
@@ -179,7 +186,7 @@ const ArsipPage: React.FC<Props> = ({ listArsip }) => {
                     </table>
                 </div>
                 <div className="px-6 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-                    <span className="text-[12px] font-medium text-zinc-500">{filtered.length} total dokumen</span>
+                    <span className="text-[12px] font-medium text-zinc-500">{listArsip.total} total dokumen</span>
                 </div>
             </div>
 

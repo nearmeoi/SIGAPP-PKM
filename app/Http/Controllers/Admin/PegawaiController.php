@@ -60,10 +60,30 @@ class PegawaiController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,xls,xlsx|max:2048',
+            'file' => 'required|file|mimes:csv,txt|max:2048',
         ]);
 
-        // TODO: Implement CSV/Excel import logic using a package like maatwebsite/excel
-        return redirect()->back()->with('error', 'Fitur import CSV belum tersedia. Silakan tambahkan pegawai secara manual.');
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        
+        // Skip header
+        fgetcsv($handle);
+
+        $count = 0;
+        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            if (count($data) >= 1) {
+                Pegawai::create([
+                    'nama_pegawai' => $data[0],
+                    'nip'          => $data[1] ?? null,
+                    'jabatan'      => $data[2] ?? null,
+                    'posisi'       => $data[3] ?? null,
+                ]);
+                $count++;
+            }
+        }
+
+        fclose($handle);
+
+        return redirect()->back()->with('success', "Berhasil mengimpor {$count} data pegawai.");
     }
 }

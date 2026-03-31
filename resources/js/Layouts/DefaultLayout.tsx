@@ -3,10 +3,11 @@ import { usePage } from '@inertiajs/react';
 import Header from '@/Components/Header';
 import Footer from '@/Components/Footer';
 import Toast from '@/Components/Toast';
+import { PageProps } from '@/types/index';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    const { props } = usePage();
-    const flash = (props as any).flash || {};
+    const { props } = usePage<PageProps>();
+    const flash = props.flash || {};
 
     const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; title: string; message: string }>({
         show: false, type: 'success', title: '', message: '',

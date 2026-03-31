@@ -170,4 +170,3 @@ const TestimonialSidebarDisplay: React.FC<TestimonialSidebarDisplayProps> = ({ s
 };
 
 export default TestimonialSidebarDisplay;
-

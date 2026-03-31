@@ -1,14 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import { Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
-import { Filter, Download, Search, ChevronRight, Clock, X } from 'lucide-react';
+import {
+    Filter, Download, Search, ChevronRight, Clock, X,
+    Pencil, Trash2, CheckSquare, Square, Mail, Check
+} from 'lucide-react';
 
 interface Pengajuan {
     id_pengajuan: number;
     judul_kegiatan: string;
     status_pengajuan: string;
+    no_telepon?: string;
     created_at: string;
-    user?: { name: string };
+    user?: { name: string; email: string };
     jenis_pkm?: { nama_jenis: string };
     provinsi?: string;
     kota_kabupaten?: string;
@@ -28,37 +32,36 @@ interface IndexProps {
     filters: { search: string; status: string };
 }
 
-const statusBadge: Record<string, { label: string; text: string; bg: string; dot: string }> = {
+const STATUS_BADGE: Record<string, { label: string; text: string; bg: string; dot: string }> = {
     diproses: { label: 'Diproses', text: 'text-blue-700', bg: 'bg-blue-50', dot: 'bg-blue-400' },
     diterima: { label: 'Diterima', text: 'text-emerald-700', bg: 'bg-emerald-50', dot: 'bg-emerald-400' },
     direvisi: { label: 'Revisi', text: 'text-amber-700', bg: 'bg-amber-50', dot: 'bg-amber-400' },
     ditolak: { label: 'Ditolak', text: 'text-red-700', bg: 'bg-red-50', dot: 'bg-red-400' },
-    selesai: { label: 'Selesai', text: 'text-indigo-700', bg: 'bg-indigo-50', dot: 'bg-indigo-400' },
 };
 
-const statusOptions = [
+const STATUS_OPTIONS = [
     { value: '', label: 'Semua Status' },
     { value: 'diproses', label: 'Diproses' },
     { value: 'direvisi', label: 'Direvisi' },
     { value: 'diterima', label: 'Diterima' },
     { value: 'ditolak', label: 'Ditolak' },
-    { value: 'selesai', label: 'Selesai' },
 ];
 
 const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [showUndangan, setShowUndangan] = useState(false);
+    const [undanganSubject, setUndanganSubject] = useState('Undangan Pengajuan PKM');
+    const [undanganBody, setUndanganBody] = useState('');
 
+    // ── Filter helpers ─────────────────────────────────
     const applyFilters = useCallback(() => {
         router.get('/admin/pengajuan', {
             search: search || undefined,
             status: status || undefined,
         }, { preserveState: true, replace: true });
     }, [search, status]);
-
-    const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') applyFilters();
-    };
 
     const handleStatusChange = (newStatus: string) => {
         setStatus(newStatus);
@@ -68,6 +71,12 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
         }, { preserveState: true, replace: true });
     };
 
+    const clearFilters = () => {
+        setSearch(''); setStatus('');
+        router.get('/admin/pengajuan', {}, { preserveState: true, replace: true });
+    };
+
+    // ── Export ──────────────────────────────────────────
     const handleExport = () => {
         const params = new URLSearchParams();
         if (search) params.set('search', search);
@@ -75,23 +84,46 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
         window.location.href = `/admin/pengajuan/export?${params.toString()}`;
     };
 
-    const clearFilters = () => {
-        setSearch('');
-        setStatus('');
-        router.get('/admin/pengajuan', {}, { preserveState: true, replace: true });
+    // ── Checkbox helpers ────────────────────────────────
+    const allIds = listPengajuan.data.map(p => p.id_pengajuan);
+    const allChecked = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+    const someChecked = selectedIds.length > 0;
+
+    const toggleAll = () => {
+        setSelectedIds(allChecked ? [] : allIds);
     };
+
+    const toggleOne = (id: number) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    // ── Delete ──────────────────────────────────────────
+    const handleDelete = (id: number, judul: string) => {
+        if (!confirm(`Hapus pengajuan "${judul}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        router.delete(`/admin/pengajuan/${id}`, {
+            onSuccess: () => setSelectedIds(prev => prev.filter(x => x !== id)),
+        });
+    };
+
+    // ── Selected pengajuan data ──────────────────────────
+    const selectedPengajuan = listPengajuan.data.filter(p => selectedIds.includes(p.id_pengajuan));
 
     const hasFilters = search || status;
 
     return (
         <AdminLayout title="">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            {/* ── Page Header ── */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Kelola Pengajuan</h1>
                     <p className="text-[14px] text-zinc-500 mt-1">Review dan kelola semua pengajuan proposal kegiatan PKM.</p>
                 </div>
-                <div className="flex items-center gap-3">
+
+                {/* Toolbar */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* Search */}
                     <div className="relative">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input
@@ -99,49 +131,77 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                             placeholder="Cari proposal..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            onKeyDown={handleSearchKeyDown}
-                            className="bg-white border border-zinc-200 rounded-md py-2 pl-9 pr-4 text-[13px] text-zinc-700 placeholder-zinc-400 focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 outline-none w-64 shadow-sm transition-all"
+                            onKeyDown={e => e.key === 'Enter' && applyFilters()}
+                            className="bg-white border border-zinc-200 rounded-md py-2 pl-9 pr-4 text-[13px] text-zinc-700 placeholder-zinc-400 focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 outline-none w-56 shadow-sm transition-all"
                         />
                     </div>
+
+                    {/* Status filter */}
                     <select
                         value={status}
                         onChange={e => handleStatusChange(e.target.value)}
-                        className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 outline-none cursor-pointer transition-colors"
+                        className="px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 focus:ring-2 focus:ring-zinc-200 outline-none cursor-pointer"
                     >
-                        {statusOptions.map(opt => (
+                        {STATUS_OPTIONS.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                     </select>
+
+                    {/* Export */}
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
                     >
                         <Download size={14} /> Export
                     </button>
+
+                    {/* Clear filter */}
                     {hasFilters && (
-                        <button
-                            onClick={clearFilters}
-                            className="flex items-center gap-1 px-2 py-2 text-zinc-400 hover:text-zinc-600 transition-colors"
-                            title="Hapus filter"
-                        >
+                        <button onClick={clearFilters} className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors" title="Hapus filter">
                             <X size={14} />
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Table Card */}
+            {/* ── Bulk action bar (muncul saat ada yang dicentang) ── */}
+            {someChecked && (
+                <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-[13px] text-indigo-800">
+                    <Check size={14} className="text-indigo-500" />
+                    <span className="font-semibold">{selectedIds.length} dipilih</span>
+                    <span className="text-indigo-400">|</span>
+                    <button
+                        onClick={() => setShowUndangan(true)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white rounded-md text-[12px] font-semibold hover:bg-indigo-700 transition-colors"
+                    >
+                        <Mail size={12} /> Kirim Undangan ({selectedIds.length})
+                    </button>
+                    <button onClick={() => setSelectedIds([])} className="ml-auto text-indigo-400 hover:text-indigo-700 transition-colors">
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
+
+            {/* ── Table ── */}
             <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[900px]">
+                    <table className="w-full text-left min-w-[960px]">
                         <thead>
                             <tr className="border-b border-zinc-200 bg-zinc-50/50">
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 w-12 text-center">No</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Nama Kegiatan</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Pengaju</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Detail</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-center">Status</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-right">Action</th>
+                                {/* Check-all */}
+                                <th className="py-3 px-4 w-10">
+                                    <button onClick={toggleAll} className="text-zinc-400 hover:text-zinc-700 transition-colors">
+                                        {allChecked
+                                            ? <CheckSquare size={16} className="text-indigo-600" />
+                                            : <Square size={16} />
+                                        }
+                                    </button>
+                                </th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Nama Kegiatan</th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Pengaju</th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Detail</th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-center">Status</th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
@@ -153,47 +213,80 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                 </tr>
                             ) : (
                                 listPengajuan.data.map((item) => {
-                                    const st = statusBadge[item.status_pengajuan] || statusBadge.diproses;
+                                    const st = STATUS_BADGE[item.status_pengajuan] || STATUS_BADGE.diproses;
+                                    const checked = selectedIds.includes(item.id_pengajuan);
                                     return (
-                                        <tr key={item.id_pengajuan} className="hover:bg-zinc-50/50 transition-colors group">
-                                            <td className="py-4 px-6 text-center">
-                                                <span className="text-[13px] font-medium text-zinc-500">
-                                                    {item.id_pengajuan.toString().padStart(2, '0')}
-                                                </span>
+                                        <tr key={item.id_pengajuan} className={`hover:bg-zinc-50/50 transition-colors group ${checked ? 'bg-indigo-50/30' : ''}`}>
+                                            {/* Checkbox */}
+                                            <td className="py-3 px-4">
+                                                <button onClick={() => toggleOne(item.id_pengajuan)} className="text-zinc-400 hover:text-zinc-700">
+                                                    {checked
+                                                        ? <CheckSquare size={16} className="text-indigo-600" />
+                                                        : <Square size={16} />
+                                                    }
+                                                </button>
                                             </td>
-                                            <td className="py-4 px-6">
-                                                <Link href={`/admin/pengajuan/${item.id_pengajuan}`} className="text-[14px] font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors leading-snug truncate max-w-[280px] block">
+
+                                            {/* Nama Kegiatan */}
+                                            <td className="py-3 px-4">
+                                                <Link href={`/admin/pengajuan/${item.id_pengajuan}`} className="text-[14px] font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors leading-snug truncate max-w-[260px] block">
                                                     {item.judul_kegiatan}
                                                 </Link>
-                                                <div className="text-[12px] text-zinc-400 mt-1 flex items-center gap-1">
-                                                    <Clock size={14} className="text-zinc-400" />
-                                                    {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                <div className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1">
+                                                    <Clock size={11} />
+                                                    {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-6">
-                                                <div className="text-[13px] font-medium text-zinc-700">
-                                                    {item.user?.name || '-'}
-                                                </div>
+
+                                            {/* Pengaju */}
+                                            <td className="py-3 px-4">
+                                                <div className="text-[13px] font-medium text-zinc-800">{item.user?.name || '-'}</div>
+                                                {item.no_telepon && (
+                                                    <div className="text-[11px] text-zinc-400 mt-0.5">📞 {item.no_telepon}</div>
+                                                )}
                                             </td>
-                                            <td className="py-4 px-6">
+
+                                            {/* Detail: Jenis & Lokasi */}
+                                            <td className="py-3 px-4">
                                                 <div className="text-[13px] text-zinc-700 font-medium">{item.jenis_pkm?.nama_jenis || '-'}</div>
-                                                <div className="text-[12px] text-zinc-500 mt-1 truncate max-w-[200px]">
+                                                <div className="text-[11px] text-zinc-400 mt-0.5 truncate max-w-[180px]">
                                                     {item.kota_kabupaten ? `${item.kota_kabupaten}, ${item.provinsi}` : 'Lokasi: TBD'}
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-6 text-center">
-                                                <span className={`inline-flex items-center justify-start gap-1.5 w-24 px-3 py-1 rounded-md text-[11px] font-semibold tracking-wider uppercase border ${st.bg} ${st.text} border-zinc-100`}>
+
+                                            {/* Status badge */}
+                                            <td className="py-3 px-4 text-center">
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wider uppercase border ${st.bg} ${st.text} border-zinc-100`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`}></span>
                                                     {st.label}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6 text-right">
-                                                <Link
-                                                    href={`/admin/pengajuan/${item.id_pengajuan}`}
-                                                    className="inline-flex items-center justify-center p-2 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors border border-transparent hover:border-zinc-200"
-                                                >
-                                                    <ChevronRight size={18} />
-                                                </Link>
+
+                                            {/* Actions */}
+                                            <td className="py-3 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Link
+                                                        href={`/admin/pengajuan/${item.id_pengajuan}`}
+                                                        className="p-1.5 rounded-md text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                                        title="Lihat Detail"
+                                                    >
+                                                        <ChevronRight size={15} />
+                                                    </Link>
+                                                    {/* <Link
+                                                        href={`/admin/pengajuan/${item.id_pengajuan}`}
+                                                        className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </Link> */}
+                                                    <button
+                                                        onClick={() => handleDelete(item.id_pengajuan, item.judul_kegiatan)}
+                                                        className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -203,40 +296,18 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                     </table>
                 </div>
 
-                {/* Pagination footer */}
+                {/* Pagination */}
                 {listPengajuan.last_page > 1 && (
                     <div className="flex items-center justify-between px-6 py-3 border-t border-zinc-200 bg-zinc-50/50">
                         <div className="text-[12px] font-medium text-zinc-500">
                             Menampilkan {(listPengajuan.current_page - 1) * listPengajuan.per_page + 1}
                             –{Math.min(listPengajuan.current_page * listPengajuan.per_page, listPengajuan.total)}
-                            dari {listPengajuan.total} items
+                            {' '}dari {listPengajuan.total} items
                         </div>
                         <div className="flex items-center gap-1">
                             {listPengajuan.links.map((link, i) => {
-                                if (i === 0) {
-                                    return (
-                                        <button
-                                            key={i}
-                                            disabled={!link.url}
-                                            onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
-                                            className="w-8 h-8 flex items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 text-[13px] transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            ‹
-                                        </button>
-                                    );
-                                }
-                                if (i === listPengajuan.links.length - 1) {
-                                    return (
-                                        <button
-                                            key={i}
-                                            disabled={!link.url}
-                                            onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
-                                            className="w-8 h-8 flex items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 text-[13px] transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            ›
-                                        </button>
-                                    );
-                                }
+                                const isFirst = i === 0;
+                                const isLast = i === listPengajuan.links.length - 1;
                                 return (
                                     <button
                                         key={i}
@@ -244,9 +315,9 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                         onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
                                         className={`w-8 h-8 flex items-center justify-center rounded-md text-[13px] font-medium transition-colors shadow-sm focus:outline-none disabled:cursor-not-allowed ${link.active
                                             ? 'bg-zinc-900 text-white'
-                                            : 'border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'
+                                            : 'border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 disabled:opacity-40'
                                             }`}
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                        dangerouslySetInnerHTML={{ __html: isFirst ? '‹' : isLast ? '›' : link.label }}
                                     />
                                 );
                             })}
@@ -254,6 +325,88 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                     </div>
                 )}
             </div>
+
+            {/* ── Gmail-style compose modal (MVP: tampilan saja, kirim manual) ── */}
+            {showUndangan && (
+                <div className="fixed bottom-4 right-4 z-50 w-[520px] bg-white rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden" style={{ animation: 'slideUp 0.2s ease-out' }}>
+                    {/* Modal header */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 text-white rounded-t-2xl">
+                        <div className="flex items-center gap-2">
+                            <Mail size={14} />
+                            <span className="text-[13px] font-semibold">Kirim Undangan</span>
+                            <span className="text-[11px] bg-white/20 rounded px-1.5 py-0.5">{selectedIds.length} penerima</span>
+                        </div>
+                        <button onClick={() => setShowUndangan(false)} className="hover:bg-white/20 rounded p-0.5 transition-colors">
+                            <X size={14} />
+                        </button>
+                    </div>
+
+                    {/* To field */}
+                    <div className="flex items-start gap-2 px-4 py-2.5 border-b border-zinc-100">
+                        <span className="text-[12px] text-zinc-400 mt-0.5 w-12 shrink-0">Kepada</span>
+                        <div className="flex flex-wrap gap-1.5 flex-1">
+                            {selectedPengajuan.map(p => (
+                                <span key={p.id_pengajuan} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[11px] font-medium border border-indigo-100">
+                                    {p.user?.name ?? 'Pengaju'} &lt;{p.user?.email ?? '–'}&gt;
+                                    <button onClick={() => toggleOne(p.id_pengajuan)} className="hover:text-red-500">
+                                        <X size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Subject */}
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-100">
+                        <span className="text-[12px] text-zinc-400 w-12 shrink-0">Subjek</span>
+                        <input
+                            type="text"
+                            value={undanganSubject}
+                            onChange={e => setUndanganSubject(e.target.value)}
+                            className="flex-1 text-[13px] text-zinc-800 outline-none placeholder-zinc-300"
+                            placeholder="Tulis subjek email..."
+                        />
+                    </div>
+
+                    {/* Body */}
+                    <textarea
+                        value={undanganBody}
+                        onChange={e => setUndanganBody(e.target.value)}
+                        placeholder={`Yth. Bapak/Ibu Pengusul,\n\nDengan hormat, kami mengundang Anda untuk...\n\nHormat kami,\nTim SIGAP PKM`}
+                        className="flex-1 px-4 py-3 text-[13px] text-zinc-700 outline-none resize-none min-h-[160px] placeholder-zinc-300"
+                    />
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-zinc-50 border-t border-zinc-100">
+                        <div className="text-[11px] text-zinc-400">masih butuh konfigurasi SMTP di <code className="bg-zinc-200 px-1 rounded">.env</code></div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowUndangan(false)}
+                                className="px-3 py-1.5 text-[12px] text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-100 transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={() => {
+                                    alert(`[MVP] Undangan akan dikirim ke ${selectedIds.length} pengaju setelah SMTP dikonfigurasi.\n\nSubjek: ${undanganSubject}`);
+                                    setShowUndangan(false);
+                                }}
+                                className="px-3 py-1.5 text-[12px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold flex items-center gap-1.5"
+                            >
+                                <Mail size={12} /> Kirim
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to   { transform: translateY(0);    opacity: 1; }
+                }
+            `}} />
         </AdminLayout>
     );
 };

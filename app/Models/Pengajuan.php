@@ -28,6 +28,7 @@ class Pengajuan extends Model
         'judul_kegiatan',
         'kebutuhan',
         'instansi_mitra',
+        'no_telepon',
         'proposal',
         'surat_permohonan',
         'rab',

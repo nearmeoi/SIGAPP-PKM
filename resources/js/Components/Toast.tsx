@@ -40,4 +40,3 @@ export default function Toast({ show, type = 'success', title, message, onClose,
         </div>
     );
 }
-

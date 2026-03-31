@@ -44,4 +44,3 @@ const MobileTabBar: React.FC<MobileTabBarProps> = ({ activeTab = 'peta', onTabCh
 };
 
 export default MobileTabBar;
-

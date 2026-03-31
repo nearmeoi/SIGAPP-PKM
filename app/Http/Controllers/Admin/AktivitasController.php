@@ -59,6 +59,10 @@ class AktivitasController extends Controller
 
         $aktivitas->save();
 
+        if ($aktivitas->status_pelaksanaan === 'selesai') {
+            $aktivitas->pengajuan()->update(['status_pengajuan' => 'selesai']);
+        }
+
         return redirect()->back()->with('success', 'Aktivitas berhasil diperbarui.');
     }
 

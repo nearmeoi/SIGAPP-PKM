@@ -142,4 +142,3 @@ const DocumentationGallery: React.FC<DocumentationGalleryProps> = ({ status, dri
 };
 
 export default DocumentationGallery;
-
