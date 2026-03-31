@@ -1,0 +1,246 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import { Link, usePage } from '@inertiajs/react';
+import ProfileDropdown from '@/Components/ProfileDropdown';
+import type { User, Auth } from '@/types';
+
+interface NavLink {
+    label: string;
+    href: string;
+    icon: string;
+}
+
+const getInitials = (name?: string): string => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+};
+
+const getContextRole = (pageUrl: string, user: User | null): string | null => {
+    const search = pageUrl.includes('?') ? pageUrl.split('?')[1] : '';
+    const params = new URLSearchParams(search);
+    const queryRole = params.get('role');
+
+    if (queryRole === 'dosen' || queryRole === 'masyarakat') {
+        return queryRole;
+    }
+
+    if (pageUrl.startsWith('/login/dosen')) {
+        return 'dosen';
+    }
+
+    if (pageUrl.startsWith('/login/masyarakat')) {
+        return 'masyarakat';
+    }
+
+    const role = String(user?.role || '').toLowerCase();
+    return role.includes('dosen') ? 'dosen' : role ? 'masyarakat' : null;
+};
+
+const getNavLinks = (pageUrl: string, user: User | null): NavLink[] => {
+    const role = getContextRole(pageUrl, user);
+    const pengajuanHref = role ? `/pengajuan?role=${role}&view=form` : '/login';
+    const statusHref = role ? `/pengajuan?role=${role}&view=status` : '/login';
+
+    return [
+        { label: 'Beranda', href: '/', icon: 'fa-house' },
+        { label: 'Cek Status', href: statusHref, icon: 'fa-magnifying-glass' },
+        { label: 'Pengajuan', href: pengajuanHref, icon: 'fa-file-circle-plus' },
+        { label: 'Panduan', href: '#panduan', icon: 'fa-book-open' },
+    ];
+};
+
+export default function Navbar() {
+    const page = usePage();
+    const { auth } = page.props as { auth: Auth };
+    const currentUrl = page.url || '/';
+    const user = auth?.user ?? null;
+    const poltekparLogoSrc = '/logo-poltekpar.png';
+    const navLinks = useMemo(() => getNavLinks(currentUrl, user), [currentUrl, user]);
+
+    const [mobileOpen, setMobileOpen] = useState(false);
+
+    const toggleMobile = useCallback(() => {
+        setMobileOpen((prev) => !prev);
+    }, []);
+
+    const closeMobile = useCallback(() => {
+        setMobileOpen(false);
+    }, []);
+
+    return (
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                <div className="flex items-center justify-between h-16">
+                    {/* Brand */}
+                    <a
+                        href="https://p3m.poltekparmakassar.ac.id/"
+                        className="flex items-center gap-3 group"
+                    >
+                        <span className="w-10 h-10 flex items-center justify-center">
+                            <img
+                                src={poltekparLogoSrc}
+                                alt=""
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                            />
+                        </span>
+                        <div className="hidden sm:block">
+                            <span className="block text-xs font-bold text-slate-700 uppercase tracking-wide leading-tight">
+                                Sistem Informasi Geospasial dan Akses Pelayanan
+                                <br />
+                                Pengabdian Kepada Masyarakat (SIGAP-PKM)
+                            </span>
+                            <span className="block text-xs font-medium text-slate-500 mt-0.5">
+                                Politeknik Pariwisata Makassar
+                            </span>
+                        </div>
+                    </a>
+
+                    {/* Desktop Nav */}
+                    <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+                        <ul className="flex items-center gap-1">
+                            {navLinks.map((item) => (
+                                <li key={item.label}>
+                                    <Link
+                                        href={item.href}
+                                        className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-sigap-blue hover:bg-slate-50 rounded-lg transition-colors"
+                                        onClick={closeMobile}
+                                    >
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
+
+                    {/* Utility */}
+                    <div className="hidden lg:flex items-center gap-4">
+                        <a
+                            href="https://p3m.poltekparmakassar.ac.id/peta-sebaran-p3m"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-sigap-blue bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        >
+                            <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                            <span>Portal P3M</span>
+                        </a>
+                    </div>
+
+                    {/* Right Controls */}
+                    <div className="flex items-center gap-2">
+                        <ProfileDropdown auth={auth} />
+
+                        {/* Hamburger */}
+                        <button
+                            type="button"
+                            className={`md:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 transition-colors ${
+                                mobileOpen ? 'text-sigap-blue' : 'text-slate-600'
+                            }`}
+                            onClick={toggleMobile}
+                            aria-label="Toggle navigation"
+                            aria-expanded={mobileOpen}
+                        >
+                            <span
+                                className={`w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${
+                                    mobileOpen ? 'rotate-45 translate-y-2' : ''
+                                }`}
+                            ></span>
+                            <span
+                                className={`w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${
+                                    mobileOpen ? 'opacity-0' : ''
+                                }`}
+                            ></span>
+                            <span
+                                className={`w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${
+                                    mobileOpen ? '-rotate-45 -translate-y-2' : ''
+                                }`}
+                            ></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Drawer */}
+            <div
+                className={`md:hidden fixed inset-y-0 left-0 w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-out z-50 ${
+                    mobileOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            >
+                <div className="flex flex-col h-full">
+                    {/* Drawer Header */}
+                    <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <img src={poltekparLogoSrc} alt="" className="w-8 h-8 object-contain" />
+                            <span className="text-sm font-bold text-slate-800">SIGAP-PKM</span>
+                        </div>
+                        <button
+                            type="button"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
+                            onClick={closeMobile}
+                        >
+                            <i className="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+
+                    {/* Drawer Links */}
+                    <ul className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+                        {navLinks.map((item) => (
+                            <li key={item.label}>
+                                <Link
+                                    href={item.href}
+                                    className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-700 hover:text-sigap-blue hover:bg-slate-50 rounded-lg transition-colors"
+                                    onClick={closeMobile}
+                                >
+                                    <i className={`fa-solid ${item.icon} text-sigap-blue w-5 text-center`}></i>
+                                    <span>{item.label}</span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {/* Drawer Footer - Auth */}
+                    <div className="px-4 py-4 border-t border-slate-100">
+                        {user ? (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white font-bold text-sm">
+                                        <span className="">{getInitials(user.name)}</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+                                        <p className="text-xs text-slate-500">{user.email}</p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/logout"
+                                    method="post"
+                                    as="button"
+                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <i className="fa-solid fa-right-from-bracket"></i>
+                                </Link>
+                            </div>
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-white bg-sigap-blue hover:bg-sigap-darkBlue rounded-lg transition-colors"
+                                onClick={closeMobile}
+                            >
+                                <i className="fa-solid fa-right-to-bracket"></i>
+                                <span>Masuk / Login</span>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Backdrop */}
+            {mobileOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40"
+                    onClick={closeMobile}
+                ></div>
+            )}
+        </header>
+    );
+}

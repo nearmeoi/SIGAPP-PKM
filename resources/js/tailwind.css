@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+    body {
+        @apply bg-white text-slate-900 font-sans antialiased;
+    }
+}
+
+/* Custom component styles */
+@layer components {
+    /* Button variants */
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-sigap-blue text-white font-semibold rounded-lg shadow-soft hover:bg-sigap-darkBlue transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sigap-blue focus:ring-offset-2;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-sigap-blue font-semibold rounded-lg border-2 border-sigap-blue shadow-soft hover:bg-sigap-lightGray transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sigap-blue focus:ring-offset-2;
+    }
+
+    /* Card variants */
+    .card-soft {
+        @apply bg-white rounded-xl shadow-soft border border-slate-100 p-6;
+    }
+
+    /* Input variants */
+    .input-field {
+        @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sigap-blue focus:border-transparent transition-all duration-200;
+    }
+
+    /* Link variants */
+    .link-primary {
+        @apply text-sigap-blue font-medium hover:text-sigap-darkBlue transition-colors duration-200;
+    }
+}
+
+/* Custom utility styles */
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+}
