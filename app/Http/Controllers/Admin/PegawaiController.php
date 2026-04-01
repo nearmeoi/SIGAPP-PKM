@@ -10,12 +10,20 @@ use Inertia\Inertia;
 
 class PegawaiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $listPegawai = Pegawai::with('user')->get();
+        $listPegawai = Pegawai::with('user')
+            ->when($request->search, function ($query, $search) {
+                $query->where('nama_pegawai', 'like', '%'.addcslashes($search, '\\%_').'%')
+                      ->orWhere('nip', 'like', '%'.addcslashes($search, '\\%_').'%');
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('Admin/Pegawai/Index', [
             'listPegawai' => $listPegawai,
+            'filters'     => ['search' => $request->search ?? ''],
         ]);
     }
 
