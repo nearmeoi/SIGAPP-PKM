@@ -41,6 +41,16 @@ export const PKM_STATUS_META: Record<string, PkmStatusMeta> = {
         label: 'PKM Berlangsung',
         markerIcon: 'fa-hourglass-half',
     },
+    ada_pengajuan: {
+        key: 'ada_pengajuan',
+        label: 'Ada Pengajuan',
+        markerIcon: 'fa-file-circle-plus',
+    },
+    belum_mulai: {
+        key: 'belum_mulai',
+        label: 'Belum Mulai',
+        markerIcon: 'fa-clock',
+    },
 };
 
 const normalizeTypeKey = (value: any): string => {
@@ -62,6 +72,12 @@ const normalizeTypeKey = (value: any): string => {
 };
 
 export const getPkmTypeMeta = (pkm: any): PkmTypeMeta => {
+    // If warna_icon is provided from DB, use it
+    if (pkm?.warna_icon && typeof pkm.warna_icon === 'string' && pkm.warna_icon.startsWith('#')) {
+        const rawType = pkm?.jenis_pkm ?? pkm?.jenisPkm ?? pkm?.jenis ?? pkm?.type ?? pkm?.category;
+        const baseMeta = PKM_TYPE_META[normalizeTypeKey(rawType)] ?? PKM_TYPE_META.mahasiswa_prodi;
+        return { ...baseMeta, color: pkm.warna_icon };
+    }
     const rawType = pkm?.jenis_pkm ?? pkm?.jenisPkm ?? pkm?.jenis ?? pkm?.type ?? pkm?.category;
     return PKM_TYPE_META[normalizeTypeKey(rawType)] ?? PKM_TYPE_META.mahasiswa_prodi;
 };

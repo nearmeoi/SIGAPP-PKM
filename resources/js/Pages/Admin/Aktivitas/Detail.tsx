@@ -41,11 +41,21 @@ interface NominatimResult {
     lon: string;
 }
 
+interface Arsip {
+    id_arsip: number;
+    nama_dokumen: string;
+    jenis_arsip: string;
+    url_dokumen?: string;
+    url_arsip?: string;
+    keterangan?: string;
+}
+
 interface Aktivitas {
     id_aktivitas: number;
     status_pelaksanaan: string;
     catatan_pelaksanaan?: string;
     url_thumbnail?: string;
+    arsip?: Arsip[];
     pengajuan: {
         id_pengajuan: number;
         judul_kegiatan: string;
@@ -331,6 +341,36 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Dokumentasi & Arsip */}
+                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-2">
+                            <FileText size={16} className="text-zinc-500" />
+                            <h2 className="text-[14px] font-semibold text-zinc-900">Dokumentasi & Arsip</h2>
+                            <span className="text-[11px] text-zinc-400 bg-zinc-200/50 px-2 py-0.5 rounded-full font-semibold">{aktivitas.arsip?.length || 0}</span>
+                        </div>
+                        {!aktivitas.arsip || aktivitas.arsip.length === 0 ? (
+                            <div className="p-5 text-center text-zinc-400 text-[13px]">Belum ada dokumentasi yang diupload.</div>
+                        ) : (
+                            <div className="divide-y divide-zinc-100">
+                                {aktivitas.arsip.map(arsip => (
+                                    <div key={arsip.id_arsip} className="px-5 py-3 flex items-center gap-3 group">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                            <FileText size={14} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[13px] font-medium text-zinc-900 truncate">{arsip.nama_dokumen}</div>
+                                            <div className="text-[11px] text-zinc-400">{arsip.jenis_arsip} {arsip.keterangan ? `• ${arsip.keterangan}` : ''}</div>
+                                        </div>
+                                        {(arsip.url_dokumen || arsip.url_arsip) && (
+                                            <a href={arsip.url_dokumen || arsip.url_arsip} target="_blank" rel="noopener noreferrer"
+                                                className="text-[12px] text-blue-600 font-medium hover:underline">Buka</a>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Danger Zone */}

@@ -23,6 +23,11 @@ const getNavLinks = (user: User | null): NavLink[] => {
         { label: 'Beranda', href: '/', icon: 'fa-house' },
     ];
 
+    if (!user) {
+        navLinks.push({ label: 'Panduan', href: '/panduan', icon: 'fa-book-open' });
+        return navLinks;
+    }
+
     if (user?.role === 'admin') {
         navLinks.push({ label: 'Panel Admin', href: '/admin/dashboard', icon: 'fa-gauge-high' });
     }
@@ -30,7 +35,7 @@ const getNavLinks = (user: User | null): NavLink[] => {
     navLinks.push(
         { label: 'Cek Status', href: '/cek-status', icon: 'fa-magnifying-glass' },
         { label: 'Pengajuan', href: '/pengajuan', icon: 'fa-file-circle-plus' },
-        { label: 'Panduan', href: '#panduan', icon: 'fa-book-open' }
+        { label: 'Panduan', href: '/panduan', icon: 'fa-book-open' }
     );
 
     return navLinks;

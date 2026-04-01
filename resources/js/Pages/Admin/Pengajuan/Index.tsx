@@ -54,6 +54,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
     const [showUndangan, setShowUndangan] = useState(false);
     const [undanganSubject, setUndanganSubject] = useState('Undangan Pengajuan PKM');
     const [undanganBody, setUndanganBody] = useState('');
+    const [selectAllMode, setSelectAllMode] = useState(false);
 
     // ── Filter helpers ─────────────────────────────────
     const applyFilters = useCallback(() => {
@@ -86,14 +87,27 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
 
     // ── Checkbox helpers ────────────────────────────────
     const allIds = listPengajuan.data.map(p => p.id_pengajuan);
-    const allChecked = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+    const allChecked = allIds.length > 0 && allIds.every(id => selectedIds.includes(id)) && !selectAllMode;
     const someChecked = selectedIds.length > 0;
 
     const toggleAll = () => {
-        setSelectedIds(allChecked ? [] : allIds);
+        if (selectAllMode) {
+            setSelectAllMode(false);
+            setSelectedIds([]);
+        } else if (allChecked) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(allIds);
+        }
+    };
+
+    const selectAllAcrossPages = () => {
+        setSelectAllMode(true);
+        setSelectedIds(listPengajuan.data.map(p => p.id_pengajuan));
     };
 
     const toggleOne = (id: number) => {
+        setSelectAllMode(false);
         setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
         );
@@ -109,6 +123,9 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
 
     // ── Selected pengajuan data ──────────────────────────
     const selectedPengajuan = listPengajuan.data.filter(p => selectedIds.includes(p.id_pengajuan));
+    // For undangan: only "diterima" items
+    const undanganRecipients = selectedPengajuan.filter(p => p.status_pengajuan === 'diterima');
+    const hasDiterimaSelected = undanganRecipients.length > 0;
 
     const hasFilters = search || status;
 
@@ -169,14 +186,32 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                 <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-[13px] text-indigo-800">
                     <Check size={14} className="text-indigo-500" />
                     <span className="font-semibold">{selectedIds.length} dipilih</span>
+                    {!selectAllMode && selectedIds.length === allIds.length && listPengajuan.total > allIds.length && (
+                        <>
+                            <span className="text-indigo-400">|</span>
+                            <button onClick={selectAllAcrossPages} className="text-[12px] font-semibold text-indigo-600 hover:text-indigo-800 underline">
+                                Pilih semua {listPengajuan.total} data
+                            </button>
+                        </>
+                    )}
+                    {selectAllMode && (
+                        <>
+                            <span className="text-indigo-400">|</span>
+                            <span className="text-[12px] font-semibold text-indigo-600">Semua {listPengajuan.total} data dipilih</span>
+                        </>
+                    )}
                     <span className="text-indigo-400">|</span>
-                    <button
-                        onClick={() => setShowUndangan(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white rounded-md text-[12px] font-semibold hover:bg-indigo-700 transition-colors"
-                    >
-                        <Mail size={12} /> Kirim Undangan ({selectedIds.length})
-                    </button>
-                    <button onClick={() => setSelectedIds([])} className="ml-auto text-indigo-400 hover:text-indigo-700 transition-colors">
+                    {hasDiterimaSelected ? (
+                        <button
+                            onClick={() => setShowUndangan(true)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white rounded-md text-[12px] font-semibold hover:bg-indigo-700 transition-colors"
+                        >
+                            <Mail size={12} /> Kirim Undangan ({undanganRecipients.length})
+                        </button>
+                    ) : (
+                        <span className="text-[12px] text-indigo-400 italic">Centang data berstatus Diterima untuk kirim undangan</span>
+                    )}
+                    <button onClick={() => { setSelectedIds([]); setSelectAllMode(false); }} className="ml-auto text-indigo-400 hover:text-indigo-700 transition-colors">
                         <X size={14} />
                     </button>
                 </div>
@@ -335,7 +370,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                         <div className="flex items-center gap-2">
                             <Mail size={14} />
                             <span className="text-[13px] font-semibold">Kirim Undangan</span>
-                            <span className="text-[11px] bg-white/20 rounded px-1.5 py-0.5">{selectedIds.length} penerima</span>
+                            <span className="text-[11px] bg-white/20 rounded px-1.5 py-0.5">{undanganRecipients.length} penerima</span>
                         </div>
                         <button onClick={() => setShowUndangan(false)} className="hover:bg-white/20 rounded p-0.5 transition-colors">
                             <X size={14} />
@@ -346,7 +381,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                     <div className="flex items-start gap-2 px-4 py-2.5 border-b border-zinc-100">
                         <span className="text-[12px] text-zinc-400 mt-0.5 w-12 shrink-0">Kepada</span>
                         <div className="flex flex-wrap gap-1.5 flex-1">
-                            {selectedPengajuan.map(p => (
+                            {undanganRecipients.map(p => (
                                 <span key={p.id_pengajuan} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[11px] font-medium border border-indigo-100">
                                     {p.user?.name ?? 'Pengaju'} &lt;{p.user?.email ?? '–'}&gt;
                                     <button onClick={() => toggleOne(p.id_pengajuan)} className="hover:text-red-500">
@@ -389,7 +424,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                             </button>
                             <button
                                 onClick={() => {
-                                    alert(`[MVP] Undangan akan dikirim ke ${selectedIds.length} pengaju setelah SMTP dikonfigurasi.\n\nSubjek: ${undanganSubject}`);
+                                    alert(`[MVP] Undangan akan dikirim ke ${undanganRecipients.length} pengaju setelah SMTP dikonfigurasi.\n\nSubjek: ${undanganSubject}`);
                                     setShowUndangan(false);
                                 }}
                                 className="px-3 py-1.5 text-[12px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold flex items-center gap-1.5"

@@ -1,5 +1,10 @@
 const SIGAP_DEMO_DATA_ENABLED = import.meta.env.VITE_ENABLE_SIGAP_DEMO_DATA !== 'false';
 
+const demoTestimoni = [
+    { nama_pemberi: 'Budi Santoso', rating: 5, pesan_ulasan: 'Kegiatan sangat bermanfaat untuk masyarakat desa kami.' },
+    { nama_pemberi: 'Siti Aminah', rating: 4, pesan_ulasan: 'Pelaksanaannya baik, materi mudah dipahami.' },
+];
+
 const demoPkmRecords = [
     {
         id: 1,
@@ -306,7 +311,13 @@ const getPreviewStatusFromLocation = () => {
     return new URLSearchParams(window.location.search).get('preview_status');
 };
 
-export const resolvePublicPkmData = (serverData) => resolveCollection(serverData, demoPkmRecords);
+export const resolvePublicPkmData = (serverData) => {
+    const data = resolveCollection(serverData, demoPkmRecords);
+    return data.map((item) => ({
+        ...item,
+        testimoni: item.testimoni ?? (item.status === 'selesai' ? demoTestimoni : []),
+    }));
+};
 
 export const resolveUserPkmData = (serverData) => resolveCollection(serverData, demoPkmRecords);
 

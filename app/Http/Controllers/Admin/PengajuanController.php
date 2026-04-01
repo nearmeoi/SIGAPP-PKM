@@ -26,6 +26,7 @@ class PengajuanController extends Controller
             ->when($request->status, function ($query, $status) {
                 $query->where('status_pengajuan', $status);
             })
+            ->orderByRaw("FIELD(status_pengajuan, 'diproses', 'diterima', 'direvisi', 'ditolak')")
             ->latest()
             ->paginate(10)
             ->withQueryString();

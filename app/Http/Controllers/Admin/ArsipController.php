@@ -11,7 +11,7 @@ class ArsipController extends Controller
 {
     public function index(Request $request)
     {
-        $listArsip = Arsip::with(['pengajuan.user'])
+        $listArsip = Arsip::with(['pengajuan.user', 'aktivitas.pengajuan'])
             ->when($request->search, function ($query, $search) {
                 $escaped = addcslashes($search, '\\%_');
                 $query->where('nama_dokumen', 'like', "%{$escaped}%")

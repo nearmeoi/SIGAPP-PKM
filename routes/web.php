@@ -26,6 +26,11 @@ use Inertia\Inertia;
 // ─────────────────────────────────────────────
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
+// Panduan page
+Route::get('/panduan', function () {
+    return Inertia::render('Panduan');
+})->name('panduan');
+
 // Testimoni publik — tidak terikat ke aktivitas tertentu (id_aktivitas nullable)
 Route::post('/testimoni/public', function (Request $request) {
     $request->validate([

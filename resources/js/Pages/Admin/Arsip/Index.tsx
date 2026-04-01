@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
-import { ExternalLink, Search, Folder, X, FileText, Eye, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Search, Folder, X, FileText, Eye, Plus, Trash2, Edit } from 'lucide-react';
 
 interface ArsipItem {
     id_arsip: number;
@@ -12,10 +12,17 @@ interface ArsipItem {
     url_arsip?: string;
     keterangan?: string;
     created_at: string;
+    updated_at: string;
     pengajuan?: {
         id_pengajuan: number;
         judul_kegiatan: string;
         user?: { name: string };
+    };
+    aktivitas?: {
+        id_aktivitas: number;
+        pengajuan?: {
+            judul_kegiatan: string;
+        };
     };
 }
 
@@ -51,6 +58,7 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
     const [previewItem, setPreviewItem] = useState<ArsipItem | null>(null);
     const [search, setSearch] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
+    const [editing, setEditing] = useState<ArsipItem | null>(null);
     const [form, setForm] = useState({
         id_pengajuan: '',
         nama_dokumen: '',
@@ -70,14 +78,36 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    const openCreate = () => {
+        setEditing(null);
+        setForm({ id_pengajuan: '', nama_dokumen: '', jenis_arsip: 'laporan_akhir', url_dokumen: '', keterangan: '' });
+        setModalOpen(true);
+    };
+
+    const openEdit = (a: ArsipItem) => {
+        setEditing(a);
+        setForm({
+            id_pengajuan: a.pengajuan?.id_pengajuan?.toString() || '',
+            nama_dokumen: a.nama_dokumen,
+            jenis_arsip: a.jenis_arsip,
+            url_dokumen: a.url_dokumen || a.url_arsip || '',
+            keterangan: a.keterangan || '',
+        });
+        setModalOpen(true);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post('/admin/arsip', form, {
-            onSuccess: () => {
-                setModalOpen(false);
-                setForm({ id_pengajuan: '', nama_dokumen: '', jenis_arsip: 'laporan_akhir', url_dokumen: '', keterangan: '' });
-            },
-        });
+        if (editing) {
+            router.put(`/admin/arsip/${editing.id_arsip}`, {
+                nama_dokumen: form.nama_dokumen,
+                jenis_arsip: form.jenis_arsip,
+                url_dokumen: form.url_dokumen,
+                keterangan: form.keterangan,
+            }, { onSuccess: () => setModalOpen(false) });
+        } else {
+            router.post('/admin/arsip', form, { onSuccess: () => setModalOpen(false) });
+        }
     };
 
     const handleDelete = (id: number) => {
@@ -102,7 +132,7 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                     <p className="text-zinc-500 text-[14px] mt-1">Sistem direktori dokumen pengabdian kepada masyarakat.</p>
                 </div>
                 <button
-                    onClick={() => setModalOpen(true)}
+                    onClick={openCreate}
                     className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium text-white shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800"
                 >
                     <Plus size={16} /> Arsip Baru
@@ -124,14 +154,14 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[700px]">
+                    <table className="w-full text-left min-w-[900px]">
                         <thead>
                             <tr className="border-b border-zinc-200">
                                 <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Dokumen</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Kegiatan Terkait</th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Nama Aktivitas</th>
                                 <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Jenis</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Tanggal Ditambahkan</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-right w-24">Aksi</th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Last Update</th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-right w-28">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
@@ -152,8 +182,8 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                                         </div>
                                     </td>
                                     <td className="py-4 px-6">
-                                        <div className="text-[13px] text-zinc-600 font-medium truncate max-w-[250px]" title={a.pengajuan?.judul_kegiatan || ''}>
-                                            {a.pengajuan?.judul_kegiatan || 'Kegiatan Tidak Ditemukan'}
+                                        <div className="text-[13px] text-zinc-600 font-medium truncate max-w-[250px]" title={a.aktivitas?.pengajuan?.judul_kegiatan || a.pengajuan?.judul_kegiatan || ''}>
+                                            {a.aktivitas?.pengajuan?.judul_kegiatan || a.pengajuan?.judul_kegiatan || 'Kegiatan Tidak Ditemukan'}
                                         </div>
                                     </td>
                                     <td className="py-4 px-6">
@@ -162,19 +192,28 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                                         </span>
                                     </td>
                                     <td className="py-4 px-6 text-[13px] text-zinc-500">
-                                        {new Date(a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        {new Date(a.updated_at || a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                     </td>
                                     <td className="py-4 px-6 text-right">
                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => setPreviewItem(a)}
                                                 className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+                                                title="Preview"
                                             >
                                                 <Eye size={16} />
                                             </button>
                                             <button
+                                                onClick={() => openEdit(a)}
+                                                className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
                                                 onClick={() => handleDelete(a.id_arsip)}
                                                 className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                title="Hapus"
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -258,7 +297,7 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                     <div className="absolute inset-0 bg-zinc-900/20 backdrop-blur-sm" />
                     <div className="relative bg-white rounded-xl shadow-lg border border-zinc-200 w-full max-w-md" onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                            <h3 className="text-[16px] font-semibold text-zinc-900">Tambah Arsip</h3>
+                            <h3 className="text-[16px] font-semibold text-zinc-900">{editing ? 'Edit Arsip' : 'Tambah Arsip'}</h3>
                             <button onClick={() => setModalOpen(false)} className="text-zinc-400 hover:text-zinc-600 transition-colors"><X size={18} /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -290,7 +329,7 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                                     className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 text-zinc-900 placeholder-zinc-400 transition-all resize-none" />
                             </div>
                             <div className="pt-4 flex gap-3">
-                                <button type="submit" className="flex-1 py-2 rounded-md text-[13px] font-medium text-white shadow-sm bg-zinc-900 hover:bg-zinc-800 transition-all">Simpan Dokumen</button>
+                                <button type="submit" className="flex-1 py-2 rounded-md text-[13px] font-medium text-white shadow-sm bg-zinc-900 hover:bg-zinc-800 transition-all">{editing ? 'Simpan Perubahan' : 'Simpan Dokumen'}</button>
                                 <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2 rounded-md text-[13px] font-medium text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 transition-colors">Batal</button>
                             </div>
                         </form>

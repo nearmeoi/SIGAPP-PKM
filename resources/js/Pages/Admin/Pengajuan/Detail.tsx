@@ -30,6 +30,8 @@ interface Pengajuan {
     proposal?: string;
     surat_permohonan?: string;
     rab?: string;
+    email?: string;
+    link_tambahan?: string;
     user?: { name: string; email: string };
     jenis_pkm?: { id_jenis_pkm: number; nama_jenis: string };
     provinsi?: string;
@@ -188,6 +190,15 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                                 icon={<Phone size={16} />}
                                 onSave={(val) => onUpdateField('no_telepon', val)}
                             />
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
+                                    <DollarSign size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Total Anggaran</div>
+                                    <div className="text-[14px] font-semibold text-zinc-900">Rp {Number(pengajuan.total_anggaran || 0).toLocaleString('id-ID')}</div>
+                                </div>
+                            </div>
                             <EditableInfoField
                                 label="Tanggal Mulai"
                                 value={pengajuan.tgl_mulai?.split('T')[0]}
@@ -285,6 +296,12 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                                     onSave={(val) => onUpdateField(doc.field, val)}
                                 />
                             ))}
+                            {pengajuan.link_tambahan && (
+                                <div className="pt-2 border-t border-zinc-100">
+                                    <div className="text-[12px] font-semibold text-zinc-500 mb-2">Tautan Tambahan</div>
+                                    <div className="text-[13px] text-zinc-700 break-all">{pengajuan.link_tambahan}</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -299,6 +316,12 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* Email Pengaju */}
+                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                        <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Email Pengaju</div>
+                        <div className="text-[13px] font-medium text-zinc-900">{pengajuan.user?.email || '-'}</div>
+                    </div>
 
                     {pengajuan.status_pengajuan !== 'selesai' && (
                         <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">

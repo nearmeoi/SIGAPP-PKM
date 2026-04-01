@@ -25,6 +25,12 @@ export interface PageProps {
  * PkmData — sesuai dengan response dari routes/web.php (landing) dan DashboardController.
  * Field ini di-mapping langsung dari model Pengajuan.
  */
+export interface TestimoniItem {
+    nama_pemberi: string;
+    rating: number;
+    pesan_ulasan: string;
+}
+
 export interface PkmData {
     id: number | null;
     nama: string;
@@ -40,6 +46,7 @@ export interface PkmData {
     desa: string;
     lat: number | string;
     lng: number | string;
+    testimoni?: TestimoniItem[];
 }
 
 /** Digunakan oleh Admin/Dashboard untuk peta dengan info tambahan jenis PKM */

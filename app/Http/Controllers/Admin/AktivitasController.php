@@ -29,6 +29,7 @@ class AktivitasController extends Controller
             'pengajuan.user',
             'pengajuan.jenisPkm',
             'pengajuan.timKegiatan.pegawai',
+            'arsip',
         ])->findOrFail($id);
 
         return Inertia::render('Admin/Aktivitas/Detail', [

@@ -88,7 +88,7 @@ const PegawaiPage: React.FC<Props> = ({ listPegawai, filters }) => {
                 </div>
                 <div className="flex items-center gap-3">
                     <button onClick={handleCsvUpload} className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium text-zinc-700 bg-white border border-zinc-200 shadow-sm hover:bg-zinc-50 transition-colors">
-                        <Upload size={14} /> Import CSV
+                        <Upload size={14} /> Import Excel
                     </button>
                     <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium text-white shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800">
                         <Plus size={16} /> Tambah Pegawai

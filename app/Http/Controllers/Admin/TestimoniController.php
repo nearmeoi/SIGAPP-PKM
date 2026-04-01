@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Aktivitas;
 use App\Models\Testimoni;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,8 +28,17 @@ class TestimoniController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        $listAktivitas = Aktivitas::whereNotNull('id_pengajuan')
+            ->with('pengajuan')
+            ->get()
+            ->map(fn ($a) => [
+                'id_aktivitas' => $a->id_aktivitas,
+                'judul_kegiatan' => $a->pengajuan->judul_kegiatan ?? 'Tanpa Judul',
+            ]);
+
         return Inertia::render('Admin/Testimoni/Index', [
             'listTestimoni' => $listTestimoni,
+            'listAktivitas' => $listAktivitas,
             'filters' => [
                 'search' => $request->search ?? '',
                 'rating' => $request->rating ?? '',
@@ -39,7 +49,7 @@ class TestimoniController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_aktivitas' => 'required|exists:aktivitas,id_aktivitas',
+            'id_aktivitas' => 'nullable|exists:aktivitas,id_aktivitas',
             'nama_pemberi' => 'required|string|max:255',
             'rating' => 'required|integer|min:1|max:5',
             'pesan_ulasan' => 'nullable|string|max:2000',

@@ -179,50 +179,40 @@ export default function LandingCharts({ compactMobile = false, pkmData = [] }: L
     const doughnutOptions = useMemo(() => buildDoughnutOptions(compactMobile), [compactMobile]);
 
     return (
-        <section className="px-4 py-4" id="visualisasi-data">
-            {/* Header */}
-            <div className="mb-4">
-                <h2 className="text-2xl font-bold text-slate-900">
-                    Dashboard Evaluasi <span className="text-poltekpar-primary">PKM</span>
-                </h2>
-            </div>
-
-            {/* Charts Grid */}
-            <div className={`grid gap-6 ${compactMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-                {/* Bar Chart */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                    <div className="px-2 py-1.5 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy flex items-center justify-center text-white shadow-md">
-                                <i className="fa-solid fa-chart-column text-xs"></i>
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">Jumlah PKM Per Tahun</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">Perbandingan jumlah PKM per tahun berdasarkan jenis program yang berjalan</p>
-                            </div>
+        <section className="px-4 py-4 space-y-6" id="visualisasi-data">
+            {/* Bar Chart */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                <div className="px-2 py-1.5 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy flex items-center justify-center text-white shadow-md">
+                            <i className="fa-solid fa-chart-column text-xs"></i>
                         </div>
-                    </div>
-                    <div className="p-1.5 h-72">
-                        <Bar data={chartSource.barData} options={barOptions} />
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-900">Jumlah PKM Per Tahun</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">Perbandingan jumlah PKM per tahun berdasarkan jenis program yang berjalan</p>
+                        </div>
                     </div>
                 </div>
+                <div className="p-1.5 h-72">
+                    <Bar data={chartSource.barData} options={barOptions} />
+                </div>
+            </div>
 
-                {/* Doughnut Chart */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                    <div className="px-2 py-1.5 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md">
-                                <i className="fa-solid fa-chart-pie text-xs"></i>
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">Sebaran Lokasi PKM</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">Distribusi jenis PKM yang tersebar pada lokasi pengabdian yang tercatat</p>
-                            </div>
+            {/* Doughnut Chart */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                <div className="px-2 py-1.5 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md">
+                            <i className="fa-solid fa-chart-pie text-xs"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-900">Sebaran Lokasi PKM</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">Distribusi jenis PKM yang tersebar pada lokasi pengabdian yang tercatat</p>
                         </div>
                     </div>
-                    <div className="p-1.5 h-72">
-                        <Doughnut data={chartSource.doughnutData} options={doughnutOptions} />
-                    </div>
+                </div>
+                <div className="p-1.5 h-72">
+                    <Doughnut data={chartSource.doughnutData} options={doughnutOptions} />
                 </div>
             </div>
         </section>
