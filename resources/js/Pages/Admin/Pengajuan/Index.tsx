@@ -3,7 +3,7 @@ import { Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import {
     Filter, Download, Search, ChevronRight, Clock, X,
-    Pencil, Trash2, CheckSquare, Square, Mail, Check
+    Edit, Trash2, CheckSquare, Square, Mail, Check
 } from 'lucide-react';
 
 interface Pengajuan {
@@ -317,8 +317,9 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                             ? 'bg-zinc-900 text-white'
                                             : 'border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 disabled:opacity-40'
                                             }`}
-                                        dangerouslySetInnerHTML={{ __html: isFirst ? '‹' : isLast ? '›' : link.label }}
-                                    />
+                                    >
+                                        {isFirst ? '‹' : isLast ? '›' : link.label.replace('&laquo;', '‹').replace('&raquo;', '›').replace('&hellip;', '…')}
+                                    </button>
                                 );
                             })}
                         </div>
@@ -400,13 +401,12 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                 </div>
             )}
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style>{`
                 @keyframes slideUp {
                     from { transform: translateY(20px); opacity: 0; }
                     to   { transform: translateY(0);    opacity: 1; }
                 }
-            `}} />
+            `}</style>
         </AdminLayout>
     );
 };

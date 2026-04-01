@@ -3,19 +3,22 @@ import { router, Link } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
 import {
-    Activity, ArrowLeft, Image as ImageIcon, CheckCircle, Save,
+    Activity, ArrowLeft, Image, CheckCircle, Save,
     MapPin, FileText, Trash2, Search, X, ChevronRight
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
-    iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
-    shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
-});
+// Fix leaflet icons natively with safety check
+if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+        iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
+        shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
+    });
+}
 
 function MapClickHandler({ onClick }: { onClick: (latlng: L.LatLng) => void }) {
     useMapEvents({ click(e) { onClick(e.latlng); } });
@@ -178,7 +181,7 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                     {thumbnailAktivitas ? (
                                         <><CheckCircle size={20} className="text-emerald-500 flex-shrink-0" /><span className="text-[13px] font-medium text-zinc-800 truncate">{thumbnailAktivitas.name}</span></>
                                     ) : (
-                                        <><ImageIcon size={20} className="text-zinc-400 flex-shrink-0" /><div className="flex flex-col"><span className="text-[13px] font-medium text-zinc-700">Pilih thumbnail...</span><span className="text-[11px] text-zinc-500 mt-0.5">Maks 2MB. JPG, PNG.</span></div><span className="ml-auto text-indigo-600 text-[12px] font-semibold bg-indigo-50 px-3 py-1 rounded-md">Browse</span></>
+                                        <><Image size={20} className="text-zinc-400 flex-shrink-0" /><div className="flex flex-col"><span className="text-[13px] font-medium text-zinc-700">Pilih thumbnail...</span><span className="text-[11px] text-zinc-500 mt-0.5">Maks 2MB. JPG, PNG.</span></div><span className="ml-auto text-indigo-600 text-[12px] font-semibold bg-indigo-50 px-3 py-1 rounded-md">Browse</span></>
                                     )}
                                     <input id="thumb-upload" type="file" className="sr-only" accept="image/*" onChange={e => setThumbnailAktivitas(e.target.files?.[0] || null)} />
                                 </label>

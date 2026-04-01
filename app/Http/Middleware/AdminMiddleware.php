@@ -10,8 +10,18 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || $request->user()->role !== 'admin') {
-            return redirect('/')->with('error', 'Akses ditolak.');
+        // Jika belum login → ke halaman login
+        if (! $request->user()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            return redirect()->guest(route('login'));
+        }
+
+        // Jika sudah login tapi bukan admin → 403 Forbidden
+        if ($request->user()->role !== 'admin') {
+            abort(403, 'Akses ditolak. Halaman ini hanya untuk admin.');
         }
 
         return $next($request);

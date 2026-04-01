@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
 class Arsip extends Model
 {
     protected $table = 'arsip';
+
     protected $primaryKey = 'id_arsip';
 
     protected $fillable = [
@@ -21,11 +21,11 @@ class Arsip extends Model
 
     public function pengajuan()
     {
-        return $this->belongsTo(Pengajuan::class , 'id_pengajuan', 'id_pengajuan');
+        return $this->belongsTo(Pengajuan::class, 'id_pengajuan', 'id_pengajuan');
     }
 
     public function aktivitas()
     {
-        return $this->belongsTo(Aktivitas::class , 'id_aktivitas', 'id_aktivitas');
+        return $this->belongsTo(Aktivitas::class, 'id_aktivitas', 'id_aktivitas');
     }
 }

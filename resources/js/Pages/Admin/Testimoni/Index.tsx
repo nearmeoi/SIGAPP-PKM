@@ -1,6 +1,6 @@
 import React from 'react';
 import AdminLayout from '../../../Layouts/AdminLayout';
-import { Star, MessageSquareQuote } from 'lucide-react';
+import { Star, MessageSquare } from 'lucide-react';
 
 interface TestimoniItem {
     id_testimoni: number;
@@ -64,7 +64,7 @@ const TestimoniPage: React.FC<Props> = ({ listTestimoni }) => {
             {/* Review cards */}
             {items.length === 0 ? (
                 <div className="bg-white rounded-xl border border-zinc-200 shadow-sm py-16 flex flex-col items-center justify-center text-center">
-                    <MessageSquareQuote size={32} className="text-zinc-300 mb-3" />
+                    <MessageSquare size={32} className="text-zinc-300 mb-3" />
                     <div className="text-zinc-900 text-[14px] font-medium">Belum ada testimoni</div>
                     <div className="text-zinc-500 text-[13px] mt-1">Testimoni akan muncul di sini setelah kegiatan selesai.</div>
                 </div>

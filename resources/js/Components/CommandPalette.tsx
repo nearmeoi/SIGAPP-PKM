@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from '@inertiajs/react';
-import { Search, FileText, Users, UserCircle, Activity, MessageSquare, FolderOpen, X } from 'lucide-react';
+import { Search, FileText, Users, User, Activity, MessageSquare, Folder, X } from 'lucide-react';
 
 interface SearchResult {
     id: number | string;
@@ -20,11 +20,11 @@ interface SearchResponse {
 
 const categoryConfig: Record<string, { label: string; icon: React.ElementType }> = {
     pengajuan: { label: 'Pengajuan', icon: FileText },
-    users: { label: 'Pengguna', icon: UserCircle },
+    users: { label: 'Pengguna', icon: User },
     pegawai: { label: 'Pegawai', icon: Users },
     aktivitas: { label: 'Aktivitas', icon: Activity },
     testimoni: { label: 'Testimoni', icon: MessageSquare },
-    arsip: { label: 'Arsip', icon: FolderOpen },
+    arsip: { label: 'Arsip', icon: Folder },
 };
 
 interface FlatResult extends SearchResult {
@@ -68,7 +68,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     const fetchRecent = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/search?q=');
+            const res = await fetch('/admin/api/search?q=');
             const data = await res.json();
             setResults(data);
         } catch { setResults(null); }
@@ -85,7 +85,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         debounceRef.current = setTimeout(async () => {
             setLoading(true);
             try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(value)}`);
+                const res = await fetch(`/admin/api/search?q=${encodeURIComponent(value)}`);
                 const data = await res.json();
                 setResults(data);
             } catch { setResults(null); }

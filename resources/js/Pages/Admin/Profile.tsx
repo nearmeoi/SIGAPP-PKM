@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
-import { User, Mail, Shield, ArrowLeft, Key } from 'lucide-react';
+import { User, Mail, Activity, ArrowLeft } from 'lucide-react';
 
 interface Props {
     user: {
@@ -67,7 +67,7 @@ export default function Profile({ user }: Props) {
 
                         <div className="flex items-start gap-4">
                             <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                                <Shield size={16} className="text-zinc-500" />
+                                <Activity size={16} className="text-zinc-500" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Role</div>
@@ -77,7 +77,7 @@ export default function Profile({ user }: Props) {
 
                         <div className="flex items-start gap-4">
                             <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                                <Key size={16} className="text-zinc-500" />
+                                <Activity size={16} className="text-zinc-500" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">User ID</div>

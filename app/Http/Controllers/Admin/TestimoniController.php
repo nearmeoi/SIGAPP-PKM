@@ -13,10 +13,11 @@ class TestimoniController extends Controller
     {
         $listTestimoni = Testimoni::with(['aktivitas.pengajuan.user'])
             ->when($request->search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('nama_pemberi', 'like', "%{$search}%")
-                        ->orWhere('pesan_ulasan', 'like', "%{$search}%")
-                        ->orWhereHas('aktivitas.pengajuan', fn ($p) => $p->where('judul_kegiatan', 'like', "%{$search}%"));
+                $escaped = addcslashes($search, '\\%_');
+                $query->where(function ($q) use ($escaped) {
+                    $q->where('nama_pemberi', 'like', "%{$escaped}%")
+                        ->orWhere('pesan_ulasan', 'like', "%{$escaped}%")
+                        ->orWhereHas('aktivitas.pengajuan', fn ($p) => $p->where('judul_kegiatan', 'like', "%{$escaped}%"));
                 });
             })
             ->when($request->rating, function ($query, $rating) {

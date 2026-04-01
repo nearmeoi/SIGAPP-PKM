@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
-import { Users, Plus, Edit, Trash2, Search, Shield, X, MoreHorizontal } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Activity, X } from 'lucide-react';
 
 interface User {
     id_user: number;

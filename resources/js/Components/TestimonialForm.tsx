@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import ActionFeedbackDialog from './ActionFeedbackDialog';
 
 interface TestimonialFormProps {
@@ -56,10 +56,25 @@ export default function TestimonialForm({ onClose }: TestimonialFormProps) {
         }
 
         setMockProcessing(true);
-        setTimeout(() => {
-            setMockProcessing(false);
-            setFeedbackDialog({ show: true, type: 'success', title: 'Testimoni Berhasil Dikirim', message: 'Terima kasih, testimoni Anda sudah berhasil kami terima.' });
-        }, 1500);
+
+        const namaPemberi = data.jabatan.trim() ? `${data.nama} - ${data.jabatan}` : data.nama;
+
+        router.post('/testimoni/public', {
+            nama_pemberi: namaPemberi,
+            rating: data.rating,
+            pesan_ulasan: data.ulasan,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setMockProcessing(false);
+                setFeedbackDialog({ show: true, type: 'success', title: 'Testimoni Berhasil Dikirim', message: 'Terima kasih, testimoni Anda sudah berhasil kami terima.' });
+                reset();
+            },
+            onError: () => {
+                setMockProcessing(false);
+                setFeedbackDialog({ show: true, type: 'error', title: 'Gagal Mengirim', message: 'Terjadi kesalahan saat mengirim testimoni. Silakan coba lagi.' });
+            },
+        });
     };
 
     const renderInteractiveStars = () => {

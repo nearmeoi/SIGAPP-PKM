@@ -3,10 +3,10 @@ import { router, Link } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
 import {
-    FileText, ExternalLink, FolderOpen, CheckCircle, X, Clock,
+    FileText, ExternalLink, Folder, CheckCircle, X, Clock,
     AlertCircle, RefreshCw, Plus, Trash2, Users, ArrowLeft,
-    MapPin, Calendar, DollarSign, Building, Save, Image as ImageIcon, Activity,
-    Banknote, Sparkles, Pencil, Check, Phone
+    MapPin, Calendar, DollarSign, Home, Save, Activity,
+    Edit, Check, Phone
 } from 'lucide-react';
 
 interface Pegawai { id_pegawai: number; nama_pegawai: string; nip?: string; }
@@ -278,7 +278,7 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mb-6">
                         <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
                             <h2 className="text-[15px] font-semibold text-zinc-900">Dokumen Lampiran</h2>
-                            <FolderOpen size={16} className="text-zinc-400" />
+                            <Folder size={16} className="text-zinc-400" />
                         </div>
                         <div className="p-6 space-y-4">
                             {[
@@ -510,7 +510,7 @@ const EditableInfoField: React.FC<{
                     <div className="flex items-center gap-2">
                         <div className="text-[14px] font-medium text-zinc-900 leading-tight">{displayValue}</div>
                         <button onClick={() => { setTempValue(value || ''); setIsEditing(true); }} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-indigo-600 transition-opacity p-1 bg-zinc-50 hover:bg-zinc-100 rounded-md border border-zinc-200">
-                            <Pencil size={12} />
+                            <Edit size={12} />
                         </button>
                     </div>
                 )}
@@ -534,7 +534,7 @@ const EditableUrl: React.FC<{ label: string; url?: string | null; onSave: (val: 
                 <label className="text-[12px] font-semibold text-zinc-500 block">{label}</label>
                 {!isEditing && (
                     <button onClick={() => { setTempUrl(url || ''); setIsEditing(true); }} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-indigo-600 transition-opacity p-1 bg-zinc-50 hover:bg-zinc-100 rounded-md border border-zinc-200">
-                        <Pencil size={12} />
+                        <Edit size={12} />
                     </button>
                 )}
             </div>

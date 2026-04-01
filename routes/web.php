@@ -29,21 +29,21 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::post('/testimoni/public', function (Request $request) {
     $request->validate([
         'nama_pemberi' => 'required|string|max:255',
-        'rating'       => 'required|integer|min:1|max:5',
+        'rating' => 'required|integer|min:1|max:5',
         'pesan_ulasan' => 'nullable|string|max:2000',
     ]);
 
     Testimoni::create([
         'id_aktivitas' => null,
         'nama_pemberi' => $request->nama_pemberi,
-        'rating'       => $request->rating,
+        'rating' => $request->rating,
         'pesan_ulasan' => $request->pesan_ulasan,
     ]);
 
     return redirect()->back()->with('success', 'Testimoni berhasil dikirim.');
 })->middleware('throttle:10,1')->name('testimoni.public');
 
-// Geocode proxy — Rate limited 30 req/menit per IP agar tidak disalahgunakan
+// Geocode proxy — Rate limited 30 req/menit per IP
 Route::get('/api/geocode', function (Request $request) {
     $query = $request->input('q', '');
     if (strlen($query) < 2) {
@@ -51,18 +51,18 @@ Route::get('/api/geocode', function (Request $request) {
     }
 
     $params = http_build_query([
-        'q'              => $query.', Indonesia',
-        'format'         => 'json',
-        'limit'          => '8',
-        'countrycodes'   => 'id',
+        'q' => $query.', Indonesia',
+        'format' => 'json',
+        'limit' => '8',
+        'countrycodes' => 'id',
         'addressdetails' => '1',
     ]);
 
-    $url     = "https://nominatim.openstreetmap.org/search?{$params}";
+    $url = "https://nominatim.openstreetmap.org/search?{$params}";
     $context = stream_context_create([
         'http' => [
-            'method'  => 'GET',
-            'header'  => "User-Agent: SIGAP-PKM/1.0\r\nAccept-Language: id\r\n",
+            'method' => 'GET',
+            'header' => "User-Agent: SIGAP-PKM/1.0\r\nAccept-Language: id\r\n",
             'timeout' => 10,
         ],
     ]);
@@ -77,7 +77,28 @@ Route::get('/api/geocode', function (Request $request) {
 })->middleware('throttle:30,1')->name('api.geocode');
 
 // ─────────────────────────────────────────────
-// Guest routes
+// Pengumpulan Arsip Publik
+// ─────────────────────────────────────────────
+Route::get('/kumpul-arsip/{kode}', function ($kode) {
+    // Nantinya $kode ini dapat memanggil title kegiatan dari database
+    return Inertia::render('Public/PengumpulanArsip', [
+        'kode' => $kode,
+        'namaKegiatan' => 'PENGEMBANGAN WEBSITE SIGAP (CONTOH)'
+    ]);
+})->name('arsip.kumpul.public');
+
+// ─────────────────────────────────────────────
+// Pengisian Testimoni Publik
+// ─────────────────────────────────────────────
+Route::get('/testimoni/{kode}', function ($kode) {
+    return Inertia::render('Public/Testimoni', [
+        'kode' => $kode,
+        'namaKegiatan' => 'PENGEMBANGAN WEBSITE SIGAP (CONTOH)'
+    ]);
+})->name('testimoni.public');
+
+// ─────────────────────────────────────────────
+// Guest & Auth Management routes
 // ─────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -85,92 +106,94 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 
+    // Specialized login pages
+    Route::get('/login/dosen', [AuthController::class, 'showLoginDosen'])->name('login.dosen');
+    Route::get('/login/masyarakat', [AuthController::class, 'showLoginMasyarakat'])->name('login.masyarakat');
+
     Route::get('/verify-email', function () {
         return Inertia::render('Auth/VerifyEmail');
     })->name('verification.notice');
-
-    Route::get('/login/dosen', function (Request $request) {
-        $user = $request->user();
-
-        return Inertia::render('Auth/LoginDosen', [
-            'auth' => [
-                'user' => $user
-                    ? [
-                        'id'     => $user->id,
-                        'name'   => $user->name,
-                        'email'  => $user->email,
-                        'role'   => $user->role ?? 'dosen',
-                        'avatar' => $user->avatar ?? null,
-                    ]
-                    : [
-                        'id'     => 'preview-dosen',
-                        'name'   => 'Akun Dosen SIGAP',
-                        'email'  => 'dosen@poltekparmakassar.ac.id',
-                        'role'   => 'dosen',
-                        'avatar' => null,
-                    ],
-            ],
-            'pkmData' => [],
-        ]);
-    })->name('login.dosen');
-
-    Route::get('/login/masyarakat', function (Request $request) {
-        $user = $request->user();
-
-        return Inertia::render('Auth/LoginMasyarakat', [
-            'auth' => [
-                'user' => $user
-                    ? [
-                        'id'     => $user->id,
-                        'name'   => $user->name,
-                        'email'  => $user->email,
-                        'role'   => $user->role ?? 'masyarakat',
-                        'avatar' => $user->avatar ?? null,
-                    ]
-                    : [
-                        'id'     => 'preview-masyarakat',
-                        'name'   => 'Akun Masyarakat SIGAP',
-                        'email'  => 'masyarakat@poltekparmakassar.ac.id',
-                        'role'   => 'masyarakat',
-                        'avatar' => null,
-                    ],
-            ],
-            'pkmData' => [],
-        ]);
-    })->name('login.masyarakat');
-
-    Route::get('/pengajuan', function (Request $request) {
-        $user         = $request->user();
-        $defaultRole  = $user ? ($user->role ?? 'masyarakat') : 'masyarakat';
-        $requestedRole = strtolower((string) $request->query('role', $defaultRole));
-        $role         = $requestedRole === 'dosen' ? 'dosen' : 'masyarakat';
-        $view         = strtolower((string) $request->query('view', 'form'));
-
-        return Inertia::render('Auth/Pengajuan', [
-            'auth' => [
-                'user' => $user
-                    ? [
-                        'id'     => $user->id,
-                        'name'   => $user->name,
-                        'email'  => $user->email,
-                        'role'   => $user->role ?? $role,
-                        'avatar' => $user->avatar ?? null,
-                    ]
-                    : [
-                        'id'     => $role === 'dosen' ? 'preview-dosen' : 'preview-masyarakat',
-                        'name'   => $role === 'dosen' ? 'Akun Dosen SIGAP' : 'Akun Masyarakat SIGAP',
-                        'email'  => $role === 'dosen'
-                            ? 'dosen@poltekparmakassar.ac.id'
-                            : 'masyarakat@poltekparmakassar.ac.id',
-                        'role'   => $role,
-                        'avatar' => null,
-                    ],
-            ],
-            'role'        => $role,
-            'initialView' => in_array($view, ['form', 'status'], true) ? $view : 'form',
-        ]);
-    })->name('pengajuan.public');  // di-rename dari pengajuan.index agar tidak conflict dengan admin route
 });
+
+// Halaman Pengajuan (Formulir Baru)
+Route::get('/pengajuan', function (Request $request) {
+    $user = $request->user();
+    $role = $user ? ($user->role ?? 'masyarakat') : 'masyarakat';
+
+    // Ambil pengajuan milik user dari database
+    $userSubmissions = $user
+        ? Pengajuan::where('id_user', $user->id_user)
+            ->latest()
+            ->get()
+            ->map(fn ($p) => [
+                'id'        => $p->id_pengajuan,
+                'judul'     => $p->judul_kegiatan,
+                'ringkasan' => $p->kebutuhan ?: ($p->instansi_mitra ?: '-'),
+                'tanggal'   => optional($p->created_at)->format('d M Y') ?? '-',
+                'status'    => $p->status_pengajuan,
+                'catatan'   => $p->catatan_admin,
+            ])
+            ->values()
+            ->toArray()
+        : [];
+
+    return Inertia::render('Auth/Pengajuan', [
+        'auth' => [
+            'user' => $user
+                ? [
+                    'id'     => $user->id_user,
+                    'name'   => $user->name,
+                    'email'  => $user->email,
+                    'role'   => $user->role ?? $role,
+                    'avatar' => $user->avatar ?? null,
+                ]
+                : null,
+        ],
+        'role'            => $role,
+        'initialView'     => 'form',
+        'userSubmissions' => $userSubmissions,
+    ]);
+})->name('pengajuan.form');
+
+// Halaman Cek Status (Riwayat / Status)
+Route::get('/cek-status', function (Request $request) {
+    $user = $request->user();
+    $role = $user ? ($user->role ?? 'masyarakat') : 'masyarakat';
+
+    // Ambil pengajuan milik user dari database
+    $userSubmissions = $user
+        ? Pengajuan::where('id_user', $user->id_user)
+            ->latest()
+            ->get()
+            ->map(fn ($p) => [
+                'id'        => $p->id_pengajuan,
+                'judul'     => $p->judul_kegiatan,
+                'ringkasan' => $p->kebutuhan ?: ($p->instansi_mitra ?: '-'),
+                'tanggal'   => optional($p->created_at)->format('d M Y') ?? '-',
+                'status'    => $p->status_pengajuan,
+                'catatan'   => $p->catatan_admin,
+            ])
+            ->values()
+            ->toArray()
+        : [];
+
+    return Inertia::render('Auth/Pengajuan', [
+        'auth' => [
+            'user' => $user
+                ? [
+                    'id'     => $user->id_user,
+                    'name'   => $user->name,
+                    'email'  => $user->email,
+                    'role'   => $user->role ?? $role,
+                    'avatar' => $user->avatar ?? null,
+                ]
+                : null,
+        ],
+        'role'            => $role,
+        'initialView'     => 'status',
+        'userSubmissions' => $userSubmissions,
+    ]);
+})->name('pengajuan.status');
 
 // ─────────────────────────────────────────────
 // Authenticated routes
@@ -181,15 +204,15 @@ Route::middleware('auth')->group(function () {
     // User: submit pengajuan
     Route::post('/pengajuan', [PengajuanUserController::class, 'store'])->name('pengajuan.store');
 
-    // Global search API (admin tool — hanya untuk user yang sudah login)
-    Route::get('/api/search', SearchController::class)->name('api.search');
-
     // ─────────────────────────────────────────
     // Admin routes
     // ─────────────────────────────────────────
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.dashboard'));
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Global search API (admin only)
+        Route::get('/api/search', SearchController::class)->name('api.search');
 
         // Pengajuan CRUD
         Route::get('/pengajuan/export', [PengajuanController::class, 'export'])->name('pengajuan.export');
@@ -239,7 +262,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/arsip/{id}', [ArsipController::class, 'update'])->name('arsip.update');
         Route::delete('/arsip/{id}', [ArsipController::class, 'destroy'])->name('arsip.destroy');
 
-        // Notifications API — 1 query dengan selectRaw
+        // Notifications API
         Route::get('/api/notifications', function () {
             $counts = Pengajuan::selectRaw("
                 SUM(status_pengajuan = 'diproses')  as pengajuan_baru,
@@ -250,9 +273,9 @@ Route::middleware('auth')->group(function () {
             $kegiatanBerjalan = Aktivitas::where('status_pelaksanaan', 'berjalan')->count();
 
             return response()->json([
-                'pengajuan_baru'    => (int) ($counts->pengajuan_baru    ?? 0),
-                'perlu_direvisi'    => (int) ($counts->perlu_direvisi    ?? 0),
-                'diterima'          => (int) ($counts->diterima          ?? 0),
+                'pengajuan_baru' => (int) ($counts->pengajuan_baru ?? 0),
+                'perlu_direvisi' => (int) ($counts->perlu_direvisi ?? 0),
+                'pengajuan_diterima' => (int) ($counts->diterima ?? 0),
                 'kegiatan_berjalan' => $kegiatanBerjalan,
             ]);
         })->name('api.notifications');

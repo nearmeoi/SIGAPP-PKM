@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
-import { ExternalLink, Search, FolderOpen, X, FileText, Eye, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Search, Folder, X, FileText, Eye, Plus, Trash2 } from 'lucide-react';
 
 interface ArsipItem {
     id_arsip: number;

@@ -4,9 +4,9 @@ import Toast from '../Components/Toast';
 import CommandPalette from '../Components/CommandPalette';
 import ProfileDropdown from '../Components/ProfileDropdown';
 import {
-    LayoutDashboard,
+    Layout,
     Users,
-    FolderOpen,
+    Folder,
     LogOut,
     Search,
     Activity,
@@ -16,7 +16,7 @@ import {
     ChevronDown,
     ChevronRight,
     FileText,
-    UserCircle,
+    User,
     Command,
 } from 'lucide-react';
 
@@ -33,7 +33,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { label: 'Dashboard', href: '/admin', icon: Layout },
     { label: 'Pengajuan', href: '/admin/pengajuan', icon: FileText },
     { label: 'Aktivitas', href: '/admin/aktivitas', icon: Activity },
     {
@@ -41,11 +41,11 @@ const navItems: NavItem[] = [
         icon: Database,
         children: [
             { label: 'Pegawai', href: '/admin/pegawai', icon: Users },
-            { label: 'Users', href: '/admin/users', icon: UserCircle },
+            { label: 'Users', href: '/admin/users', icon: User },
             { label: 'Jenis PKM', href: '/admin/master/jenis-pkm', icon: Grid },
         ],
     },
-    { label: 'Arsip', href: '/admin/arsip', icon: FolderOpen },
+    { label: 'Arsip', href: '/admin/arsip', icon: Folder },
     { label: 'Testimoni', href: '/admin/testimoni', icon: MessageSquare },
 ];
 
@@ -229,7 +229,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-4 ml-4">
-                        <ProfileDropdown />
+                        <ProfileDropdown auth={(props as any).auth} />
                     </div>
                 </header>
 

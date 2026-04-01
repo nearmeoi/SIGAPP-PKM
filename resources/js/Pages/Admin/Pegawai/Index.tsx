@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
-import { Edit2, Trash2, X, Plus, Search, Upload, User, Users } from 'lucide-react';
+import { Edit, Trash2, X, Plus, Search, Upload, User, Users } from 'lucide-react';
 
 interface Pegawai {
     id_pegawai: number;
@@ -131,7 +131,7 @@ const PegawaiPage: React.FC<Props> = ({ listPegawai }) => {
                                     </td>
                                     <td className="py-4 px-6 text-right">
                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => openEdit(item)} className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"><Edit2 size={15} /></button>
+                                            <button onClick={() => openEdit(item)} className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"><Edit size={15} /></button>
                                             <button onClick={() => handleDelete(item.id_pegawai)} className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={15} /></button>
                                         </div>
                                     </td>

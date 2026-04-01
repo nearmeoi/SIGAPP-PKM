@@ -13,9 +13,10 @@ class ArsipController extends Controller
     {
         $listArsip = Arsip::with(['pengajuan.user'])
             ->when($request->search, function ($query, $search) {
-                $query->where('nama_dokumen', 'like', "%{$search}%")
-                    ->orWhereHas('pengajuan', function ($q) use ($search) {
-                        $q->where('judul_kegiatan', 'like', "%{$search}%");
+                $escaped = addcslashes($search, '\\%_');
+                $query->where('nama_dokumen', 'like', "%{$escaped}%")
+                    ->orWhereHas('pengajuan', function ($q) use ($escaped) {
+                        $q->where('judul_kegiatan', 'like', "%{$escaped}%");
                     });
             })
             ->latest()
@@ -57,9 +58,9 @@ class ArsipController extends Controller
 
         $request->validate([
             'nama_dokumen' => 'required|string|max:255',
-            'jenis_arsip'  => 'required|in:Laporan,Sertifikat,laporan_akhir,daftar_hadir,foto_kegiatan,dokumen_lain',
-            'url_dokumen'  => 'required|url|max:2048',
-            'keterangan'   => 'nullable|string|max:500',
+            'jenis_arsip' => 'required|in:Laporan,Sertifikat,laporan_akhir,daftar_hadir,foto_kegiatan,dokumen_lain',
+            'url_dokumen' => 'required|url|max:2048',
+            'keterangan' => 'nullable|string|max:500',
         ]);
 
         $arsip->update($request->only(['nama_dokumen', 'jenis_arsip', 'url_dokumen', 'keterangan']));

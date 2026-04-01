@@ -13,9 +13,82 @@ use Inertia\Inertia;
 
 class AuthController extends Controller
 {
+    /**
+     * Redirect URL berdasarkan role user.
+     */
+    private function dashboardUrl(): string
+    {
+        return Auth::user()?->role === 'admin' ? '/admin/dashboard' : '/';
+    }
+
     public function showLogin()
     {
+        // Jika sudah login, arahkan ke dashboard sesuai role
+        if (Auth::check()) {
+            return redirect($this->dashboardUrl());
+        }
+
         return Inertia::render('Auth/Login');
+    }
+
+    public function showLoginDosen(Request $request)
+    {
+        if (Auth::check()) {
+            return redirect($this->dashboardUrl());
+        }
+
+        $user = $request->user();
+
+        return Inertia::render('Auth/LoginDosen', [
+            'auth' => [
+                'user' => $user
+                    ? [
+                        'id'     => $user->id_user,
+                        'name'   => $user->name,
+                        'email'  => $user->email,
+                        'role'   => $user->role ?? 'dosen',
+                        'avatar' => $user->avatar ?? null,
+                    ]
+                    : [
+                        'id'     => 'preview-dosen',
+                        'name'   => 'Akun Dosen SIGAP',
+                        'email'  => 'dosen@poltekparmakassar.ac.id',
+                        'role'   => 'dosen',
+                        'avatar' => null,
+                    ],
+            ],
+            'pkmData' => [],
+        ]);
+    }
+
+    public function showLoginMasyarakat(Request $request)
+    {
+        if (Auth::check()) {
+            return redirect($this->dashboardUrl());
+        }
+
+        $user = $request->user();
+
+        return Inertia::render('Auth/LoginMasyarakat', [
+            'auth' => [
+                'user' => $user
+                    ? [
+                        'id'     => $user->id_user,
+                        'name'   => $user->name,
+                        'email'  => $user->email,
+                        'role'   => $user->role ?? 'masyarakat',
+                        'avatar' => $user->avatar ?? null,
+                    ]
+                    : [
+                        'id'     => 'preview-masyarakat',
+                        'name'   => 'Akun Masyarakat SIGAP',
+                        'email'  => 'masyarakat@poltekparmakassar.ac.id',
+                        'role'   => 'masyarakat',
+                        'avatar' => null,
+                    ],
+            ],
+            'pkmData' => [],
+        ]);
     }
 
     public function login(Request $request)
@@ -28,11 +101,10 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            if (Auth::user()->role === 'admin') {
-                return redirect()->intended('/admin');
-            }
+            // Arahkan ke dashboard sesuai role; intended() fallback ke default role URL
+            $default = Auth::user()->role === 'admin' ? '/admin/dashboard' : '/';
 
-            return redirect()->intended('/');
+            return redirect()->intended($default);
         }
 
         return back()->withErrors([
@@ -42,6 +114,11 @@ class AuthController extends Controller
 
     public function showRegister()
     {
+        // Jika sudah login, arahkan ke dashboard sesuai role
+        if (Auth::check()) {
+            return redirect($this->dashboardUrl());
+        }
+
         return Inertia::render('Auth/Register');
     }
 
@@ -86,7 +163,10 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return redirect('/');
+        // Admin yang register (dibuat manual) langsung ke admin panel
+        $redirectTo = $user->role === 'admin' ? '/admin/dashboard' : '/';
+
+        return redirect($redirectTo);
     }
 
     public function logout(Request $request)

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from '@inertiajs/react';
-import type { User } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import type { User, PageProps } from '@/types/index';
 
 const getInitials = (name?: string): string => {
     if (!name) return '?';
@@ -20,11 +20,19 @@ const getRoleBadge = (user: User | null): RoleBadge | null => {
     if (!user) return null;
 
     const role = String(user.role || user.type || 'masyarakat').toLowerCase();
+    const isAdmin = role === 'admin';
     const isDosen = role.includes('dosen');
+
+    if (isAdmin) {
+        return {
+            label: 'Administrator',
+            className: 'bg-indigo-100 text-indigo-700 font-bold',
+        };
+    }
 
     return {
         label: isDosen ? 'Akun Dosen' : 'Akun Masyarakat',
-        className: isDosen ? 'profile-dropdown-panel__badge--dosen' : 'profile-dropdown-panel__badge--masyarakat',
+        className: isDosen ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700',
     };
 };
 
@@ -59,19 +67,21 @@ function useClickOutside(
 }
 
 interface ProfileDropdownProps {
-    auth: {
+    auth?: {
         user: User | null;
     };
 }
 
-export default function ProfileDropdown({ auth }: ProfileDropdownProps) {
+export default function ProfileDropdown({ auth: propsAuth }: ProfileDropdownProps) {
+    const { props } = usePage<PageProps>();
+    const auth = propsAuth || props.auth;
     const user = auth?.user ?? null;
     const [isOpen, setIsOpen] = useState(false);
     const shellRef = useRef<HTMLDivElement>(null);
 
     const badge = useMemo(() => getRoleBadge(user), [user]);
     const avatarSrc = user?.avatar || user?.avatar_url || user?.profile_photo_url || null;
-    const logoutHref = typeof route === 'function' ? route('logout') : '/logout';
+    const logoutHref = '/logout'; // Direct path for logout
 
     const closeDropdown = useCallback(() => {
         setIsOpen(false);
@@ -82,6 +92,12 @@ export default function ProfileDropdown({ auth }: ProfileDropdownProps) {
     }, []);
 
     useClickOutside(shellRef, isOpen, closeDropdown);
+
+    // Get the normalized role
+    const userRole = useMemo(() => {
+        if (!user) return null;
+        return String(user.role || user.type || '').toLowerCase();
+    }, [user]);
 
     if (!user) {
         return (
@@ -132,13 +148,10 @@ export default function ProfileDropdown({ auth }: ProfileDropdownProps) {
                 >
                     {/* Header */}
                     <div className="px-5 py-4 bg-gradient-to-br from-slate-50 to-slate-100/50 border-b border-slate-100">
-                        <p className="font-semibold text-slate-900 text-base">{user.name || 'Pengguna'}</p>
+                        <p className="font-semibold text-slate-900 text-base line-clamp-1">{user.name || 'Pengguna'}</p>
+                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
                         {badge && (
-                            <span className={`inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full ${
-                                badge.className.includes('dosen') 
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'bg-emerald-100 text-emerald-700'
-                            }`}>
+                            <span className={`inline-block mt-2 px-3 py-1 text-[10px] font-bold uppercase rounded-full ${badge.className}`}>
                                 {badge.label}
                             </span>
                         )}
@@ -146,23 +159,36 @@ export default function ProfileDropdown({ auth }: ProfileDropdownProps) {
 
                     {/* Menu Items */}
                     <div className="py-2">
+                        {userRole === 'admin' ? (
+                            <Link 
+                                href="/admin/dashboard" 
+                                className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-sigap-blue transition-colors duration-150" 
+                                role="menuitem" 
+                                onClick={closeDropdown}
+                            >
+                                <i className="fa-solid fa-gauge-high text-lg text-sigap-blue"></i>
+                                <span className="font-semibold">Panel Admin</span>
+                            </Link>
+                        ) : (
+                            <Link 
+                                href={`/pengajuan?role=${user.role}&view=status`}
+                                className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-sigap-blue transition-colors duration-150" 
+                                role="menuitem" 
+                                onClick={closeDropdown}
+                            >
+                                <i className="fa-solid fa-rectangle-list text-lg text-sigap-blue"></i>
+                                <span className="font-medium">Status Pengajuan</span>
+                            </Link>
+                        )}
+                        
                         <Link 
-                            href="/profile/edit" 
+                            href={userRole === 'admin' ? "/admin/profile" : "/profile/edit"} 
                             className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-sigap-blue transition-colors duration-150" 
                             role="menuitem" 
                             onClick={closeDropdown}
                         >
                             <i className="fa-solid fa-user-pen text-lg"></i>
                             <span className="font-medium">Edit Profil</span>
-                        </Link>
-                        <Link 
-                            href="/settings" 
-                            className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-sigap-blue transition-colors duration-150" 
-                            role="menuitem" 
-                            onClick={closeDropdown}
-                        >
-                            <i className="fa-solid fa-gear text-lg"></i>
-                            <span className="font-medium">Pengaturan</span>
                         </Link>
                     </div>
 

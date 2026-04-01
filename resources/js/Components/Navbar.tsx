@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import ProfileDropdown from '@/Components/ProfileDropdown';
-import type { User, Auth } from '@/types';
+import type { User, Auth, PageProps } from '@/types/index';
 
 interface NavLink {
     label: string;
@@ -18,47 +18,33 @@ const getInitials = (name?: string): string => {
     return parts[0].slice(0, 2).toUpperCase();
 };
 
-const getContextRole = (pageUrl: string, user: User | null): string | null => {
-    const search = pageUrl.includes('?') ? pageUrl.split('?')[1] : '';
-    const params = new URLSearchParams(search);
-    const queryRole = params.get('role');
+const getNavLinks = (user: User | null): NavLink[] => {
+    const pengajuanHref = user ? '/pengajuan' : '/login';
+    const statusHref = user ? '/cek-status' : '/login';
 
-    if (queryRole === 'dosen' || queryRole === 'masyarakat') {
-        return queryRole;
-    }
-
-    if (pageUrl.startsWith('/login/dosen')) {
-        return 'dosen';
-    }
-
-    if (pageUrl.startsWith('/login/masyarakat')) {
-        return 'masyarakat';
-    }
-
-    const role = String(user?.role || '').toLowerCase();
-    return role.includes('dosen') ? 'dosen' : role ? 'masyarakat' : null;
-};
-
-const getNavLinks = (pageUrl: string, user: User | null): NavLink[] => {
-    const role = getContextRole(pageUrl, user);
-    const pengajuanHref = role ? `/pengajuan?role=${role}&view=form` : '/login';
-    const statusHref = role ? `/pengajuan?role=${role}&view=status` : '/login';
-
-    return [
+    const navLinks: NavLink[] = [
         { label: 'Beranda', href: '/', icon: 'fa-house' },
+    ];
+
+    if (user?.role === 'admin') {
+        navLinks.push({ label: 'Panel Admin', href: '/admin/dashboard', icon: 'fa-gauge-high' });
+    }
+
+    navLinks.push(
         { label: 'Cek Status', href: statusHref, icon: 'fa-magnifying-glass' },
         { label: 'Pengajuan', href: pengajuanHref, icon: 'fa-file-circle-plus' },
-        { label: 'Panduan', href: '#panduan', icon: 'fa-book-open' },
-    ];
+        { label: 'Panduan', href: '#panduan', icon: 'fa-book-open' }
+    );
+
+    return navLinks;
 };
 
 export default function Navbar() {
-    const page = usePage();
-    const { auth } = page.props as { auth: Auth };
-    const currentUrl = page.url || '/';
+    const { props } = usePage<PageProps>();
+    const { auth } = props;
     const user = auth?.user ?? null;
     const poltekparLogoSrc = '/logo-poltekpar.png';
-    const navLinks = useMemo(() => getNavLinks(currentUrl, user), [currentUrl, user]);
+    const navLinks = useMemo(() => getNavLinks(user), [user]);
 
     const [mobileOpen, setMobileOpen] = useState(false);
 

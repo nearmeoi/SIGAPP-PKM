@@ -13,12 +13,13 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::when($request->search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%");
+            $escaped = addcslashes($search, '\\%_');
+            $query->where('name', 'like', "%{$escaped}%")
+                ->orWhere('email', 'like', "%{$escaped}%");
         })
-        ->latest()
-        ->paginate(15)
-        ->withQueryString();
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,

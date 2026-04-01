@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo, ChangeEvent, FormEvent } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import ActionFeedbackDialog from './ActionFeedbackDialog';
 import DocumentationGallery from './DocumentationGallery';
 import TestimonialSidebarDisplay from './TestimonialSidebarDisplay';
@@ -23,36 +23,59 @@ interface DosenSubmissionCardProps {
     pkmListData?: PkmData[];
     submissionHistory?: Submission[];
     hideMainTabNav?: boolean;
+    onlyShowStatus?: boolean;
+}
+
+interface RabItem {
+    nama_item: string;
+    jumlah: number;
+    harga: number;
+    total: number;
 }
 
 interface FormData {
-    nama_dosen: string;
-    judul_proyek: string;
-    lokasi: string;
-    sertakan_dosen_terlibat: boolean;
-    dosen_terlibat: string[];
-    sertakan_staff_terlibat: boolean;
-    staff_terlibat: string[];
-    sertakan_mahasiswa_terlibat: boolean;
-    mahasiswa_terlibat: string[];
-    sumber_dana: string;
-    total_RAB: string;
-    tanggal_mulai: string;
-    tanggal_selesai: string;
-    proposal: File | null;
+    nama_ketua: string;
+    instansi: string;
+    email: string;
+    whatsapp: string;
+    judul_kegiatan: string;
+    provinsi: string;
+    kota_kabupaten: string;
+    kecamatan: string;
+    kelurahan_desa: string;
+    alamat_lengkap: string;
+    
+    tim_dosen: string[];
+    tim_staff: string[];
+    tim_mahasiswa: string[];
+    
+    rab_items: RabItem[];
+    
+    dana_perguruan_tinggi: number;
+    dana_pemerintah: number;
+    dana_lembaga_dalam: number;
+    dana_lembaga_luar: number;
+    
+    surat_permohonan: string;
+    surat_proposal: string;
+    link_tambahan: string[];
 }
 
 const createSubmittedLabel = (): string => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date());
 const getPkmStatusLabel = (status: string): string => status === 'berlangsung' ? 'Berlangsung' : 'Selesai';
-const getFilledTeamMembers = (members: string[] = []): string[] => members.filter((m) => m.trim());
 
-const teamValidationDefinitions = [
-    { enabledKey: 'sertakan_dosen_terlibat' as const, type: 'dosen_terlibat' as const, title: 'Dosen Terlibat' },
-    { enabledKey: 'sertakan_staff_terlibat' as const, type: 'staff_terlibat' as const, title: 'Staf Terlibat' },
-    { enabledKey: 'sertakan_mahasiswa_terlibat' as const, type: 'mahasiswa_terlibat' as const, title: 'Mahasiswa Terlibat' },
-];
-
-const getTeamEntryValidationMessage = (title: string): string => `Lengkapi semua nama pada bagian ${title.toLowerCase()}.`;
+const getSubmissionStatusStyle = (status: string) => {
+    const styles: Record<string, { label: string; icon: string; bg: string; color: string }> = {
+        diproses: { label: 'Diproses', icon: 'fa-clock', bg: '#dbeafe', color: '#1d4ed8' },
+        ditangguhkan: { label: 'Revisi', icon: 'fa-file-pen', bg: '#fef3c7', color: '#b45309' },
+        ditolak: { label: 'Ditolak', icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#b91c1c' },
+        diterima: { label: 'Diterima', icon: 'fa-circle-check', bg: '#dcfce7', color: '#15803d' },
+        berlangsung: { label: 'Berlangsung', icon: 'fa-person-walking', bg: '#fef3c7', color: '#b45309' },
+        selesai: { label: 'Selesai', icon: 'fa-flag-checkered', bg: '#dcfce7', color: '#15803d' },
+        belum_diajukan: { label: 'Belum Diajukan', icon: 'fa-file-circle-plus', bg: '#f1f5f9', color: '#64748b' },
+    };
+    return styles[status] || styles.belum_diajukan;
+};
 
 export default function DosenSubmissionCard({
     onSubmitted,
@@ -62,548 +85,470 @@ export default function DosenSubmissionCard({
     pkmListData = [],
     submissionHistory = [],
     hideMainTabNav = false,
+    onlyShowStatus = false,
 }: DosenSubmissionCardProps) {
-    const { data, setData, processing: inertiaProcessing, errors, setError, clearErrors, reset } = useForm<FormData>({
-        nama_dosen: '',
-        judul_proyek: '',
-        lokasi: '',
-        sertakan_dosen_terlibat: false,
-        dosen_terlibat: [''],
-        sertakan_staff_terlibat: false,
-        staff_terlibat: [''],
-        sertakan_mahasiswa_terlibat: false,
-        mahasiswa_terlibat: [''],
-        sumber_dana: '',
-        total_RAB: '',
-        tanggal_mulai: '',
-        tanggal_selesai: '',
-        proposal: null,
-    });
-
-    const [mockProcessing, setMockProcessing] = useState(false);
-    const [revisionProcessing, setRevisionProcessing] = useState(false);
-    const [feedbackDialog, setFeedbackDialog] = useState({ show: false, type: 'success' as const, title: '', message: '' });
     const [mainTab, setMainTab] = useState('pengajuan');
     const [expandedHubSections, setExpandedHubSections] = useState({ kegiatan: false, riwayat: false });
     const [expandedActivityId, setExpandedActivityId] = useState<number | null>(pkmListData[0]?.id ?? null);
-    const [expandedHistoryId, setExpandedHistoryId] = useState<number | null>(submissionHistory[0]?.id ?? null);
-    const revisionInputRef = useRef<HTMLInputElement>(null);
+    const [selectedDetail, setSelectedDetail] = useState<Submission | null>(null);
+    const [isMockSubmitting, setIsMockSubmitting] = useState(false);
+    const [feedbackDialog, setFeedbackDialog] = useState<{ show: boolean; type: 'success' | 'error'; title: string; message: string }>({ show: false, type: 'success', title: '', message: '' });
 
-    const handleAddPersonil = (type: 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat') => setData(type, [...data[type], '']);
-    const handleRemovePersonil = (type: 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat', index: number) => {
-        setData(type, data[type].filter((_, i) => i !== index));
-        clearErrors(type);
-    };
-    const handlePersonilChange = (type: 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat', index: number, value: string) => {
-        const updated = [...data[type]];
-        updated[index] = value;
-        setData(type, updated);
-        clearErrors(type);
-    };
-    const handleTogglePersonilSection = (enabledKey: 'sertakan_dosen_terlibat' | 'sertakan_staff_terlibat' | 'sertakan_mahasiswa_terlibat', type: 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat', checked: boolean) => {
-        setData(enabledKey, checked);
-        if (checked && data[type].length === 0) setData(type, ['']);
-        if (!checked) clearErrors(type);
-    };
-
-    const requiredSubmissionIssues: string[] = [];
-    if (!data.judul_proyek.trim()) requiredSubmissionIssues.push('Judul proyek PKM wajib diisi.');
-    if (!data.nama_dosen.trim()) requiredSubmissionIssues.push('Nama ketua kelompok wajib diisi.');
-    if (!data.lokasi.trim()) requiredSubmissionIssues.push('Lokasi pengabdian wajib diisi.');
-    if (!teamValidationDefinitions.some((s) => data[s.enabledKey])) requiredSubmissionIssues.push('Pilih minimal satu kategori tim pelaksana.');
-    teamValidationDefinitions.forEach((section) => {
-        if (data[section.enabledKey] && data[section.type].some((m) => !m.trim())) requiredSubmissionIssues.push(getTeamEntryValidationMessage(section.title));
+    const { data, setData, errors, setError, clearErrors, reset } = useForm<FormData>({
+        nama_ketua: '',
+        instansi: 'Politeknik Pariwisata Makassar',
+        email: '',
+        whatsapp: '',
+        judul_kegiatan: '',
+        provinsi: '',
+        kota_kabupaten: '',
+        kecamatan: '',
+        kelurahan_desa: '',
+        alamat_lengkap: '',
+        tim_dosen: [''],
+        tim_staff: [''],
+        tim_mahasiswa: [''],
+        rab_items: [{ nama_item: '', jumlah: 1, harga: 0, total: 0 }],
+        dana_perguruan_tinggi: 0,
+        dana_pemerintah: 0,
+        dana_lembaga_dalam: 0,
+        dana_lembaga_luar: 0,
+        surat_permohonan: '',
+        surat_proposal: '',
+        link_tambahan: [''],
     });
-    if (!data.sumber_dana) requiredSubmissionIssues.push('Sumber dana wajib dipilih.');
-    if (!String(data.total_RAB).trim()) requiredSubmissionIssues.push('Total anggaran wajib diisi.');
-    if (!data.tanggal_mulai) requiredSubmissionIssues.push('Tanggal mulai wajib diisi.');
-    if (!data.tanggal_selesai) requiredSubmissionIssues.push('Tanggal selesai wajib diisi.');
-    if (!data.proposal) requiredSubmissionIssues.push('File proposal wajib diunggah.');
 
-    const hasStartedSubmission = Boolean(data.judul_proyek.trim() || data.nama_dosen.trim() || data.lokasi.trim() || data.sumber_dana || String(data.total_RAB).trim() || data.tanggal_mulai || data.tanggal_selesai || data.proposal || teamValidationDefinitions.some((s) => data[s.enabledKey]));
+    const handleAddMember = (type: 'tim_dosen' | 'tim_staff' | 'tim_mahasiswa') => setData(type, [...data[type], '']);
+    const handleRemoveMember = (type: 'tim_dosen' | 'tim_staff' | 'tim_mahasiswa', idx: number) => setData(type, data[type].filter((_, i) => i !== idx));
+    const handleMemberChange = (type: 'tim_dosen' | 'tim_staff' | 'tim_mahasiswa', idx: number, val: string) => {
+        const updated = [...data[type]];
+        updated[idx] = val;
+        setData(type, updated);
+    };
+
+    const handleAddRab = () => setData('rab_items', [...data.rab_items, { nama_item: '', jumlah: 1, harga: 0, total: 0 }]);
+    const handleRemoveRab = (idx: number) => setData('rab_items', data.rab_items.filter((_, i) => i !== idx));
+    const handleRabChange = (idx: number, field: keyof RabItem, val: string | number) => {
+        const updated = [...data.rab_items];
+        const item = { ...updated[idx], [field]: val };
+        if (field === 'jumlah' || field === 'harga') item.total = Number(item.jumlah) * Number(item.harga);
+        updated[idx] = item;
+        setData('rab_items', updated);
+    };
+
+    const handleAddLink = () => setData('link_tambahan', [...data.link_tambahan, '']);
+    const handleRemoveLink = (idx: number) => setData('link_tambahan', data.link_tambahan.filter((_, i) => i !== idx));
+    const handleLinkChange = (idx: number, val: string) => {
+        const updated = [...data.link_tambahan];
+        updated[idx] = val;
+        setData('link_tambahan', updated);
+    };
+
+    const totalRAB = useMemo(() => data.rab_items.reduce((sum, item) => sum + (item.total || 0), 0), [data.rab_items]);
+    const totalDana = Number(data.dana_perguruan_tinggi) + Number(data.dana_pemerintah) + Number(data.dana_lembaga_dalam) + Number(data.dana_lembaga_luar);
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-        clearErrors();
-        let hasErrors = false;
-        if (!data.judul_proyek.trim()) { setError('judul_proyek', 'Judul wajib diisi'); hasErrors = true; }
-        if (!data.nama_dosen.trim()) { setError('nama_dosen', 'Ketua kelompok wajib diisi'); hasErrors = true; }
-        if (!data.lokasi.trim()) { setError('lokasi', 'Lokasi wajib diisi'); hasErrors = true; }
-        if (!teamValidationDefinitions.some((s) => data[s.enabledKey])) { setError('team_selection', 'Pilih minimal satu kategori tim'); hasErrors = true; }
-        teamValidationDefinitions.forEach((section) => {
-            if (data[section.enabledKey] && data[section.type].some((m) => !m.trim())) { setError(section.type, getTeamEntryValidationMessage(section.title)); hasErrors = true; }
-        });
-        if (!data.sumber_dana) { setError('sumber_dana', 'Sumber dana wajib dipilih'); hasErrors = true; }
-        if (!String(data.total_RAB).trim()) { setError('total_RAB', 'Total anggaran wajib diisi'); hasErrors = true; }
-        if (!data.tanggal_mulai) { setError('tanggal_mulai', 'Tanggal mulai wajib diisi'); hasErrors = true; }
-        if (!data.tanggal_selesai) { setError('tanggal_selesai', 'Tanggal selesai wajib diisi'); hasErrors = true; }
-        if (!data.proposal) { setError('proposal', 'Proposal wajib diunggah'); hasErrors = true; }
-
-        if (hasErrors) {
-            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Siap', message: 'Masih ada data wajib yang belum lengkap.' });
+        if (!data.judul_kegiatan.trim()) {
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Lengkap', message: 'Mohon isi judul kegiatan PKM.' });
+            return;
+        }
+        if (!data.nama_ketua.trim()) {
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Lengkap', message: 'Mohon isi nama ketua kelompok.' });
+            return;
+        }
+        if (!data.email.trim()) {
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Lengkap', message: 'Mohon isi email kampus.' });
+            return;
+        }
+        if (!data.provinsi.trim()) {
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Lengkap', message: 'Mohon isi provinsi lokasi PKM.' });
+            return;
+        }
+        if (!data.kota_kabupaten.trim()) {
+            setFeedbackDialog({ show: true, type: 'error', title: 'Form Belum Lengkap', message: 'Mohon isi kota/kabupaten.' });
             return;
         }
 
-        setMockProcessing(true);
-        setTimeout(() => {
-            setMockProcessing(false);
-            onSubmitted?.({
-                id: Date.now(),
-                judul: data.judul_proyek,
-                ringkasan: `${data.lokasi} • Ketua ${data.nama_dosen}`,
-                tanggal: createSubmittedLabel(),
-                status: 'diproses',
-                tim_pelaksana: {
-                    dosen_terlibat: data.sertakan_dosen_terlibat ? getFilledTeamMembers(data.dosen_terlibat) : [],
-                    staff_terlibat: data.sertakan_staff_terlibat ? getFilledTeamMembers(data.staff_terlibat) : [],
-                    mahasiswa_terlibat: data.sertakan_mahasiswa_terlibat ? getFilledTeamMembers(data.mahasiswa_terlibat) : [],
-                },
-            });
-            setFeedbackDialog({ show: true, type: 'success', title: 'Pengajuan Berhasil', message: 'Data pengajuan PKM sudah tersimpan.' });
-            setTimeout(() => reset(), 300);
-        }, 1200);
+        setIsMockSubmitting(true);
+
+        // Build payload sesuai backend PengajuanUserController::store (role dosen)
+        const payload = {
+            judul_kegiatan:     data.judul_kegiatan,
+            nama_dosen:         data.nama_ketua,
+            instansi_mitra:     data.instansi,
+            no_telepon:         data.whatsapp,
+            provinsi:           data.provinsi,
+            kota_kabupaten:     data.kota_kabupaten,
+            kecamatan:          data.kecamatan,
+            kelurahan_desa:     data.kelurahan_desa,
+            alamat_lengkap:     data.alamat_lengkap,
+            dosen_terlibat:     data.tim_dosen.filter(v => v.trim() !== ''),
+            staff_terlibat:     data.tim_staff.filter(v => v.trim() !== ''),
+            mahasiswa_terlibat: data.tim_mahasiswa.filter(v => v.trim() !== ''),
+            sumber_dana:        'Perguruan Tinggi',
+            total_anggaran:     totalRAB || 0,
+            proposal_url:       data.surat_proposal,
+            surat_permohonan_url: data.surat_permohonan,
+            rab:                data.link_tambahan.filter(v => v.trim() !== '').join(', '),
+        };
+
+        router.post('/pengajuan', payload as any, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsMockSubmitting(false);
+                onSubmitted?.({
+                    id: Date.now(),
+                    judul: data.judul_kegiatan,
+                    ringkasan: `Lokasi: ${data.kota_kabupaten} • Ketua: ${data.nama_ketua}`,
+                    tanggal: createSubmittedLabel(),
+                    status: 'diproses',
+                });
+                onUpdateSubmissionStatus?.('diproses');
+                setFeedbackDialog({ show: true, type: 'success', title: 'Pengajuan Berhasil', message: 'Data pengajuan PKM Dosen telah disimpan.' });
+                reset();
+            },
+            onError: () => {
+                setIsMockSubmitting(false);
+                setFeedbackDialog({ show: true, type: 'error', title: 'Gagal Mengirim', message: 'Terjadi kesalahan saat menyimpan. Coba lagi.' });
+            },
+        });
     };
 
-    const handleUploadRevision = (file: File | null) => {
-        if (!file) return;
-        setRevisionProcessing(true);
-        setTimeout(() => {
-            setRevisionProcessing(false);
-            if (revisionInputRef.current) revisionInputRef.current.value = '';
-            onUpdateSubmissionStatus?.('diproses');
-            setFeedbackDialog({ show: true, type: 'success', title: 'Revisi Terkirim', message: 'Dokumen revisi berhasil diunggah.' });
-        }, 1000);
-    };
 
-    const handleCreateNewSubmission = () => {
-        reset();
-        clearErrors();
-        if (revisionInputRef.current) revisionInputRef.current.value = '';
-        onUpdateSubmissionStatus?.('belum_diajukan');
-        setFeedbackDialog({ show: true, type: 'success', title: 'Siap Mengajukan Ulang', message: 'Form sudah dibuka kembali.' });
-    };
-
-    const isProcessing = inertiaProcessing || mockProcessing;
-    const isSubmitDisabled = isProcessing || requiredSubmissionIssues.length > 0;
-
-    const teamSections = [
-        { enabledKey: 'sertakan_dosen_terlibat' as const, type: 'dosen_terlibat' as const, title: 'Dosen Terlibat', placeholder: 'Nama Dosen', icon: 'fa-user-tie', iconBg: '#e0f2fe', iconColor: '#0369a1', sectionBg: '#f8fafc', sectionBorder: '#e2e8f0', buttonBg: '#e0f2fe', buttonColor: '#0369a1', note: 'Centang jika ada dosen lain yang ikut.' },
-        { enabledKey: 'sertakan_staff_terlibat' as const, type: 'staff_terlibat' as const, title: 'Staf Terlibat', placeholder: 'Nama Staf', icon: 'fa-id-badge', iconBg: '#f3e8ff', iconColor: '#6d28d9', sectionBg: '#fbf5ff', sectionBorder: '#f3e8ff', buttonBg: '#ede9fe', buttonColor: '#6d28d9', note: 'Centang jika ada staf yang ikut.' },
-        { enabledKey: 'sertakan_mahasiswa_terlibat' as const, type: 'mahasiswa_terlibat' as const, title: 'Mahasiswa Terlibat', placeholder: 'Nama Mahasiswa', icon: 'fa-graduation-cap', iconBg: '#dcfce7', iconColor: '#16a34a', sectionBg: '#f0fdf4', sectionBorder: '#dcfce7', buttonBg: '#dcfce7', buttonColor: '#16a34a', note: 'Centang jika ada mahasiswa yang ikut.' },
-    ];
-
-    const statusCardConfig: Record<string, { icon: string; iconBg: string; iconColor: string; title: string; message: string }> = {
-        diproses: { icon: 'fa-clock', iconBg: '#dbeafe', iconColor: '#1d4ed8', title: 'Pengajuan PKM Anda sedang diproses.', message: 'Mohon menunggu proses verifikasi dari tim kami.' },
-        ditangguhkan: { icon: 'fa-file-pen', iconBg: '#fef3c7', iconColor: '#b45309', title: 'Pengajuan memerlukan revisi.', message: 'Silakan perbarui dokumen sesuai catatan revisi.' },
-        ditolak: { icon: 'fa-circle-xmark', iconBg: '#fee2e2', iconColor: '#b91c1c', title: 'Pengajuan belum dapat diterima.', message: 'Anda dapat menyiapkan pengajuan baru.' },
-        diterima: { icon: 'fa-circle-check', iconBg: '#dcfce7', iconColor: '#15803d', title: 'Pengajuan telah diterima.', message: 'Silakan cek email untuk informasi lanjutan.' },
-        berlangsung: { icon: 'fa-person-walking', iconBg: '#fef3c7', iconColor: '#b45309', title: 'Program PKM sedang berlangsung.', message: 'Berikut ringkasan kegiatan yang berjalan.' },
-        selesai: { icon: 'fa-flag-checkered', iconBg: '#dcfce7', iconColor: '#15803d', title: 'Program PKM telah selesai.', message: 'Berikut dokumentasi kegiatan.' },
-    };
-
-    const renderSubmissionHub = () => (
-        <div className="p-6">
-            <div className="flex items-start gap-4 p-5 bg-gradient-to-br from-blue-50 to-slate-50 rounded-2xl border border-blue-100 mb-5">
-                <span className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-table-list text-lg"></i>
-                </span>
-                <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Daftar Kegiatan dan Riwayat Pengajuan</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">Arsip kegiatan PKM dan histori pengajuan.</p>
+    const renderDetailModal = () => {
+        if (!selectedDetail) return null;
+        const style = getSubmissionStatusStyle(selectedDetail.status);
+        return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="absolute inset-0" onClick={() => setSelectedDetail(null)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-sigap-blue text-white flex items-center justify-center shadow-md"><i className="fa-solid fa-file-invoice text-lg"></i></div>
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 line-clamp-1">{selectedDetail.judul}</h3>
+                                <p className="text-[11px] text-slate-500 font-medium">{selectedDetail.tanggal}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setSelectedDetail(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                        <div className="flex flex-col items-center p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/30">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Status Pengajuan</span>
+                            <div className="px-4 py-1.5 rounded-full font-bold text-sm flex items-center gap-2 shadow-sm" style={{ backgroundColor: style.bg, color: style.color }}><i className={`fa-solid ${style.icon}`}></i>{style.label}</div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sigap-blue"><i className="fa-solid fa-info-circle text-xs"></i><span className="text-xs font-bold uppercase tracking-wider">Ringkasan</span></div>
+                            <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedDetail.ringkasan}</p>
+                        </div>
+                        {selectedDetail.catatan && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-amber-600"><i className="fa-solid fa-comment-dots text-xs"></i><span className="text-xs font-bold uppercase tracking-wider">Catatan Admin</span></div>
+                                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3"><i className="fa-solid fa-quote-left text-amber-200 text-xl mt-1"></i><p className="text-sm text-amber-800 italic leading-relaxed">{selectedDetail.catatan}</p></div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                        <button onClick={() => setSelectedDetail(null)} className="px-6 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors shadow-sm">Tutup</button>
+                    </div>
                 </div>
             </div>
+        );
+    };
 
-            {/* Kegiatan */}
-            <div className={`border border-slate-200 rounded-xl overflow-hidden mb-4 ${expandedHubSections.kegiatan ? 'ring-2 ring-blue-100' : ''}`}>
-                <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedHubSections(prev => ({ ...prev, kegiatan: !prev.kegiatan }))}>
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-900">Daftar Kegiatan</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">Daftar titik PKM pada peta</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">{pkmListData.length} kegiatan</span>
-                        <i className={`fa-solid fa-chevron-${expandedHubSections.kegiatan ? 'up' : 'down'} text-slate-400`}></i>
-                    </div>
+    const renderArchiveTab = () => (
+        <div className="p-6">
+            <div className="flex items-start gap-4 p-5 bg-gradient-to-br from-blue-50 to-slate-50 rounded-2xl border border-blue-100 mb-5">
+                <span className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0"><i className="fa-solid fa-layer-group text-lg"></i></span>
+                <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Arsip & Riwayat PKM</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">Daftar kegiatan PKM yang sudah terdata dan histori pengajuan Anda.</p>
+                </div>
+            </div>
+            
+            <div className="border border-slate-200 rounded-xl overflow-hidden mb-4">
+                <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedHubSections(p => ({ ...p, kegiatan: !p.kegiatan }))}>
+                    <h4 className="text-sm font-bold text-slate-900">Daftar Kegiatan</h4>
+                    <i className={`fa-solid fa-chevron-${expandedHubSections.kegiatan ? 'up' : 'down'} text-slate-400`}></i>
                 </button>
                 {expandedHubSections.kegiatan && (
                     <div className="border-t border-slate-100 divide-y divide-slate-100">
-                        {pkmListData.map((activity) => {
-                            const isOpen = expandedActivityId === activity.id;
-                            return (
-                                <div key={activity.id}>
-                                    <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedActivityId(prev => prev === activity.id ? null : activity.id)}>
-                                        <div className="text-left">
-                                            <strong className="text-sm font-semibold text-slate-900 block">{activity.nama}</strong>
-                                            <span className="text-xs text-slate-500">{activity.desa}, Kec. {activity.kecamatan}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${activity.status === 'berlangsung' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                <i className={`fa-solid ${activity.status === 'berlangsung' ? 'fa-person-walking' : 'fa-flag-checkered'} mr-1`}></i>
-                                                {getPkmStatusLabel(activity.status)}
-                                            </span>
-                                            <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'} text-slate-400`}></i>
-                                        </div>
-                                    </button>
-                                    {isOpen && (
-                                        <div className="px-4 pb-4">
-                                            <p className="text-sm text-slate-600 mb-3">{activity.deskripsi}</p>
-                                            <div className="flex items-center gap-4 text-xs text-slate-500">
-                                                <span><i className="fa-solid fa-calendar-days mr-1.5"></i>Tahun {activity.tahun}</span>
-                                                <span><i className="fa-solid fa-location-dot mr-1.5"></i>{activity.kabupaten}, {activity.provinsi}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {pkmListData.map(a => (
+                            <div key={a.id} className="p-4"><strong className="text-sm font-semibold text-slate-900 block">{a.nama}</strong><p className="text-xs text-slate-500">{a.tahun} • {a.kabupaten}</p></div>
+                        ))}
                     </div>
                 )}
             </div>
 
-            {/* Riwayat */}
-            <div className={`border border-slate-200 rounded-xl overflow-hidden ${expandedHubSections.riwayat ? 'ring-2 ring-blue-100' : ''}`}>
-                <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedHubSections(prev => ({ ...prev, riwayat: !prev.riwayat }))}>
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-900">Riwayat Pengajuan</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">Histori pengajuan Anda</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">{submissionHistory.length} riwayat</span>
-                        <i className={`fa-solid fa-chevron-${expandedHubSections.riwayat ? 'up' : 'down'} text-slate-400`}></i>
-                    </div>
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedHubSections(p => ({ ...p, riwayat: !p.riwayat }))}>
+                    <h4 className="text-sm font-bold text-slate-900">Riwayat Pengajuan</h4>
+                    <i className={`fa-solid fa-chevron-${expandedHubSections.riwayat ? 'up' : 'down'} text-slate-400`}></i>
                 </button>
                 {expandedHubSections.riwayat && (
-                    <div className="border-t border-slate-100 divide-y divide-slate-100">
-                        {submissionHistory.map((item) => {
-                            const isOpen = expandedHistoryId === item.id;
-                            const style = item.status === 'diterima' ? { bg: '#dcfce7', color: '#15803d', icon: 'fa-circle-check', label: 'Diterima' } : item.status === 'ditangguhkan' ? { bg: '#fef3c7', color: '#b45309', icon: 'fa-file-pen', label: 'Ditangguhkan' } : item.status === 'ditolak' ? { bg: '#fee2e2', color: '#b91c1c', icon: 'fa-circle-xmark', label: 'Ditolak' } : { bg: '#e2e8f0', color: '#475569', icon: 'fa-circle-info', label: item.status };
-                            return (
-                                <div key={item.id}>
-                                    <button type="button" className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" onClick={() => setExpandedHistoryId(prev => prev === item.id ? null : item.id)}>
-                                        <div className="text-left">
-                                            <strong className="text-sm font-semibold text-slate-900 block">{item.judul}</strong>
-                                            <span className="text-xs text-slate-500">{item.tanggal}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="px-2.5 py-1 text-xs font-semibold rounded-full" style={{ backgroundColor: style.bg, color: style.color }}>
-                                                <i className={`fa-solid ${style.icon} mr-1`}></i>{style.label}
-                                            </span>
-                                            <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'} text-slate-400`}></i>
-                                        </div>
-                                    </button>
-                                    {isOpen && (
-                                        <div className="px-4 pb-4">
-                                            <p className="text-sm text-slate-600 mb-2">{item.ringkasan}</p>
-                                            <span className="text-xs text-slate-500"><i className="fa-solid fa-clipboard-list mr-1.5"></i>{item.catatan}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                    <div className="border-t border-slate-100 overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-slate-50/50 border-b border-slate-100">
+                                <tr>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">Nama Pengajuan</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {submissionHistory.length > 0 ? (
+                                    submissionHistory.map(item => (
+                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-4"><strong className="text-sm font-semibold text-slate-900 block">{item.judul}</strong><span className="text-[11px] text-slate-500 line-clamp-1">{item.ringkasan}</span></td>
+                                            <td className="px-4 py-4 text-center">
+                                                <button type="button" className="text-[11px] font-bold text-sigap-blue hover:underline" onClick={() => setSelectedDetail(item)}>Detail</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={2} className="px-4 py-8 text-center text-slate-400 text-xs italic">Belum ada riwayat pengajuan.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
         </div>
     );
 
-    const renderForm = () => (
-        <div className="p-6 space-y-5">
-            {/* Detail Proyek */}
-            <div>
-                <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <i className="fa-solid fa-folder-open text-sigap-blue"></i>Detail Proyek
-                </h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Judul Proyek PKM <span className="text-red-500">*</span></label>
-                        <input type="text" value={data.judul_proyek} onChange={(e) => setData('judul_proyek', e.target.value)} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.judul_proyek ? 'border-red-300 bg-red-50' : 'border-slate-200'}`} placeholder="Masukkan judul pengabdian..." />
-                        {errors.judul_proyek && <p className="mt-1 text-xs text-red-600">{errors.judul_proyek}</p>}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ketua Kelompok <span className="text-red-500">*</span></label>
-                            <input type="text" value={data.nama_dosen} onChange={(e) => setData('nama_dosen', e.target.value)} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.nama_dosen ? 'border-red-300 bg-red-50' : 'border-slate-200'}`} placeholder="Nama lengkap dan gelar..." />
-                            {errors.nama_dosen && <p className="mt-1 text-xs text-red-600">{errors.nama_dosen}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Lokasi Pengabdian <span className="text-red-500">*</span></label>
-                            <input type="text" value={data.lokasi} onChange={(e) => setData('lokasi', e.target.value)} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.lokasi ? 'border-red-300 bg-red-50' : 'border-slate-200'}`} placeholder="Desa, Kecamatan, Kota..." />
-                            {errors.lokasi && <p className="mt-1 text-xs text-red-600">{errors.lokasi}</p>}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <hr className="border-slate-200" />
-
-            {/* Tim Pelaksana */}
-            <div>
-                <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
-                    <i className="fa-solid fa-users text-sigap-blue"></i>Tim Pelaksana
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">Ketua kelompok tidak perlu diinput ulang. Centang kategori anggota yang ikut.</p>
-                {errors.team_selection && <p className="mb-4 text-xs text-red-600 flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation"></i>{errors.team_selection}</p>}
-
-                {teamSections.map((section, idx) => {
-                    const isEnabled = data[section.enabledKey];
-                    return (
-                        <div key={section.type} className="p-4 rounded-xl border mb-4 transition-opacity" style={{ backgroundColor: section.sectionBg, borderColor: section.sectionBorder, opacity: isEnabled ? 1 : 0.82 }}>
-                            <div className="flex items-center justify-between mb-4">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" checked={isEnabled} onChange={(e) => handleTogglePersonilSection(section.enabledKey, section.type, e.target.checked)} className="w-4 h-4" style={{ accentColor: section.iconColor }} />
-                                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: section.iconBg, color: section.iconColor }}><i className={`fa-solid ${section.icon}`}></i></span>
-                                    <span className="text-sm font-bold" style={{ color: section.iconColor }}>{section.title}</span>
-                                </label>
-                                {isEnabled && (
-                                    <button type="button" onClick={() => handleAddPersonil(section.type)} className="px-3 py-1.5 text-xs font-semibold rounded-lg" style={{ backgroundColor: section.buttonBg, color: section.buttonColor }}>
-                                        <i className="fa-solid fa-plus mr-1"></i>Tambah
-                                    </button>
-                                )}
-                            </div>
-                            {!isEnabled && <p className="text-sm text-slate-500">{section.note}</p>}
-                            {isEnabled && (
-                                <div className="space-y-3">
-                                    {data[section.type].map((personil, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <span className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold" style={{ backgroundColor: section.iconBg, color: section.iconColor }}>{index + 1}</span>
-                                                <input type="text" value={personil} onChange={(e) => handlePersonilChange(section.type, index, e.target.value)} placeholder={`${section.placeholder} ${index + 1}`} className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm" />
-                                            </div>
-                                            {data[section.type].length > 1 && (
-                                                <button type="button" onClick={() => handleRemovePersonil(section.type, index)} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"><i className="fa-regular fa-trash-can"></i></button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {errors[section.type] && <p className="text-xs text-red-600 flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation"></i>{errors[section.type]}</p>}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            <hr className="border-slate-200" />
-
-            {/* Pendanaan & Jadwal */}
-            <div>
-                <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <i className="fa-solid fa-wallet text-sigap-blue"></i>Pendanaan & Jadwal
-                </h3>
+    const renderSubmissionForm = () => (
+        <div className="p-6 space-y-8">
+            {/* Identitas Pengusul */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-6">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-id-card text-sigap-blue"></i>Identitas Pengusul</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Sumber Dana</label>
-                        <select value={data.sumber_dana} onChange={(e) => { setData('sumber_dana', e.target.value); clearErrors('sumber_dana'); }} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.sumber_dana ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
-                            <option value="" disabled>Pilih Sumber Dana</option>
-                            <option value="DIPA Poltekpar">DIPA Poltekpar</option>
-                            <option value="Mandiri">Mandiri / Pribadi</option>
-                            <option value="Sponsor Luar">Sponsor Eksternal</option>
-                        </select>
-                        {errors.sumber_dana && <p className="mt-1 text-xs text-red-600">{errors.sumber_dana}</p>}
+                    <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-semibold text-slate-700">Judul Kegiatan PKM <span className="text-red-500">*</span></label>
+                        <input type="text" value={data.judul_kegiatan} onChange={e => setData('judul_kegiatan', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Masukkan judul pengabdian" />
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Total Anggaran (RAB)</label>
-                        <div className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-lg focus-within:border-sigap-blue focus-within:ring-2 focus-within:ring-blue-100">
-                            <span className="text-slate-500 font-medium text-sm">Rp</span>
-                            <input type="number" value={data.total_RAB} onChange={(e) => { setData('total_RAB', e.target.value); clearErrors('total_RAB'); }} placeholder="0" className="flex-1 outline-none text-sm" />
-                        </div>
-                        {errors.total_RAB && <p className="mt-1 text-xs text-red-600">{errors.total_RAB}</p>}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700">Nama Ketua Kelompok (Dosen) <span className="text-red-500">*</span></label>
+                        <input type="text" value={data.nama_ketua} onChange={e => setData('nama_ketua', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Nama lengkap dan gelar" />
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Mulai</label>
-                        <input type="date" value={data.tanggal_mulai} onChange={(e) => { setData('tanggal_mulai', e.target.value); clearErrors('tanggal_mulai'); }} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.tanggal_mulai ? 'border-red-300 bg-red-50' : 'border-slate-200'}`} />
-                        {errors.tanggal_mulai && <p className="mt-1 text-xs text-red-600">{errors.tanggal_mulai}</p>}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700">Instansi / Unit Kerja</label>
+                        <input type="text" value={data.instansi} readOnly className="w-full px-3 py-2 border border-slate-100 bg-slate-50 text-slate-500 rounded-lg text-sm" />
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Selesai</label>
-                        <input type="date" value={data.tanggal_selesai} onChange={(e) => { setData('tanggal_selesai', e.target.value); clearErrors('tanggal_selesai'); }} className={`w-full px-3 py-2.5 border rounded-lg outline-none focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 text-sm ${errors.tanggal_selesai ? 'border-red-300 bg-red-50' : 'border-slate-200'}`} />
-                        {errors.tanggal_selesai && <p className="mt-1 text-xs text-red-600">{errors.tanggal_selesai}</p>}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700">Email Kampus <span className="text-red-500">*</span></label>
+                        <input type="email" value={data.email} onChange={e => setData('email', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="email@poltekparmakassar.ac.id" />
                     </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Unggah Proposal (PDF)</label>
-                        <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:border-sigap-blue hover:bg-slate-50 transition-all">
-                            <input type="file" id="proposal_inline" accept=".pdf" onChange={(e) => { if (e.target.files?.[0]) { setData('proposal', e.target.files[0]); clearErrors('proposal'); } }} className="hidden" />
-                            <label htmlFor="proposal_inline" className="cursor-pointer">
-                                <div className="w-12 h-12 rounded-full bg-blue-100 text-sigap-blue flex items-center justify-center mx-auto mb-2">
-                                    <i className="fa-solid fa-cloud-arrow-up"></i>
-                                </div>
-                                <p className="text-sm font-semibold text-slate-900">{data.proposal ? data.proposal.name : 'Pilih File Proposal'}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">{data.proposal ? `${(data.proposal.size / 1024 / 1024).toFixed(2)} MB` : 'Unggah dokumen proposal PKM dalam format PDF'}</p>
-                            </label>
-                        </div>
-                        {errors.proposal && <p className="mt-1 text-xs text-red-600">{errors.proposal}</p>}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700">WhatsApp <span className="text-red-500">*</span></label>
+                        <input type="tel" value={data.whatsapp} onChange={e => setData('whatsapp', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="081234567890" />
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {hasStartedSubmission && requiredSubmissionIssues.length > 0 && (
-                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                    <i className="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5"></i>
-                    <div>
-                        <strong className="text-amber-900 text-sm">Form belum bisa dikirim</strong>
-                        <p className="text-amber-700 text-sm">{requiredSubmissionIssues[0]}</p>
+            {/* Lokasi PKM Card */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-6">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-map-location-dot text-sigap-blue"></i>Lokasi PKM</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Provinsi <span className="text-red-500">*</span></label><input type="text" value={data.provinsi} onChange={e => setData('provinsi', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Provinsi" /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Kota / Kabupaten <span className="text-red-500">*</span></label><input type="text" value={data.kota_kabupaten} onChange={e => setData('kota_kabupaten', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Kota/Kabupaten" /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Kecamatan</label><input type="text" value={data.kecamatan} onChange={e => setData('kecamatan', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Kecamatan" /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Kelurahan / Desa</label><input type="text" value={data.kelurahan_desa} onChange={e => setData('kelurahan_desa', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder="Kelurahan/Desa" /></div>
+                    <div className="md:col-span-2 space-y-1.5"><label className="text-xs font-semibold text-slate-700">Alamat Lengkap</label><textarea value={data.alamat_lengkap} onChange={e => setData('alamat_lengkap', e.target.value)} rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100 resize-none" placeholder="Detail alamat lokasi PKM..." /></div>
+                </div>
+            </section>
+
+            {/* Tim Pelaksana Section */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-6">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-users-gear text-sigap-blue"></i>Tim Pelaksana</h3>
+                
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Anggota Dosen</label>
+                    {data.tim_dosen.map((m, i) => (
+                        <div key={i} className="flex gap-2">
+                            <input type="text" value={m} onChange={e => handleMemberChange('tim_dosen', i, e.target.value)} className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder={`Nama Dosen ${i+1}`} />
+                            {data.tim_dosen.length > 1 && <button type="button" onClick={() => handleRemoveMember('tim_dosen', i)} className="w-10 h-10 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50"><i className="fa-solid fa-trash-can"></i></button>}
+                        </div>
+                    ))}
+                    <button type="button" onClick={() => handleAddMember('tim_dosen')} className="text-xs font-bold text-sigap-blue hover:underline flex items-center gap-1.5"><i className="fa-solid fa-plus-circle"></i>Tambah Dosen</button>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Anggota Staff</label>
+                    {data.tim_staff.map((m, i) => (
+                        <div key={i} className="flex gap-2">
+                            <input type="text" value={m} onChange={e => handleMemberChange('tim_staff', i, e.target.value)} className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder={`Nama Staff ${i+1}`} />
+                            {data.tim_staff.length > 1 && <button type="button" onClick={() => handleRemoveMember('tim_staff', i)} className="w-10 h-10 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50"><i className="fa-solid fa-trash-can"></i></button>}
+                        </div>
+                    ))}
+                    <button type="button" onClick={() => handleAddMember('tim_staff')} className="text-xs font-bold text-sigap-blue hover:underline flex items-center gap-1.5"><i className="fa-solid fa-plus-circle"></i>Tambah Staff</button>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Anggota Mahasiswa</label>
+                    {data.tim_mahasiswa.map((m, i) => (
+                        <div key={i} className="flex gap-2">
+                            <input type="text" value={m} onChange={e => handleMemberChange('tim_mahasiswa', i, e.target.value)} className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue focus:ring-2 focus:ring-blue-100" placeholder={`Nama Mahasiswa ${i+1}`} />
+                            {data.tim_mahasiswa.length > 1 && <button type="button" onClick={() => handleRemoveMember('tim_mahasiswa', i)} className="w-10 h-10 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50"><i className="fa-solid fa-trash-can"></i></button>}
+                        </div>
+                    ))}
+                    <button type="button" onClick={() => handleAddMember('tim_mahasiswa')} className="text-xs font-bold text-sigap-blue hover:underline flex items-center gap-1.5"><i className="fa-solid fa-plus-circle"></i>Tambah Mahasiswa</button>
+                </div>
+            </section>
+
+            {/* RAB Section */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-calculator text-sigap-blue"></i>Rencana Anggaran Biaya (RAB)</h3>
+                <div className="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[400px]">
+                        <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-3 py-2">Item</th>
+                                <th className="px-3 py-2 w-20 text-center">Jml</th>
+                                <th className="px-3 py-2 w-32">Harga (Rp)</th>
+                                <th className="px-3 py-2 w-10 text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {data.rab_items.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td className="p-2"><input type="text" value={item.nama_item} onChange={e => handleRabChange(idx, 'nama_item', e.target.value)} className="w-full px-2 py-1.5 border border-slate-100 rounded text-xs outline-none focus:border-sigap-blue" placeholder="Nama item..." /></td>
+                                    <td className="p-2"><input type="number" value={item.jumlah} onChange={e => handleRabChange(idx, 'jumlah', parseInt(e.target.value)||0)} className="w-full px-2 py-1.5 border border-slate-100 rounded text-xs text-center outline-none focus:border-sigap-blue" /></td>
+                                    <td className="p-2"><input type="number" value={item.harga} onChange={e => handleRabChange(idx, 'harga', parseInt(e.target.value)||0)} className="w-full px-2 py-1.5 border border-slate-100 rounded text-xs outline-none focus:border-sigap-blue" /></td>
+                                    <td className="p-2 text-center">
+                                        {data.rab_items.length > 1 && <button type="button" onClick={() => handleRemoveRab(idx)} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-xmark"></i></button>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-slate-50/50">
+                            <tr>
+                                <td colSpan={2} className="px-3 py-2 text-xs font-bold text-slate-700 text-right">Estimasi Total RAB:</td>
+                                <td className="px-3 py-2 text-xs font-bold text-sigap-blue">Rp {totalRAB.toLocaleString('id-ID')}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button type="button" onClick={handleAddRab} className="text-xs font-bold text-sigap-blue hover:underline flex items-center gap-1.5"><i className="fa-solid fa-plus-circle"></i>Tambah Baris RAB</button>
+            </section>
+
+            {/* Sumber Dana Section */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-hand-holding-dollar text-sigap-blue"></i>Sumber Pendanaan (Rp)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><label className="text-[11px] font-bold text-slate-500 uppercase">Perguruan Tinggi</label><input type="number" value={data.dana_perguruan_tinggi} onChange={e => setData('dana_perguruan_tinggi', parseInt(e.target.value)||0)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="0" /></div>
+                    <div className="space-y-1.5"><label className="text-[11px] font-bold text-slate-500 uppercase">Pemerintah</label><input type="number" value={data.dana_pemerintah} onChange={e => setData('dana_pemerintah', parseInt(e.target.value)||0)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="0" /></div>
+                    <div className="space-y-1.5"><label className="text-[11px] font-bold text-slate-500 uppercase">Lembaga Dalam Negeri</label><input type="number" value={data.dana_lembaga_dalam} onChange={e => setData('dana_lembaga_dalam', parseInt(e.target.value)||0)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="0" /></div>
+                    <div className="space-y-1.5"><label className="text-[11px] font-bold text-slate-500 uppercase">Lembaga Luar Negeri</label><input type="number" value={data.dana_lembaga_luar} onChange={e => setData('dana_lembaga_luar', parseInt(e.target.value)||0)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="0" /></div>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg flex justify-between items-center"><span className="text-xs font-bold text-blue-700">Total Keseluruhan Dana:</span><span className="text-sm font-bold text-sigap-blue">Rp {totalDana.toLocaleString('id-ID')}</span></div>
+            </section>
+
+            {/* Dokumen Section */}
+            <section className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><i className="fa-solid fa-link text-sigap-blue"></i>Tautan Dokumen Pendukung</h3>
+                <div className="space-y-4">
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Link Surat Permohonan <span className="text-red-500">*</span></label><input type="url" value={data.surat_permohonan} onChange={e => setData('surat_permohonan', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="https://..." /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-semibold text-slate-700">Link Proposal PKM <span className="text-red-500">*</span></label><input type="url" value={data.surat_proposal} onChange={e => setData('surat_proposal', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="https://..." /></div>
+                    <div className="space-y-3">
+                        <label className="text-xs font-semibold text-slate-700">Link Tambahan Lainnya</label>
+                        {data.link_tambahan.map((l, i) => (
+                            <div key={i} className="flex gap-2">
+                                <input type="url" value={l} onChange={e => handleLinkChange(i, e.target.value)} className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-sigap-blue" placeholder="Link tambahan..." />
+                                {data.link_tambahan.length > 1 && <button type="button" onClick={() => handleRemoveLink(i)} className="w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 text-red-500"><i className="fa-solid fa-trash-can"></i></button>}
+                            </div>
+                        ))}
+                        <button type="button" onClick={handleAddLink} className="text-xs font-bold text-sigap-blue hover:underline flex items-center gap-1.5"><i className="fa-solid fa-plus-circle"></i>Tambah Tautan Lagi</button>
                     </div>
                 </div>
-            )}
+            </section>
 
-            <button type="submit" disabled={isSubmitDisabled} className="w-full py-3 bg-sigap-blue hover:bg-sigap-darkBlue text-white font-semibold rounded-xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2">
-                {isProcessing ? <><i className="fa-solid fa-spinner fa-spin"></i>Memproses...</> : <><i className="fa-solid fa-paper-plane"></i>Kirim Pengajuan</>}
+            <button type="submit" disabled={isMockSubmitting} className="w-full py-3.5 bg-sigap-blue hover:bg-sigap-darkBlue text-white font-bold rounded-xl shadow-lg disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                {isMockSubmitting ? <><i className="fa-solid fa-spinner fa-spin"></i>Memproses...</> : <><i className="fa-solid fa-paper-plane"></i>Kirim Pengajuan Dosen</>}
             </button>
         </div>
     );
 
-    const isRevisionMode = submissionStatus === 'ditangguhkan';
-    const isRejectedMode = submissionStatus === 'ditolak';
-    const isPkmBerlangsung = submissionStatus === 'berlangsung';
-    const isPkmSelesai = submissionStatus === 'selesai';
-
-    if (submissionStatus !== 'belum_diajukan' && statusCardConfig[submissionStatus]) {
-        const currentStatusCard = statusCardConfig[submissionStatus];
-
-        if ((isPkmBerlangsung || isPkmSelesai) && pkmStatusData) {
-            return (
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                    <div className="p-5 border-b border-slate-100">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white shadow-md">
-                                <i className="fa-solid fa-file-signature text-lg"></i>
-                            </div>
-                            <div>
-                                <h3 className="text-base font-bold text-slate-900">Akses Pengajuan PKM</h3>
-                                <p className="text-sm text-slate-500 mt-0.5">Kegiatan PKM yang sedang berjalan</p>
-                            </div>
-                        </div>
-                    </div>
-                    {!hideMainTabNav && (
-                        <div className="flex border-b border-slate-100">
-                            <button type="button" onClick={() => setMainTab('pengajuan')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'pengajuan' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                                <i className="fa-solid fa-file-signature mr-2"></i>Pengajuan
-                            </button>
-                            <button type="button" onClick={() => setMainTab('arsip')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'arsip' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                                <i className="fa-solid fa-layer-group mr-2"></i>Arsip
-                            </button>
-                        </div>
-                    )}
-                    {!hideMainTabNav && mainTab === 'arsip' ? renderSubmissionHub() : (
-                        <div className="p-6">
-                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                                {pkmStatusData.thumbnail ? <div className="h-48 bg-cover bg-center" style={{ backgroundImage: `url(${pkmStatusData.thumbnail})` }}></div> : <div className="h-48 bg-slate-100 flex items-center justify-center text-slate-400"><i className="fa-solid fa-image text-4xl"></i></div>}
-                                <div className="p-5">
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                        <h2 className="text-lg font-bold text-slate-900">{pkmStatusData.nama}</h2>
-                                        <span className="text-sm font-semibold text-slate-500">{pkmStatusData.tahun}</span>
-                                    </div>
-                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3 ${pkmStatusData.status === 'berlangsung' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        <i className={`fa-solid ${pkmStatusData.status === 'berlangsung' ? 'fa-spinner fa-spin' : 'fa-check-double'}`}></i>
-                                        {pkmStatusData.status === 'berlangsung' ? 'Berlangsung' : 'Selesai'}
-                                    </div>
-                                    <p className="text-sm text-slate-600 mb-4">{pkmStatusData.deskripsi}</p>
-                                    {isPkmSelesai && (
-                                        <>
-                                            <DocumentationGallery status={pkmStatusData.status} driveLink={pkmStatusData.dokumentasi} />
-                                            <TestimonialSidebarDisplay status={pkmStatusData.status} />
-                                            <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl border border-blue-100 text-center">
-                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 flex items-center justify-center mx-auto mb-3 text-xl">
-                                                    <i className="fa-solid fa-file-circle-plus"></i>
-                                                </div>
-                                                <h4 className="text-sm font-bold text-slate-900 mb-2">Ingin membuat pengajuan PKM baru?</h4>
-                                                <p className="text-xs text-slate-600 mb-4">Anda dapat mengajukan program PKM berikutnya.</p>
-                                                <button type="button" onClick={handleCreateNewSubmission} className="px-6 py-2.5 bg-sigap-blue hover:bg-sigap-darkBlue text-white text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2">
-                                                    Buat Pengajuan Baru<i className="fa-solid fa-arrow-right"></i>
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                    <p className="text-sm text-slate-600 mt-4"><i className="fa-solid fa-map-pin mr-2 text-slate-400"></i>{pkmStatusData.desa}, Kec. {pkmStatusData.kecamatan}, {pkmStatusData.kabupaten}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <ActionFeedbackDialog show={feedbackDialog.show} type={feedbackDialog.type} title={feedbackDialog.title} message={feedbackDialog.message} onClose={() => setFeedbackDialog({ ...feedbackDialog, show: false })} />
-                </div>
-            );
-        }
-
+    if (onlyShowStatus || submissionStatus !== 'belum_diajukan') {
+        const style = getSubmissionStatusStyle(submissionStatus);
         return (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                <div className="p-5 border-b border-slate-100">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white shadow-md">
-                            <i className="fa-solid fa-file-signature text-lg"></i>
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-slate-900">Akses Pengajuan PKM</h3>
-                            <p className="text-sm text-slate-500 mt-0.5">Status pengajuan Anda</p>
-                        </div>
-                    </div>
+                <div className="p-5 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white shadow-md"><i className="fa-solid fa-file-signature text-lg"></i></div>
+                    <div><h3 className="text-base font-bold text-slate-900">Akses Pengajuan PKM</h3><p className="text-sm text-slate-500 mt-0.5">Kelola pengajuan dosen Anda</p></div>
                 </div>
                 {!hideMainTabNav && (
                     <div className="flex border-b border-slate-100">
-                        <button type="button" onClick={() => setMainTab('pengajuan')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'pengajuan' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                            <i className="fa-solid fa-file-signature mr-2"></i>Pengajuan
-                        </button>
-                        <button type="button" onClick={() => setMainTab('arsip')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'arsip' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                            <i className="fa-solid fa-layer-group mr-2"></i>Arsip
-                        </button>
+                        <button type="button" onClick={() => setMainTab('pengajuan')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'pengajuan' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>Pengajuan</button>
+                        <button type="button" onClick={() => setMainTab('arsip')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'arsip' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>Arsip</button>
                     </div>
                 )}
-                {!hideMainTabNav && mainTab === 'arsip' ? renderSubmissionHub() : (
+                {!hideMainTabNav && mainTab === 'arsip' ? renderArchiveTab() : (
                     <div className="p-6">
-                        <div className="flex flex-col items-center text-center py-8">
-                            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-lg" style={{ backgroundColor: currentStatusCard.iconBg, color: currentStatusCard.iconColor }}>
-                                <i className={`fa-solid ${currentStatusCard.icon}`}></i>
+                        <div className="flex flex-col items-center text-center py-8 border-b border-slate-100">
+                            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-lg" style={{ backgroundColor: style.bg, color: style.color }}><i className={`fa-solid ${style.icon}`}></i></div>
+                            <h4 className="text-lg font-bold text-slate-900 mb-3">{submissionStatus === 'belum_diajukan' ? 'Belum Ada Pengajuan Aktif' : 'Status Pengajuan: ' + style.label}</h4>
+                            <p className="text-sm text-slate-600 max-w-md">Detail riwayat pengajuan dosen dapat dilihat pada tabel di bawah.</p>
+                            {submissionStatus === 'ditolak' || submissionStatus === 'belum_diajukan' ? (
+                                <button type="button" onClick={() => onUpdateSubmissionStatus?.('belum_diajukan')} className="mt-6 px-8 py-3 bg-sigap-blue text-white font-bold rounded-xl shadow-md transition-transform hover:scale-105">Buat Pengajuan Baru</button>
+                            ) : null}
+                        </div>
+                        <div className="mt-8">
+                            <div className="flex items-center gap-2 mb-4"><i className="fa-solid fa-clock-rotate-left text-sigap-blue"></i><h4 className="text-sm font-bold text-slate-900">Semua Riwayat Pengajuan</h4></div>
+                            <div className="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase">
+                                        <tr>
+                                            <th className="px-4 py-3">Nama Pengajuan</th>
+                                            <th className="px-4 py-3">Tanggal</th>
+                                            <th className="px-4 py-3 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {submissionHistory.length > 0 ? (
+                                            submissionHistory.map(item => (
+                                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-4 py-4"><strong className="text-sm font-semibold text-slate-900 block">{item.judul}</strong><span className="text-[11px] text-slate-500 line-clamp-1">{item.ringkasan}</span></td>
+                                                    <td className="px-4 py-4 text-xs text-slate-600 whitespace-nowrap">{item.tanggal}</td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <button type="button" className="text-[11px] font-bold text-sigap-blue hover:underline" onClick={() => setSelectedDetail(item)}>Detail</button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-xs italic">Belum ada riwayat pengajuan.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                            <h4 className="text-lg font-bold text-slate-900 mb-3">{currentStatusCard.title}</h4>
-                            <p className="text-sm text-slate-600 max-w-md">{currentStatusCard.message}</p>
-                            {isRevisionMode && (
-                                <div className="mt-6 w-full max-w-md">
-                                    <input ref={revisionInputRef} type="file" accept=".pdf,.doc,.docx" onChange={(e) => handleUploadRevision(e.target.files?.[0] || null)} className="hidden" />
-                                    <button type="button" onClick={() => revisionInputRef.current?.click()} disabled={revisionProcessing} className="w-full py-3 bg-sigap-blue hover:bg-sigap-darkBlue text-white font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                        {revisionProcessing ? <><i className="fa-solid fa-spinner fa-spin"></i>Mengunggah...</> : <><i className="fa-solid fa-upload"></i>Unggah Dokumen Revisi</>}
-                                    </button>
-                                </div>
-                            )}
-                            {isRejectedMode && (
-                                <button type="button" onClick={handleCreateNewSubmission} className="mt-6 px-8 py-3 bg-sigap-blue hover:bg-sigap-darkBlue text-white font-semibold rounded-xl transition-all flex items-center gap-2">
-                                    Buat Pengajuan Baru<i className="fa-solid fa-rotate-right"></i>
-                                </button>
-                            )}
                         </div>
                     </div>
                 )}
                 <ActionFeedbackDialog show={feedbackDialog.show} type={feedbackDialog.type} title={feedbackDialog.title} message={feedbackDialog.message} onClose={() => setFeedbackDialog({ ...feedbackDialog, show: false })} />
+                {renderDetailModal()}
             </div>
         );
     }
 
     return (
         <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white shadow-md">
-                        <i className="fa-solid fa-file-signature text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-slate-900">Akses Pengajuan PKM</h3>
-                        <p className="text-sm text-slate-500 mt-0.5">Formulir pengajuan PKM untuk dosen</p>
-                    </div>
-                </div>
+            <div className="p-5 border-b border-slate-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sigap-blue to-sigap-darkBlue flex items-center justify-center text-white shadow-md"><i className="fa-solid fa-file-signature text-lg"></i></div>
+                <div><h3 className="text-base font-bold text-slate-900">Form Pengajuan PKM Dosen</h3><p className="text-sm text-slate-500 mt-0.5">Silakan lengkapi data usulan pengabdian</p></div>
             </div>
             {!hideMainTabNav && (
                 <div className="flex border-b border-slate-100">
-                    <button type="button" onClick={() => setMainTab('pengajuan')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'pengajuan' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <i className="fa-solid fa-file-signature mr-2"></i>Pengajuan
-                    </button>
-                    <button type="button" onClick={() => setMainTab('arsip')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'arsip' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <i className="fa-solid fa-layer-group mr-2"></i>Arsip
-                    </button>
+                    <button type="button" onClick={() => setMainTab('pengajuan')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'pengajuan' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>Pengajuan</button>
+                    <button type="button" onClick={() => setMainTab('arsip')} className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === 'arsip' ? 'text-sigap-blue border-b-2 border-sigap-blue' : 'text-slate-500 hover:text-slate-700'}`}>Arsip</button>
                 </div>
             )}
-            {!hideMainTabNav && mainTab === 'arsip' ? renderSubmissionHub() : (
+            {!hideMainTabNav && mainTab === 'arsip' ? renderArchiveTab() : (
                 <form onSubmit={handleSubmit}>
-                    {renderForm()}
+                    {renderSubmissionForm()}
                 </form>
             )}
             <ActionFeedbackDialog show={feedbackDialog.show} type={feedbackDialog.type} title={feedbackDialog.title} message={feedbackDialog.message} onClose={() => setFeedbackDialog({ ...feedbackDialog, show: false })} />
+            {renderDetailModal()}
         </div>
     );
 }

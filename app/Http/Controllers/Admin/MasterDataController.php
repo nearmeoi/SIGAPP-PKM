@@ -46,7 +46,14 @@ class MasterDataController extends Controller
 
     public function destroyJenis(int $id)
     {
-        JenisPkm::findOrFail($id)->delete();
+        $jenis = JenisPkm::findOrFail($id);
+        $pengajuanCount = $jenis->pengajuan()->count();
+
+        if ($pengajuanCount > 0) {
+            return redirect()->back()->with('error', "Tidak dapat menghapus jenis PKM '{$jenis->nama_jenis}' karena masih digunakan oleh {$pengajuanCount} pengajuan.");
+        }
+
+        $jenis->delete();
 
         return redirect()->back()->with('success', 'Jenis PKM berhasil dihapus.');
     }
