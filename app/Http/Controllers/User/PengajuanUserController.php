@@ -78,52 +78,52 @@ class PengajuanUserController extends Controller
 
         // Logic for Dosen
         $request->validate([
-            'id_jenis_pkm'      => 'nullable|exists:jenis_pkm,id_jenis_pkm',
-            'judul_kegiatan'    => 'required|string|max:255',
-            'nama_dosen'        => 'required|string|max:255',
-            'instansi_mitra'    => 'nullable|string|max:255',
-            'no_telepon'        => 'nullable|string|max:20',
-            'provinsi'          => 'required|string|max:100',
-            'kota_kabupaten'    => 'required|string|max:100',
-            'kecamatan'         => 'nullable|string|max:100',
-            'kelurahan_desa'    => 'nullable|string|max:100',
-            'alamat_lengkap'    => 'nullable|string|max:1000',
-            'sumber_dana'       => 'nullable|string|max:255',
-            'total_anggaran'    => 'nullable|numeric|min:0',
-            'tgl_mulai'         => 'nullable|date',
-            'tgl_selesai'       => 'nullable|date|after_or_equal:tgl_mulai',
-            'proposal_url'      => 'nullable|string|max:2048',
+            'id_jenis_pkm' => 'nullable|exists:jenis_pkm,id_jenis_pkm',
+            'judul_kegiatan' => 'required|string|max:255',
+            'nama_dosen' => 'required|string|max:255',
+            'instansi_mitra' => 'nullable|string|max:255',
+            'no_telepon' => 'nullable|string|max:20',
+            'provinsi' => 'required|string|max:100',
+            'kota_kabupaten' => 'required|string|max:100',
+            'kecamatan' => 'nullable|string|max:100',
+            'kelurahan_desa' => 'nullable|string|max:100',
+            'alamat_lengkap' => 'nullable|string|max:1000',
+            'sumber_dana' => 'nullable|string|max:255',
+            'total_anggaran' => 'nullable|numeric|min:0',
+            'tgl_mulai' => 'nullable|date',
+            'tgl_selesai' => 'nullable|date|after_or_equal:tgl_mulai',
+            'proposal_url' => 'nullable|string|max:2048',
             'surat_permohonan_url' => 'nullable|string|max:2048',
-            'rab'               => 'nullable|string|max:2048',
-            'dosen_terlibat'    => 'nullable|array',
-            'dosen_terlibat.*'  => 'string|max:255',
-            'staff_terlibat'    => 'nullable|array',
-            'staff_terlibat.*'  => 'string|max:255',
-            'mahasiswa_terlibat'   => 'nullable|array',
+            'rab' => 'nullable|string|max:2048',
+            'dosen_terlibat' => 'nullable|array',
+            'dosen_terlibat.*' => 'string|max:255',
+            'staff_terlibat' => 'nullable|array',
+            'staff_terlibat.*' => 'string|max:255',
+            'mahasiswa_terlibat' => 'nullable|array',
             'mahasiswa_terlibat.*' => 'string|max:255',
         ]);
 
         $defaultJenisPkm = JenisPkm::first();
 
         $pengajuan = Pengajuan::create([
-            'id_user'          => $user->id_user,
-            'id_jenis_pkm'     => $request->id_jenis_pkm ?? $defaultJenisPkm?->id_jenis_pkm ?? 1,
-            'provinsi'         => $request->provinsi,
-            'kota_kabupaten'   => $request->kota_kabupaten,
-            'kecamatan'        => $request->kecamatan ?? '',
-            'kelurahan_desa'   => $request->kelurahan_desa ?? '',
-            'alamat_lengkap'   => $request->alamat_lengkap ?? '',
-            'judul_kegiatan'   => $request->judul_kegiatan,
-            'kebutuhan'        => $request->kebutuhan ?? '',
-            'instansi_mitra'   => $request->instansi_mitra ?? '',
-            'no_telepon'       => $request->no_telepon ?? '',
-            'sumber_dana'      => $request->sumber_dana ?? '',
-            'total_anggaran'   => $request->total_anggaran ?? 0,
-            'tgl_mulai'        => $request->tgl_mulai,
-            'tgl_selesai'      => $request->tgl_selesai,
-            'proposal'         => $request->proposal_url ?? '',
+            'id_user' => $user->id_user,
+            'id_jenis_pkm' => $request->id_jenis_pkm ?? $defaultJenisPkm?->id_jenis_pkm ?? 1,
+            'provinsi' => $request->provinsi,
+            'kota_kabupaten' => $request->kota_kabupaten,
+            'kecamatan' => $request->kecamatan ?? '',
+            'kelurahan_desa' => $request->kelurahan_desa ?? '',
+            'alamat_lengkap' => $request->alamat_lengkap ?? '',
+            'judul_kegiatan' => $request->judul_kegiatan,
+            'kebutuhan' => $request->kebutuhan ?? '',
+            'instansi_mitra' => $request->instansi_mitra ?? '',
+            'no_telepon' => $request->no_telepon ?? '',
+            'sumber_dana' => $request->sumber_dana ?? '',
+            'total_anggaran' => $request->total_anggaran ?? 0,
+            'tgl_mulai' => $request->tgl_mulai,
+            'tgl_selesai' => $request->tgl_selesai,
+            'proposal' => $request->proposal_url ?? '',
             'surat_permohonan' => $request->surat_permohonan_url ?? '',
-            'rab'              => $request->rab ?? '',
+            'rab' => $request->rab ?? '',
             'status_pengajuan' => 'diproses',
         ]);
 
@@ -136,14 +136,14 @@ class PengajuanUserController extends Controller
             $teamMembers[] = [
                 'id_pegawai' => $pegawai->id_pegawai,
                 'nama_mahasiswa' => null,
-                'peran_tim' => 'Ketua/Dosen Pengusul'
+                'peran_tim' => 'Ketua/Dosen Pengusul',
             ];
         } else {
             // Fallback jika data pegawai belum di-link ke user
             $teamMembers[] = [
                 'id_pegawai' => null,
                 'nama_mahasiswa' => trim($request->nama_dosen),
-                'peran_tim' => 'Ketua/Dosen Pengusul'
+                'peran_tim' => 'Ketua/Dosen Pengusul',
             ];
         }
 
@@ -155,8 +155,8 @@ class PengajuanUserController extends Controller
             $now = now();
             $rows = array_map(fn ($m) => array_merge($m, [
                 'id_pengajuan' => $pengajuan->id_pengajuan,
-                'created_at'   => $now,
-                'updated_at'   => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
             ]), $teamMembers);
             TimKegiatan::insert($rows);
         }
@@ -171,36 +171,49 @@ class PengajuanUserController extends Controller
     private function storeMasyarakat(Request $request)
     {
         $request->validate([
-            'name'           => 'required|string|max:255',
-            'institution'    => 'required|string|max:255',
-            'needs'          => 'required|string',
-            'email'          => 'required|email|max:255',
-            'whatsapp'       => 'required|string|max:20',
-            'provinsi'       => 'required|string|max:100',
+            'name' => 'required|string|max:255',
+            'institution' => 'required|string|max:255',
+            'needs' => 'required|string',
+            'email' => 'required|email|max:255',
+            'whatsapp' => 'required|string|max:20',
+            'provinsi' => 'required|string|max:100',
             'kota_kabupaten' => 'required|string|max:100',
-            'kecamatan'      => 'nullable|string|max:100',
+            'kecamatan' => 'nullable|string|max:100',
             'kelurahan_desa' => 'nullable|string|max:100',
             'alamat_lengkap' => 'nullable|string|max:1000',
-            'surat_permohonan' => 'nullable|string|max:2048',
-            'surat_proposal'   => 'nullable|string|max:2048',
+            'surat_permohonan' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'surat_proposal' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
         ]);
 
         $defaultJenisPkm = JenisPkm::first();
 
+        $suratPermohonanUrl = null;
+        $suratProposalUrl = null;
+
+        if ($request->hasFile('surat_permohonan')) {
+            $suratPermohonanUrl = $request->file('surat_permohonan')->store('pengajuan/dokumen', 'public');
+            $suratPermohonanUrl = '/storage/'.$suratPermohonanUrl;
+        }
+        if ($request->hasFile('surat_proposal')) {
+            $suratProposalUrl = $request->file('surat_proposal')->store('pengajuan/dokumen', 'public');
+            $suratProposalUrl = '/storage/'.$suratProposalUrl;
+        }
+
         Pengajuan::create([
-            'id_user'          => Auth::id(),
-            'id_jenis_pkm'     => $defaultJenisPkm?->id_jenis_pkm ?? 1,
-            'provinsi'         => $request->provinsi,
-            'kota_kabupaten'   => $request->kota_kabupaten,
-            'kecamatan'        => $request->kecamatan ?? '',
-            'kelurahan_desa'   => $request->kelurahan_desa ?? '',
-            'alamat_lengkap'   => $request->alamat_lengkap ?? '',
-            'judul_kegiatan'   => 'Pengajuan PKM dari ' . $request->institution,
-            'kebutuhan'        => $request->needs,
-            'instansi_mitra'   => $request->institution,
-            'no_telepon'       => $request->whatsapp,
-            'surat_permohonan' => $request->surat_permohonan ?? '',
-            'proposal'         => $request->surat_proposal ?? '',
+            'id_user' => Auth::id(),
+            'id_jenis_pkm' => $defaultJenisPkm?->id_jenis_pkm ?? 1,
+            'provinsi' => $request->provinsi,
+            'kota_kabupaten' => $request->kota_kabupaten,
+            'kecamatan' => $request->kecamatan ?? '',
+            'kelurahan_desa' => $request->kelurahan_desa ?? '',
+            'alamat_lengkap' => $request->alamat_lengkap ?? '',
+            'judul_kegiatan' => 'Pengajuan PKM dari '.$request->institution,
+            'kebutuhan' => $request->needs,
+            'instansi_mitra' => $request->institution,
+            'no_telepon' => $request->whatsapp,
+            'surat_permohonan' => $suratPermohonanUrl,
+            'proposal' => $suratProposalUrl,
+            'rab' => $request->input('link_tambahan') ? implode(', ', $request->input('link_tambahan')) : '',
             'status_pengajuan' => 'diproses',
         ]);
 
@@ -215,11 +228,11 @@ class PengajuanUserController extends Controller
     {
         if (is_array($members)) {
             foreach ($members as $name) {
-                if (!empty(trim($name))) {
+                if (! empty(trim($name))) {
                     $teamMembers[] = [
                         'id_pegawai' => null,
                         'nama_mahasiswa' => $name,
-                        'peran_tim'      => $role,
+                        'peran_tim' => $role,
                     ];
                 }
             }

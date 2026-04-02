@@ -22,6 +22,10 @@ interface Pengajuan {
     no_telepon?: string;
     sumber_dana?: string;
     total_anggaran: number;
+    dana_perguruan_tinggi?: number;
+    dana_pemerintah?: number;
+    dana_lembaga_dalam?: number;
+    dana_lembaga_luar?: number;
     tgl_mulai?: string;
     tgl_selesai?: string;
     status_pengajuan: string;
@@ -158,6 +162,26 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Empty Fields Alert */}
+                    {(() => {
+                        const missing = [];
+                        if (!pengajuan.kebutuhan) missing.push('Kebutuhan');
+                        if (!pengajuan.sumber_dana && !pengajuan.total_anggaran) missing.push('Sumber Dana');
+                        if (!pengajuan.proposal) missing.push('Proposal');
+                        if (!pengajuan.surat_permohonan) missing.push('Surat Permohonan');
+                        if (!pengajuan.provinsi) missing.push('Lokasi');
+                        if (!pengajuan.tim_kegiatan?.length) missing.push('Tim PKM');
+                        if (missing.length === 0) return null;
+                        return (
+                            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <div className="text-[13px] font-bold text-amber-800">Data Belum Lengkap</div>
+                                    <p className="text-[12px] text-amber-700 mt-0.5">Field berikut masih kosong: <span className="font-semibold">{missing.join(', ')}</span></p>
+                                </div>
+                            </div>
+                        );
+                    })()}
                     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
                             <h2 className="text-[15px] font-semibold text-zinc-900">Detail Pengajuan</h2>
@@ -179,26 +203,11 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                                 onSave={(val) => onUpdateField('instansi_mitra', val)}
                             />
                             <EditableInfoField
-                                label="Sumber Dana"
-                                value={pengajuan.sumber_dana}
-                                icon={<DollarSign size={16} />}
-                                onSave={(val) => onUpdateField('sumber_dana', val)}
-                            />
-                            <EditableInfoField
                                 label="No. Telepon"
                                 value={pengajuan.no_telepon}
                                 icon={<Phone size={16} />}
                                 onSave={(val) => onUpdateField('no_telepon', val)}
                             />
-                            <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
-                                    <DollarSign size={16} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Total Anggaran</div>
-                                    <div className="text-[14px] font-semibold text-zinc-900">Rp {Number(pengajuan.total_anggaran || 0).toLocaleString('id-ID')}</div>
-                                </div>
-                            </div>
                             <EditableInfoField
                                 label="Tanggal Mulai"
                                 value={pengajuan.tgl_mulai?.split('T')[0]}
@@ -228,6 +237,27 @@ const Detail: React.FC<Props> = ({ pengajuan, listPegawai, listJenisPkm }) => {
                                 type="textarea"
                                 onSave={(val) => onUpdateField('kebutuhan', val)}
                             />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                            <h2 className="text-[15px] font-semibold text-zinc-900">Sumber Dana & Anggaran</h2>
+                            <DollarSign size={16} className="text-zinc-400" />
+                        </div>
+                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                            <EditableInfoField label="Sumber Dana (Umum)" value={pengajuan.sumber_dana} icon={<DollarSign size={16} />} onSave={(val) => onUpdateField('sumber_dana', val)} />
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 shrink-0"><DollarSign size={16} /></div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Total Anggaran</div>
+                                    <div className="text-[14px] font-semibold text-zinc-900">Rp {Number(pengajuan.total_anggaran || 0).toLocaleString('id-ID')}</div>
+                                </div>
+                            </div>
+                            <EditableInfoField label="Dana Perguruan Tinggi" value={pengajuan.dana_perguruan_tinggi ? `Rp ${Number(pengajuan.dana_perguruan_tinggi).toLocaleString('id-ID')}` : ''} icon={<DollarSign size={16} />} onSave={(val) => onUpdateField('dana_perguruan_tinggi', Number(String(val).replace(/[^0-9]/g, '')))} />
+                            <EditableInfoField label="Dana Pemerintah" value={pengajuan.dana_pemerintah ? `Rp ${Number(pengajuan.dana_pemerintah).toLocaleString('id-ID')}` : ''} icon={<DollarSign size={16} />} onSave={(val) => onUpdateField('dana_pemerintah', Number(String(val).replace(/[^0-9]/g, '')))} />
+                            <EditableInfoField label="Dana Lembaga Dalam Negeri" value={pengajuan.dana_lembaga_dalam ? `Rp ${Number(pengajuan.dana_lembaga_dalam).toLocaleString('id-ID')}` : ''} icon={<DollarSign size={16} />} onSave={(val) => onUpdateField('dana_lembaga_dalam', Number(String(val).replace(/[^0-9]/g, '')))} />
+                            <EditableInfoField label="Dana Lembaga Luar Negeri" value={pengajuan.dana_lembaga_luar ? `Rp ${Number(pengajuan.dana_lembaga_luar).toLocaleString('id-ID')}` : ''} icon={<DollarSign size={16} />} onSave={(val) => onUpdateField('dana_lembaga_luar', Number(String(val).replace(/[^0-9]/g, '')))} />
                         </div>
                     </div>
 

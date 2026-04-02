@@ -85,6 +85,13 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
     const [lat, setLat] = useState<number | null>(pengajuan.latitude ?? null);
     const [lng, setLng] = useState<number | null>(pengajuan.longitude ?? null);
 
+    // Address fields state
+    const [provinsi, setProvinsi] = useState(pengajuan.provinsi || '');
+    const [kotaKabupaten, setKotaKabupaten] = useState(pengajuan.kota_kabupaten || '');
+    const [kecamatan, setKecamatan] = useState(pengajuan.kecamatan || '');
+    const [kelurahanDesa, setKelurahanDesa] = useState(pengajuan.kelurahan_desa || '');
+    const [alamatLengkap, setAlamatLengkap] = useState(pengajuan.alamat_lengkap || '');
+
     // Nominatim search state
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<NominatimResult[]>([]);
@@ -93,8 +100,28 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
     const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleMapClick = (latlng: L.LatLng) => {
-        setLat(Math.round(latlng.lat * 10000000) / 10000000);
-        setLng(Math.round(latlng.lng * 10000000) / 10000000);
+        const newLat = Math.round(latlng.lat * 10000000) / 10000000;
+        const newLng = Math.round(latlng.lng * 10000000) / 10000000;
+        setLat(newLat);
+        setLng(newLng);
+        reverseGeocode(newLat, newLng);
+    };
+
+    const reverseGeocode = async (latVal: number, lngVal: number) => {
+        try {
+            const res = await fetch(`/api/reverse-geocode?lat=${latVal}&lon=${lngVal}`);
+            const data = await res.json();
+            if (data && data.address) {
+                const addr = data.address;
+                setProvinsi(addr.state || addr.province || '');
+                setKotaKabupaten(addr.city || addr.county || addr.regency || addr.state_district || '');
+                setKecamatan(addr.city_district || addr.suburb || addr.county || '');
+                setKelurahanDesa(addr.village || addr.town || addr.hamlet || addr.quarter || '');
+                setAlamatLengkap(data.display_name || '');
+            }
+        } catch (e) {
+            console.error('Reverse geocode error:', e);
+        }
     };
 
     const handleSearch = (query: string) => {
@@ -140,6 +167,11 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
         router.put(`/admin/pengajuan/${pengajuan.id_pengajuan}/lokasi`, {
             latitude: lat,
             longitude: lng,
+            provinsi: provinsi,
+            kota_kabupaten: kotaKabupaten,
+            kecamatan: kecamatan,
+            kelurahan_desa: kelurahanDesa,
+            alamat_lengkap: alamatLengkap,
         });
     };
 
@@ -305,9 +337,42 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                         className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-200" />
                                 </div>
                             </div>
+
+                            {/* Address Fields */}
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                                <label className="text-[11px] font-semibold text-zinc-600">Alamat (otomatis dari peta, bisa diedit)</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400">Provinsi</label>
+                                        <input type="text" value={provinsi} onChange={e => setProvinsi(e.target.value)}
+                                            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200" placeholder="Provinsi" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400">Kota / Kabupaten</label>
+                                        <input type="text" value={kotaKabupaten} onChange={e => setKotaKabupaten(e.target.value)}
+                                            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200" placeholder="Kota/Kabupaten" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400">Kecamatan</label>
+                                        <input type="text" value={kecamatan} onChange={e => setKecamatan(e.target.value)}
+                                            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200" placeholder="Kecamatan" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400">Kelurahan / Desa</label>
+                                        <input type="text" value={kelurahanDesa} onChange={e => setKelurahanDesa(e.target.value)}
+                                            className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200" placeholder="Kelurahan/Desa" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-zinc-400">Alamat Lengkap</label>
+                                    <textarea value={alamatLengkap} onChange={e => setAlamatLengkap(e.target.value)} rows={2}
+                                        className="w-full rounded-md border border-zinc-200 px-3 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 resize-none" placeholder="Alamat lengkap..." />
+                                </div>
+                            </div>
+
                             <button onClick={handleSaveLokasi} disabled={lat === null || lng === null}
                                 className="w-full flex justify-center items-center gap-2 py-2.5 rounded-lg text-[13px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm">
-                                <MapPin size={14} /> Simpan Koordinat
+                                <MapPin size={14} /> Simpan Lokasi & Alamat
                             </button>
                         </div>
                     </div>

@@ -65,6 +65,39 @@ Route::get('/api/geocode', function (Request $request) {
     return response($response)->header('Content-Type', 'application/json');
 })->middleware('throttle:30,1')->name('api.geocode');
 
+// Reverse geocode — lat/lng → address
+Route::get('/api/reverse-geocode', function (Request $request) {
+    $lat = $request->input('lat');
+    $lon = $request->input('lon');
+    if (! $lat || ! $lon) {
+        return response()->json([]);
+    }
+
+    $params = http_build_query([
+        'lat' => $lat,
+        'lon' => $lon,
+        'format' => 'json',
+        'addressdetails' => '1',
+    ]);
+
+    $url = "https://nominatim.openstreetmap.org/reverse?{$params}";
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: SIGAP-PKM/1.0\r\nAccept-Language: id\r\n",
+            'timeout' => 10,
+        ],
+    ]);
+
+    $response = @file_get_contents($url, false, $context);
+
+    if ($response === false) {
+        return response()->json([]);
+    }
+
+    return response($response)->header('Content-Type', 'application/json');
+})->middleware('throttle:30,1')->name('api.reverse-geocode');
+
 // ─────────────────────────────────────────────
 // Pengumpulan Arsip Publik (Spesifik Kegiatan)
 // ─────────────────────────────────────────────

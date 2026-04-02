@@ -76,6 +76,10 @@ class PengajuanController extends Controller
             'kebutuhan' => 'nullable|string',
             'sumber_dana' => 'nullable|string|max:255',
             'total_anggaran' => 'nullable|numeric|min:0',
+            'dana_perguruan_tinggi' => 'nullable|numeric|min:0',
+            'dana_pemerintah' => 'nullable|numeric|min:0',
+            'dana_lembaga_dalam' => 'nullable|numeric|min:0',
+            'dana_lembaga_luar' => 'nullable|numeric|min:0',
             'tgl_mulai' => 'nullable|date',
             'tgl_selesai' => 'nullable|date|after_or_equal:tgl_mulai',
             'provinsi' => 'nullable|string|max:100',
@@ -95,7 +99,9 @@ class PengajuanController extends Controller
         $pengajuan = Pengajuan::findOrFail($id);
         $pengajuan->update($request->only([
             'judul_kegiatan', 'id_jenis_pkm', 'no_telepon', 'instansi_mitra',
-            'kebutuhan', 'sumber_dana', 'total_anggaran', 'tgl_mulai', 'tgl_selesai',
+            'kebutuhan', 'sumber_dana', 'total_anggaran', 'dana_perguruan_tinggi',
+            'dana_pemerintah', 'dana_lembaga_dalam', 'dana_lembaga_luar',
+            'tgl_mulai', 'tgl_selesai',
             'provinsi', 'kota_kabupaten', 'kecamatan', 'kelurahan_desa', 'alamat_lengkap',
             'latitude', 'longitude', 'status_pengajuan', 'catatan_admin',
             'proposal', 'surat_permohonan', 'rab',
@@ -185,15 +191,25 @@ class PengajuanController extends Controller
         $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
+            'provinsi' => 'nullable|string|max:100',
+            'kota_kabupaten' => 'nullable|string|max:100',
+            'kecamatan' => 'nullable|string|max:100',
+            'kelurahan_desa' => 'nullable|string|max:100',
+            'alamat_lengkap' => 'nullable|string',
         ]);
 
         $pengajuan = Pengajuan::findOrFail($id);
         $pengajuan->update([
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
+            'provinsi' => $request->provinsi,
+            'kota_kabupaten' => $request->kota_kabupaten,
+            'kecamatan' => $request->kecamatan,
+            'kelurahan_desa' => $request->kelurahan_desa,
+            'alamat_lengkap' => $request->alamat_lengkap,
         ]);
 
-        return redirect()->back()->with('success', 'Koordinat lokasi berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Lokasi berhasil diperbarui.');
     }
 
     /**
