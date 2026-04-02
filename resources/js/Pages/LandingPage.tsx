@@ -60,7 +60,7 @@ const MapSummaryOverlay: React.FC<{
             </button>
 
             {/* Container for Cards */}
-            <div className={`flex items-end gap-3 transition-all duration-500 ease-in-out origin-bottom-left ${isCollapsed ? 'opacity-0 scale-0 -translate-x-10 translate-y-6 pointer-events-none absolute left-12 bottom-0' : 'opacity-100 scale-100 translate-x-0 translate-y-0 relative'}`}>
+            <div className={`flex items-end gap-3 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] origin-left flex-1 ${isCollapsed ? 'opacity-0 scale-50 -translate-x-[80%] pointer-events-none' : 'opacity-100 scale-100 translate-x-0 relative'}`}>
                 {/* Legend Card - Minimized Glass */}
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-1 shadow-2xl border border-white/40 whitespace-nowrap pointer-events-auto">
                     <MapLegend
