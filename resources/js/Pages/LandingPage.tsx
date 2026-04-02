@@ -221,7 +221,16 @@ export default function LandingPage({ publicPkmData = null }: { publicPkmData?: 
                             {sidebarPkm && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
                                     <div className="flex items-center justify-between">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${sidebarPkm.status === 'berlangsung' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{sidebarPkm.status}</span>
+                                        {(() => {
+                                            const s = sidebarPkm.status;
+                                            const m = getPkmStatusMeta(s);
+                                            const cls = s === 'selesai' ? 'bg-emerald-100 text-emerald-700' : s === 'direvisi' ? 'bg-orange-100 text-orange-700' : s === 'diproses' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700';
+                                            return (
+                                                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${cls}`}>
+                                                    <i className={`fa-solid ${m.markerIcon}`}></i> {m.label}
+                                                </span>
+                                            );
+                                        })()}
                                         <button onClick={() => setSidebarPkm(null)} className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
                                     </div>
                                     <div className="aspect-video rounded-[32px] overflow-hidden shadow-xl border border-slate-100 bg-slate-50 group">
@@ -310,7 +319,16 @@ export default function LandingPage({ publicPkmData = null }: { publicPkmData?: 
                                             </button>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-xl font-black text-slate-900 tracking-tight truncate">{listSelectedPkm.nama}</h3>
-                                                <span className={`inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${listSelectedPkm.status === 'berlangsung' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{listSelectedPkm.status}</span>
+                                                {(() => {
+                                                    const s = listSelectedPkm.status;
+                                                    const m = getPkmStatusMeta(s);
+                                                    const cls = s === 'selesai' ? 'bg-emerald-100 text-emerald-700' : s === 'direvisi' ? 'bg-orange-100 text-orange-700' : s === 'diproses' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700';
+                                                    return (
+                                                        <span className={`inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${cls}`}>
+                                                            <i className={`fa-solid ${m.markerIcon}`}></i> {m.label}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                             <button onClick={() => { setIsListSidebarOpen(false); setListSelectedPkm(null); }} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0">
                                                 <i className="fa-solid fa-xmark"></i>
