@@ -41,9 +41,9 @@ export default function MapLegend({
                             onClick={() => onToggleType?.(type.key)}
                             className={`flex items-center gap-2.5 transition-colors ${onToggleType ? 'cursor-pointer hover:bg-slate-50 p-1.5 -ml-1.5 rounded-lg' : ''}`}
                         >
-                            {onToggleType && (
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedTypes?.includes(type.key) ? 'bg-poltekpar-primary border-poltekpar-primary' : 'bg-white border-slate-300'}`}>
-                                    {selectedTypes?.includes(type.key) && <i className="fa-solid fa-check text-[10px] text-white"></i>}
+                            {onToggleType && selectedTypes?.includes(type.key) && (
+                                <div className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors bg-poltekpar-primary border-poltekpar-primary">
+                                    <i className="fa-solid fa-check text-[10px] text-white"></i>
                                 </div>
                             )}
                             <span
@@ -68,9 +68,9 @@ export default function MapLegend({
                             onClick={() => onToggleStatus?.(status.key)}
                             className={`flex items-center gap-2.5 transition-colors ${onToggleStatus ? 'cursor-pointer hover:bg-slate-50 p-1.5 -ml-1.5 rounded-lg' : ''}`}
                         >
-                            {onToggleStatus && (
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedStatuses?.includes(status.key) ? 'bg-poltekpar-primary border-poltekpar-primary' : 'bg-white border-slate-300'}`}>
-                                    {selectedStatuses?.includes(status.key) && <i className="fa-solid fa-check text-[10px] text-white"></i>}
+                            {onToggleStatus && selectedStatuses?.includes(status.key) && (
+                                <div className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors bg-poltekpar-primary border-poltekpar-primary">
+                                    <i className="fa-solid fa-check text-[10px] text-white"></i>
                                 </div>
                             )}
                             <span className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${status.key === 'berlangsung' ? 'bg-amber-100' : 'bg-emerald-100'}`}>
