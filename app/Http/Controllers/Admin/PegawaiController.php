@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pegawai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -32,10 +33,12 @@ class PegawaiController extends Controller
     {
         $request->validate([
             'id_user' => 'nullable|exists:users,id_user',
-            'nip' => 'nullable|string|max:50',
+            'nip' => ['nullable', 'regex:/^\d{18}$/', 'unique:pegawai,nip'],
             'nama_pegawai' => 'required|string|max:255',
             'jabatan' => 'nullable|string|max:255',
             'posisi' => 'nullable|string|max:255',
+        ], [
+            'nip.regex' => 'NIP harus terdiri dari 18 digit angka.',
         ]);
 
         Pegawai::create($request->only('id_user', 'nip', 'nama_pegawai', 'jabatan', 'posisi'));
@@ -47,10 +50,12 @@ class PegawaiController extends Controller
     {
         $request->validate([
             'id_user' => 'nullable|exists:users,id_user',
-            'nip' => 'nullable|string|max:50',
+            'nip' => ['nullable', 'regex:/^\d{18}$/', Rule::unique('pegawai', 'nip')->ignore($id, 'id_pegawai')],
             'nama_pegawai' => 'required|string|max:255',
             'jabatan' => 'nullable|string|max:255',
             'posisi' => 'nullable|string|max:255',
+        ], [
+            'nip.regex' => 'NIP harus terdiri dari 18 digit angka.',
         ]);
 
         $pegawai = Pegawai::findOrFail($id);

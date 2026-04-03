@@ -22,6 +22,7 @@ interface Submission {
     proposal?: string;
     surat_permohonan?: string;
     rab?: string;
+    rab_items?: RabItem[];
     sumber_dana?: string;
     total_anggaran?: number;
     tgl_mulai?: string;
@@ -75,8 +76,8 @@ interface FormData {
     dana_lembaga_dalam: number;
     dana_lembaga_luar: number;
 
-    surat_permohonan: string;
-    surat_proposal: string;
+    surat_permohonan: File | null;
+    surat_proposal: File | null;
     link_tambahan: string[];
     sumber_dana: string[];
 }
@@ -135,8 +136,8 @@ export default function DosenSubmissionCard({
         dana_pemerintah: 0,
         dana_lembaga_dalam: 0,
         dana_lembaga_luar: 0,
-        surat_permohonan: '',
-        surat_proposal: '',
+        surat_permohonan: null,
+        surat_proposal: null,
         link_tambahan: [''],
         sumber_dana: [],
     });
@@ -181,6 +182,7 @@ export default function DosenSubmissionCard({
             judul_kegiatan: data.judul_kegiatan,
             kebutuhan: data.kebutuhan,
             nama_dosen: data.nama_ketua,
+            email: data.email,
             instansi_mitra: data.instansi,
             no_telepon: data.whatsapp,
             provinsi: data.provinsi,
@@ -197,9 +199,17 @@ export default function DosenSubmissionCard({
             dana_lembaga_dalam: data.dana_lembaga_dalam > 0 ? data.dana_lembaga_dalam : null,
             dana_lembaga_luar: data.dana_lembaga_luar > 0 ? data.dana_lembaga_luar : null,
             total_anggaran: totalRAB || 0,
-            proposal_url: data.surat_proposal,
-            surat_permohonan_url: data.surat_permohonan,
+            surat_proposal: data.surat_proposal,
+            surat_permohonan: data.surat_permohonan,
             rab: data.link_tambahan.filter(v => v.trim() !== '').join(', '),
+            rab_items: data.rab_items
+                .filter(item => item.nama_item.trim() !== '' && Number(item.jumlah) > 0)
+                .map(item => ({
+                    nama_item: item.nama_item.trim(),
+                    jumlah: Number(item.jumlah) || 0,
+                    harga: Number(item.harga) || 0,
+                    total: (Number(item.jumlah) || 0) * (Number(item.harga) || 0),
+                })),
         };
 
         router.post('/pengajuan', payload as any, {
@@ -553,34 +563,42 @@ export default function DosenSubmissionCard({
 
             {/* Dokumen */}
             <div className="space-y-4">
-                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Dokumen & Tautan</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-[13px] font-bold text-slate-600 mb-1 block">Link Surat Permohonan</label>
-                        <input type="url" value={data.surat_permohonan} onChange={e => setData('surat_permohonan', e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-poltekpar-primary/20 focus:border-poltekpar-primary" placeholder="https://drive.google.com/..." />
-                    </div>
-                    <div>
-                        <label className="text-[13px] font-bold text-slate-600 mb-1 block">Link Proposal</label>
-                        <input type="url" value={data.surat_proposal} onChange={e => setData('surat_proposal', e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-poltekpar-primary/20 focus:border-poltekpar-primary" placeholder="https://drive.google.com/..." />
-                    </div>
-                </div>
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <label className="text-[13px] font-bold text-slate-600">Tautan Tambahan</label>
-                        <button type="button" onClick={handleAddLink} className="text-[11px] font-bold text-poltekpar-primary flex items-center gap-1 hover:opacity-70">
-                            <i className="fa-solid fa-plus"></i> Tambah
-                        </button>
-                    </div>
-                    {data.link_tambahan.map((link, idx) => (
-                        <div key={idx} className="flex gap-2 mb-2">
-                            <input type="url" value={link} onChange={e => handleLinkChange(idx, e.target.value)} className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-poltekpar-primary/20 focus:border-poltekpar-primary" placeholder="https://..." />
-                            {data.link_tambahan.length > 1 && (
-                                <button type="button" onClick={() => handleRemoveLink(idx)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all">
-                                    <i className="fa-solid fa-xmark"></i>
-                                </button>
-                            )}
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <i className="fa-solid fa-link text-poltekpar-primary"></i> Dokumen & Tautan
+                </h4>
+                <div className="space-y-4">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-slate-700">Surat Permohonan <span className="text-red-500">*</span></label>
+                            <a href="/template/surat_permohonan" target="_blank" rel="noreferrer" className="text-[10px] font-bold text-poltekpar-primary hover:underline flex items-center gap-1.5"><i className="fa-solid fa-download"></i> Download Template Surat Permohonan</a>
                         </div>
-                    ))}
+                        <input type="file" accept=".pdf,.doc,.docx" onChange={e => setData('surat_permohonan', e.target.files?.[0] || null)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-poltekpar-primary file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-poltekpar-primary/10 file:text-poltekpar-primary" required />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-slate-700">Proposal (Opsional)</label>
+                            <a href="/template/proposal" target="_blank" rel="noreferrer" className="text-[10px] font-bold text-poltekpar-primary hover:underline flex items-center gap-1.5"><i className="fa-solid fa-download"></i> Download Template Proposal</a>
+                        </div>
+                        <input type="file" accept=".pdf,.doc,.docx" onChange={e => setData('surat_proposal', e.target.files?.[0] || null)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-poltekpar-primary file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-poltekpar-primary/10 file:text-poltekpar-primary" />
+                    </div>
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-semibold text-slate-700">Link Tambahan (Drive, Bukti lain...)</label>
+                            <button type="button" onClick={handleAddLink} className="text-[11px] font-bold text-poltekpar-primary flex items-center gap-1 hover:opacity-70">
+                                <i className="fa-solid fa-plus"></i> Tambah
+                            </button>
+                        </div>
+                        {data.link_tambahan.map((link, idx) => (
+                            <div key={idx} className="flex gap-2 mb-2">
+                                <input type="url" value={link} onChange={e => handleLinkChange(idx, e.target.value)} className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-poltekpar-primary/20 focus:border-poltekpar-primary" placeholder="https://..." />
+                                {data.link_tambahan.length > 1 && (
+                                    <button type="button" onClick={() => handleRemoveLink(idx)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all">
+                                        <i className="fa-solid fa-xmark"></i>
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 

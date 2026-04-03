@@ -1,605 +1,188 @@
-# SIGAP-PKM (Admin & Backend System)
+# SIGAPPA P3M Poltekpar Makassar
 
-Repositori ini berisi kode sumber untuk sistem backend dan administrasi **SIGAP-PKM**. Sistem ini dibangun menggunakan arsitektur monolitik modern dengan Laravel sebagai inti backend dan Inertia.js yang menjembatani *frontend* React.
+Sistem Informasi Geospasial dan Akses Pelayanan Pengabdian Pariwisata (SIGAPPA) untuk P3M Politeknik Pariwisata Makassar.
 
-## Tech Stack Utama (Backend)
-- **Framework:** Laravel 12.x
-- **Database:** MySQL
-- **Bridge:** Inertia.js (Server-side routing)
-- **Autentikasi:** Laravel Breeze / Session-based
-- **Environment:** PHP 8.4
+Repositori ini berisi aplikasi web berbasis Laravel + Inertia React yang menggabungkan:
 
----
+- portal publik SIGAPPA
+- autentikasi dosen dan masyarakat
+- form pengajuan PKM
+- cek status pengajuan
+- dashboard admin P3M
+- pengelolaan aktivitas, arsip, testimoni, pegawai, dan template dokumen
 
-# SIGAP PKM - Frontend Progress Documentation
+## Gambaran Web
 
-Frontend untuk Sistem Informasi Geospasial dan Akses Pelayanan Pengabdian Kepada Masyarakat (SIGAP PKM) Politeknik Pariwisata Makassar.
+Antarmuka publik saat ini mengikuti struktur web P3M dengan menu utama:
 
-README ini mendeskripsikan evolusi frontend SIGAP PKM berdasarkan:
+- `Beranda`
+- `Cek Status`
+- `Pengajuan`
+- `Panduan`
+- `Portal P3M`
 
-- branch `fe`
-- branch `fe-2`
-- working tree sekarang di atas `fe-2`
+Konten publik yang tersedia di aplikasi:
 
-Dokumen ini ditulis untuk merekam kondisi frontend terbaru yang akan dipush sebagai branch `fe-3`.
+- peta sebaran kegiatan PKM
+- statistik pengajuan dan status pelaksanaan
+- akses pengajuan untuk dosen dan masyarakat
+- halaman panduan penggunaan
+- pengumpulan arsip publik
+- form testimoni publik
+- tautan profil dan kegiatan P3M
 
-## 1. Status Pengembangan Saat Ini
+## Fitur Utama
 
-Saat README ini diperbarui:
+### 1. Landing Page Publik
 
-- branch aktif lokal: `fe-2`
-- remote repository: `https://github.com/githubnyabintang/SIGAP-P3M.git`
-- project sudah memiliki pengembangan lanjutan di working tree lokal yang belum dipush
-- kondisi kerja sekarang adalah state baru yang akan dipisahkan ke branch `fe-3`
+- peta lokasi kegiatan PKM berbasis Leaflet
+- ringkasan status pengajuan dan kegiatan
+- grafik evaluasi dan statistik pengunjung
+- CTA ke pengajuan, cek status, dan portal
 
-Artinya, isi README ini tidak hanya menjelaskan isi branch `fe-2`, tetapi juga menjelaskan keseluruhan implementasi terbaru yang sudah ada di project lokal saat ini sebagai kandidat final `fe-3`.
+### 2. Pengajuan Auth Dosen
 
-## 2. Ringkasan Perbandingan Branch
+- form pengajuan PKM dosen
+- input informasi ketua pengusul
+- detail kegiatan dan lokasi
+- tim pelaksana dinamis
+- tabel RAB per item
+- sumber dana
+- unggah surat permohonan dan proposal
+- link tambahan pendukung
 
-### Branch `fe`
+### 3. Pengajuan Auth Masyarakat
 
-Branch `fe` adalah fondasi frontend awal. Fokus utamanya masih pada:
+- form pengajuan PKM masyarakat
+- identitas pengusul/perwakilan
+- kebutuhan PKM
+- lokasi pelaksanaan
+- unggah surat permohonan dan proposal
+- link tambahan
 
-- landing page berbasis peta
-- autentikasi dasar
-- struktur halaman React + Inertia
-- styling dasar untuk peta, auth, dan layout umum
+### 4. Cek Status Pengajuan
 
-Pada tahap ini project sudah memiliki arah visual SIGAP PKM, tetapi belum sedalam versi sekarang dari sisi:
+- riwayat pengajuan per pengguna
+- status `diproses`, `direvisi`, `diterima`, `ditolak`, dan `selesai`
+- catatan admin pada pengajuan yang perlu revisi
 
-- pemisahan pengalaman desktop dan mobile
-- alur akses pengajuan yang kompleks
-- pengelolaan status pengajuan per user
-- komponen feedback submit yang seragam
-- splash screen mobile
-- helper data untuk integrasi backend
+### 5. Dashboard Admin
 
-### Branch `fe-2`
+Panel admin mencakup modul:
 
-Branch `fe-2` adalah hasil pengembangan lanjutan dari branch `fe` berdasarkan diskusi antara Front-End dan Back-End.
+- dashboard evaluasi dan grafik pengajuan
+- kelola pengajuan
+- detail pengajuan dosen dan masyarakat
+- verifikasi berkas
+- kelola pegawai
+- kelola user
+- kelola aktivitas
+- kelola arsip
+- kelola testimoni
+- master data jenis PKM
+- template dokumen
 
-Secara konteks kerja, branch ini merupakan hasil diskusi dengan Akmal selaku Back-End Developer terkait UI/UX dari branch `fe`, lalu diterjemahkan ke implementasi frontend yang lebih matang.
+## Fitur Admin Pengajuan
 
-Dari hasil diff `fe..fe-2`, area yang paling berkembang adalah:
+Alur admin pengajuan yang sudah ada di project saat ini:
 
-- `LandingPage`
-- `LoginDosen`
-- `DosenSubmissionCard`
-- `SubmitDokumentasiLaporan`
-- `landing.css`
-- `login.css`
+- daftar pengajuan dengan filter, pencarian, ekspor, dan indikator kelengkapan data
+- detail pengajuan mengikuti format form asli
+- admin dapat mengedit data penting pengajuan
+- admin dapat mengedit tim pelaksana
+- admin dapat mengedit rincian tabel RAB pada pengajuan dosen
+- admin dapat mengedit sumber dana
+- admin tidak bisa memverifikasi pengajuan jika data inti masih belum lengkap
+- status verifikasi tersedia untuk `diterima`, `direvisi`, dan `ditolak`
 
-Secara umum `fe-2` sudah membawa:
+## Template Dokumen
 
-- dashboard dosen yang jauh lebih kaya
-- kartu akses pengajuan PKM inline
-- status pengajuan yang lebih jelas
-- komponen chart dan insight yang lebih matang
-- form dan visual yang lebih premium dibanding fondasi di `fe`
+Aplikasi sudah mendukung:
 
-### Kondisi Project Lokal Saat Ini
+- pengelolaan template dokumen di admin
+- unduh template publik melalui route `/template/{jenis}`
 
-Kondisi lokal sekarang adalah eksplorasi lanjutan yang dibuat secara mandiri dari sisi Front-End Developer untuk menyiapkan opsi frontend lain.
+Template ini dipakai untuk kebutuhan pengajuan seperti surat permohonan dan proposal.
 
-State ini diposisikan sebagai branch `fe-3`, yaitu versi yang disiapkan oleh saya selaku Front-End Developer untuk menawarkan opsi lanjutan yang berbeda dari `fe-2` dan akan dipaparkan ke Project Lead, yaitu Fikri.
+## Route Penting
 
-Dari diff terhadap `fe-2`, perubahan paling dominan ada di:
+### Publik
 
-- `LandingPage.jsx`
-- `LoginDosen.jsx`
-- `LoginMasyarakat.jsx`
-- `DosenSubmissionCard.jsx`
-- `landing.css`
-- `lecturer-form.css`
-- file-file mobile baru
-- helper data baru
-- popup feedback baru
+- `/`
+- `/panduan`
+- `/pengajuan`
+- `/cek-status`
+- `/testimoni`
+- `/kumpul-arsip`
+- `/template/{jenis}`
 
-Secara praktis, state project sekarang sudah mencakup:
+### Autentikasi
 
-- dual experience desktop dan mobile yang dipisahkan dengan lebih rapi
-- landing page mobile khusus
-- login dosen mobile khusus
-- login masyarakat mobile khusus
-- splash screen mobile
-- status pengajuan dan status PKM yang lebih konsisten
-- akses pengajuan PKM dengan alur dosen dan masyarakat yang dipisahkan tapi seragam
-- lapisan fallback data dummy yang siap digantikan backend
-- sistem popup sukses/error yang seragam
+- `/login`
+- `/register`
+- `/login/dosen`
+- `/login/masyarakat`
+- `/verify-email`
 
-## 3. Gambaran Besar Project Sekarang
+### Admin
 
-Project ini sekarang berfungsi sebagai frontend SIGAP PKM dengan empat area pengalaman utama:
+- `/admin/dashboard`
+- `/admin/pengajuan`
+- `/admin/pegawai`
+- `/admin/users`
+- `/admin/aktivitas`
+- `/admin/arsip`
+- `/admin/testimoni`
+- `/admin/master/jenis-pkm`
+- `/admin/templates`
 
-1. Landing page publik
-2. Login dan akses dosen
-3. Login dan akses masyarakat
-4. Halaman submit dokumentasi/laporan dan halaman pendukung autentikasi
+## Stack Teknologi
 
-Selain itu ada satu halaman utilitas tambahan:
-
-- `MapDashboard.jsx`
-
-Halaman ini masih berfungsi sebagai area pengelolaan/pengujian frontend untuk peta dan entri data dummy.
-
-## 4. Halaman dan Fitur yang Ada Sekarang
-
-### 4.1 Landing Page
-
-File utama:
-
-- `resources/js/Pages/LandingPage.jsx`
-- `resources/js/Components/LandingPageMobile.jsx`
-- `resources/css/landing.css`
-- `resources/css/landing-mobile.css`
-
-Fitur landing page saat ini:
-
-- peta sebaran PKM publik
-- marker status kegiatan PKM
-- legenda status PKM
-- ringkasan total PKM, PKM selesai, dan PKM berlangsung
-- sidebar daftar kegiatan
-- sidebar detail titik PKM
-- chart evaluasi PKM
-- akses pengajuan PKM dari halaman publik
-- menu dan navigasi publik P3M
-
-#### Desktop Landing Page
-
-Versi desktop tetap menggunakan shell utama landing page dengan:
-
-- header web
-- peta utama
-- panel insight
-- area chart
-- kartu akses pengajuan
-
-Desktop dijaga agar tidak tercampur dengan eksperimen mobile.
-
-#### Mobile Landing Page
-
-Versi mobile sekarang dipisahkan ke komponen khusus dan memiliki karakter seperti aplikasi mobile:
-
-- bottom tab navbar khusus mobile
-- tab `Menu`
-- tab `Peta`
-- tab `Dashboard`
-- tab `Akses`
-- tab `Login`
-- sidebar drawer menu khusus mobile
-- sidebar detail titik PKM khusus mobile
-- tata letak map satu layar ala aplikasi map
-- splash screen mobile-only
-
-Hal penting:
-
-- tab navbar bawah hanya tampil di mobile
-- desktop tidak ikut menampilkan navbar bawah
-- sidebar menu dan sidebar titik PKM memakai logika mobile yang terpisah dari desktop
-
-### 4.2 Login Dosen
-
-File utama:
-
-- `resources/js/Pages/Auth/LoginDosen.jsx`
-- `resources/js/Components/LoginDosenMobile.jsx`
-- `resources/js/Components/DosenSubmissionCard.jsx`
-- `resources/css/login-dosen-mobile.css`
-
-Login dosen sekarang bukan hanya halaman login visual, tetapi halaman akun dosen dengan beberapa mode:
-
-- peta kegiatan user
-- dashboard evaluasi PKM
-- akses pengajuan PKM
-- kegiatan dan riwayat
-- status pengajuan
-- status PKM berlangsung/selesai
-
-#### Desktop Login Dosen
-
-Versi desktop memiliki:
-
-- peta akun dosen
-- sidebar aktivitas
-- dashboard evaluasi
-- kartu akses pengajuan PKM
-- status pengajuan
-- mode status PKM berlangsung
-- mode status PKM selesai
-- dokumentasi dan testimoni pada mode selesai
-
-Di bagian akses pengajuan, logika status saat ini adalah:
-
-- `belum_diajukan` menampilkan form pengajuan
-- `diproses` menampilkan status diproses
-- `ditangguhkan` menampilkan status revisi dan unggah revisi
-- `ditolak` menampilkan status ditolak dan opsi pengajuan baru
-- `diterima` menampilkan status diterima
-- `berlangsung` menampilkan kartu PKM berlangsung
-- `selesai` menampilkan kartu PKM selesai
-
-#### Mobile Login Dosen
-
-Versi mobile dosen mengikuti pola mobile landing, tetapi dengan konteks akun dosen:
-
-- splash screen mobile
-- bottom tab navbar mobile
-- tab `Menu`
-- tab `Peta`
-- tab `Dashboard`
-- tab `Akses`
-- tab `Logout`
-- drawer menu dengan info `Akun Dosen`
-- ringkasan status pengajuan di drawer
-- ringkasan status pengajuan di area akses
-- toggle mobile untuk `Pengajuan PKM` dan `Kegiatan & Riwayat`
-
-### 4.3 Login Masyarakat
-
-File utama:
-
-- `resources/js/Pages/Auth/LoginMasyarakat.jsx`
-- `resources/js/Components/LoginMasyarakatMobile.jsx`
-- `resources/js/Components/MasyarakatSubmissionCard.jsx`
-- `resources/css/masyarakat-form.css`
-
-Login masyarakat sekarang mengadopsi shell interaksi yang sama dengan dosen, tetapi isi form mengikuti kebutuhan masyarakat.
-
-#### Desktop Login Masyarakat
-
-Versi desktop memiliki:
-
-- peta akun masyarakat
-- dashboard evaluasi
-- kartu akses pengajuan PKM
-- status pengajuan masyarakat
-- status PKM berlangsung/selesai
-- kegiatan dan riwayat
-
-#### Mobile Login Masyarakat
-
-Versi mobile masyarakat mengadopsi arsitektur `LoginDosenMobile`, dengan penyesuaian:
-
-- drawer menampilkan `Akun Masyarakat`
-- deskripsi menu mengikuti konteks masyarakat
-- status pengajuan masyarakat tampil di drawer dan di atas area akses
-- layout mobile tetap konsisten dengan dosen
-- isi form tetap form masyarakat
-
-### 4.4 Akses Pengajuan PKM
-
-Ini adalah area yang paling banyak berkembang di project saat ini.
-
-#### Dosen
-
-File utama:
-
-- `resources/js/Components/DosenSubmissionCard.jsx`
-- `resources/js/Components/LecturerSubmissionForm.jsx`
-- `resources/css/lecturer-form.css`
-
-Fitur pengajuan dosen:
-
-- form inline
-- validasi field wajib
-- validasi struktur tim
-- minimal satu dari dosen/staf/mahasiswa harus dipilih
-- entry dinamis untuk dosen/staf/mahasiswa
-- validasi entry tambahan yang kosong
-- upload proposal
-- alur revisi
-- alur pengajuan baru setelah ditolak/selesai
-- tab `Pengajuan PKM`
-- tab `Kegiatan & Riwayat`
-
-#### Masyarakat
-
-File utama:
-
-- `resources/js/Components/MasyarakatSubmissionCard.jsx`
-- `resources/js/Components/GeneralSubmissionForm.jsx`
-
-Fitur pengajuan masyarakat:
-
-- form inline
-- field masyarakat tetap dipertahankan
-- upload surat permohonan PDF
-- link teks untuk unduh template surat permohonan
-- status pengajuan masyarakat
-- status PKM berlangsung/selesai
-- riwayat pengajuan
-
-### 4.5 Submit Dokumentasi dan Laporan
-
-File utama:
-
-- `resources/js/Pages/Auth/SubmitDokumentasiLaporan.jsx`
-
-Fitur:
-
-- submit tautan dokumentasi
-- submit laporan
-- validasi field wajib
-- popup feedback sukses/error yang seragam
-
-### 4.6 Halaman Autentikasi Pendukung
-
-File:
-
-- `resources/js/Pages/Auth/Login.jsx`
-- `resources/js/Pages/Auth/Register.jsx`
-- `resources/js/Pages/Auth/VerifyEmail.jsx`
-
-Fungsi:
-
-- login umum
-- registrasi
-- verifikasi email
-
-### 4.7 Map Dashboard
-
-File:
-
-- `resources/js/Pages/MapDashboard.jsx`
-
-Peran saat ini:
-
-- area pengelolaan/pengujian frontend
-- entri data peta
-- pengujian submit link
-- popup feedback seragam
-
-## 5. Komponen Shared Penting
-
-Beberapa komponen penting yang sekarang menjadi fondasi bersama:
-
-- `resources/js/Components/ActionFeedbackDialog.jsx`
-- `resources/js/Components/MobileSplashScreen.jsx`
-- `resources/js/Components/LandingCharts.jsx`
-- `resources/js/Components/DocumentationGallery.jsx`
-- `resources/js/Components/TestimonialForm.jsx`
-- `resources/js/Components/TestimonialSidebarDisplay.jsx`
-- `resources/js/Components/BottomSheet.jsx`
-- `resources/js/Components/MobileTabBar.jsx`
-
-Fungsi masing-masing:
-
-- `ActionFeedbackDialog.jsx`
-  popup seragam untuk sukses/error submit
-
-- `MobileSplashScreen.jsx`
-  splash screen mobile-only berbasis session tab
-
-- `LandingCharts.jsx`
-  chart evaluasi PKM yang dipakai di landing dan dashboard akun
-
-- `DocumentationGallery.jsx`
-  area tampilan dokumentasi kegiatan
-
-- `TestimonialForm.jsx`
-  form kirim testimoni
-
-- `TestimonialSidebarDisplay.jsx`
-  tampilan testimoni di panel kegiatan
-
-- `BottomSheet.jsx`
-  panel bawah mobile untuk detail
-
-- `MobileTabBar.jsx`
-  tab navbar bawah mobile
-
-## 6. Sistem Validasi dan Feedback Form
-
-Project sekarang sudah jauh lebih seragam dibanding sebelumnya.
-
-Standar yang sudah diterapkan:
-
-- tombol submit nonaktif bila field wajib belum lengkap
-- warning visual muncul saat user sudah mulai mengisi tapi belum lengkap
-- popup sukses/error menggunakan komponen yang sama
-- validasi khusus untuk struktur tim dosen
-- validasi file upload
-- validasi revisi
-
-Form yang sudah memakai pola ini:
-
-- pengajuan dosen
-- pengajuan masyarakat
-- testimonial
-- general submission
-- submit dokumentasi/laporan
-- data entry tambahan pada landing/map dashboard
-
-## 7. Arsitektur Data Dummy dan Kesiapan Backend
-
-File terpenting:
-
-- `resources/js/data/sigapData.js`
-
-Tujuan file ini adalah memisahkan:
-
-- data demo frontend
-- data nyata dari backend
-
-Pola yang sekarang dipakai:
-
-- jika backend mengirim array data, frontend memakai data backend
-- jika backend belum mengirim data dan demo mode aktif, frontend memakai fallback dummy
-- jika demo mode dimatikan, frontend tidak akan menampilkan dummy
-
-Flag environment:
-
-- `VITE_ENABLE_SIGAP_DEMO_DATA=true`
-
-Jika diubah menjadi:
-
-- `VITE_ENABLE_SIGAP_DEMO_DATA=false`
-
-maka fallback dummy akan mati.
-
-### Kontrak Data yang Sudah Disiapkan
-
-Landing page siap menerima:
-
-- `publicPkmData`
-
-Login dosen siap menerima:
-
-- `userPkmData`
-- `userSubmissionData`
-- `userSubmissionHistory`
-
-Login masyarakat siap menerima:
-
-- `userPkmData`
-- `userSubmissionData`
-- `userSubmissionHistory`
-
-### Catatan Penting
-
-Walaupun wadah backend sudah siap, sebagian alur submit saat ini masih mock di frontend, misalnya:
-
-- perubahan status lokal setelah submit
-- simulasi delay dengan `setTimeout`
-- penambahan data pengajuan ke state lokal
-
-Artinya:
-
-- struktur integrasi backend sudah aman disiapkan
-- dummy data bisa dimatikan saat deploy
-- tetapi endpoint backend nyata masih perlu dihubungkan agar semua submit benar-benar persist ke database
-
-## 8. Mobile-Only Enhancements yang Sudah Ada
-
-Bagian ini tidak ada atau belum matang di branch lebih awal, tetapi sekarang sudah ada:
-
-- mobile landing page khusus
-- mobile login dosen khusus
-- mobile login masyarakat khusus
-- tab navbar bawah yang menempel ke layar
-- drawer menu mobile
-- sidebar detail PKM mobile
-- scroll vertical-only untuk pengalaman mobile
-- splash screen mobile-only
-- pemisahan styling mobile agar desktop tidak ikut berubah
-
-File styling baru yang mendukung ini:
-
-- `resources/css/landing-mobile.css`
-- `resources/css/login-dosen-mobile.css`
-- `resources/css/mobile-splash.css`
-
-## 9. Routing yang Tersedia
-
-Route yang sekarang aktif:
-
-- `/` -> `LandingPage`
-- `/login` -> `Auth/Login`
-- `/register` -> `Auth/Register`
-- `/submit-dokumentasi-laporan` -> `Auth/SubmitDokumentasiLaporan`
-- `/verify-email` -> `Auth/VerifyEmail`
-- `/login/dosen` -> `Auth/LoginDosen`
-- `/login/masyarakat` -> `Auth/LoginMasyarakat`
-- `POST /logout` -> logout session
-
-File route:
-
-- `routes/web.php`
-
-## 10. Tech Stack
-
-Project ini menggunakan:
-
-- Laravel
+- Laravel 12
+- PHP 8.4
 - Inertia.js React
 - React 19
+- TypeScript
 - Vite
+- Tailwind CSS
+- MySQL
 - Leaflet
-- React Leaflet
 - Chart.js
-- React Chart.js 2
-- Font Awesome
+- Lucide React
 
-File referensi:
-
-- `package.json`
-
-## 11. Struktur File Penting
-
-### Pages
+## Struktur Folder Penting
 
 ```text
-resources/js/Pages/
-|-- LandingPage.jsx
-|-- MapDashboard.jsx
-`-- Auth/
-    |-- Login.jsx
-    |-- Register.jsx
-    |-- VerifyEmail.jsx
-    |-- LoginDosen.jsx
-    |-- LoginMasyarakat.jsx
-    `-- SubmitDokumentasiLaporan.jsx
+app/
+|-- Http/Controllers/
+|-- Models/
+`-- Providers/
+
+database/
+|-- migrations/
+`-- seeders/
+
+resources/
+|-- css/
+`-- js/
+    |-- Components/
+    |-- Layouts/
+    |-- Pages/
+    `-- data/
+
+routes/
+`-- web.php
 ```
 
-### Components
-
-```text
-resources/js/Components/
-|-- ActionFeedbackDialog.jsx
-|-- BottomSheet.jsx
-|-- DocumentationGallery.jsx
-|-- DosenSubmissionCard.jsx
-|-- Footer.jsx
-|-- GeneralSubmissionForm.jsx
-|-- Header.jsx
-|-- LandingCharts.jsx
-|-- LandingPageMobile.jsx
-|-- LecturerSubmissionForm.jsx
-|-- LoginDosenMobile.jsx
-|-- LoginMasyarakatMobile.jsx
-|-- MasyarakatSubmissionCard.jsx
-|-- MobileSplashScreen.jsx
-|-- MobileTabBar.jsx
-|-- TestimonialForm.jsx
-|-- TestimonialSidebarDisplay.jsx
-`-- Toast.jsx
-```
-
-### CSS
-
-```text
-resources/css/
-|-- app.css
-|-- auth-layout.css
-|-- documentation-gallery.css
-|-- form-components.css
-|-- landing.css
-|-- landing-mobile.css
-|-- lecturer-form.css
-|-- login.css
-|-- login-dosen-mobile.css
-|-- masyarakat-form.css
-|-- mobile-splash.css
-|-- testimonial-sidebar.css
-`-- verify-email.css
-```
-
-### Data Helper
-
-```text
-resources/js/data/
-`-- sigapData.js
-```
-
-## 12. Cara Menjalankan Project
+## Cara Menjalankan
 
 ### Prasyarat
 
-- PHP 8.x
+- PHP 8.4+
 - Composer
 - Node.js 18+
 - npm
+- MySQL
 
 ### Instalasi
 
@@ -612,13 +195,38 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Jika memakai Windows PowerShell, copy env bisa dilakukan dengan:
+Jika memakai PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### Development
+### Konfigurasi Database
+
+Atur koneksi database pada `.env`, misalnya:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sigap_p3m
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### Migrasi dan Seeder
+
+```bash
+php artisan migrate --seed
+```
+
+Jika ingin reset total:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+### Menjalankan Development
 
 Terminal 1:
 
@@ -634,108 +242,36 @@ npm run dev
 
 ### Build Production
 
----
+```bash
+npm run build
+```
 
-## Struktur Folder Penting (Backend Context)
-- `app/Models/` — Definisi skema relasi ORM (Pengajuan, Aktivitas, Pegawai, dll).
-- `app/Http/Controllers/` — Logika bisnis REST dan *controller* pengatur rute.
-- `database/migrations/` — Skema pembangunan *database*.
-- `routes/web.php` — Titik masuk *routing* aplikasi utama.
-- `resources/js/` — Direktori komponen React untuk panel administratif (dikendalikan via Inertia).
+## Akun Uji
 
-## Akun Kebutuhan Tes
-- **Email:** admin@poltekpar.ac.id
-- **Password:** password
+Data akun mengikuti seeder yang tersedia di project. Untuk lingkungan lokal, akun admin dan akun dosen dummy dapat dicek pada:
 
-## Instalasi & Setup Backend
+- `database/seeders/UserSeeder.php`
 
-### Prasyarat
-- PHP >= 8.4
-- Composer
-- Node.js & npm (Untuk *compile* *asset* Inertia)
-- MySQL Server
+## Catatan Pengembangan
 
-## Panduan Instalasi (Development)
+Beberapa pembaruan penting di state proyek saat ini:
 
-1. **Clone repositori** dari cabang `backend`:
-   ```bash
-   git clone -b backend https://github.com/nearmeoi/sigap-pkm.git
-   cd sigap-pkm
-   ```
+- submitter pengajuan disimpan berdasarkan input form, bukan hanya akun
+- admin melihat detail pengajuan sesuai format form dosen atau masyarakat
+- admin dapat melengkapi dan memperbaiki data pengajuan
+- item RAB dosen sekarang dapat disimpan per baris
+- verifikasi pengajuan diblokir bila isian inti masih kosong
 
-2. **Install dependensi PHP (Backend)**
-   ```bash
-   composer install
-   ```
+## Validasi yang Umum Dipakai
 
-3. **Install dependensi Node (Frontend/Inertia assets)**
-   Bagian ini tetap diperlukan karena Laravel menggunakan Vite untuk me-*render* tampilan panel admin.
-   ```bash
-   npm install
-   ```
+Sebelum deploy atau merge, pengecekan yang biasa dipakai:
 
-4. **Konfigurasi Environment**
-   Salin file konfigurasi bawaan Laravel dan sesuaikan pengaturan *database*-nya:
-   ```bash
-   cp .env.example .env
-   ```
-   Buka file `.env` dan atur koneksi *database*, misalnya:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=sigap_pkm
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
+```bash
+php -l app/Http/Controllers/Admin/PengajuanController.php
+php -l app/Http/Controllers/User/PengajuanUserController.php
+npm run build
+```
 
-5. **Generate App Key**
-   ```bash
-   php artisan key:generate
-   ```
+## Lisensi
 
-6. **Migrasi Database & Seeding**
-   Jalankan migrasi untuk membangun skema tabel sekaligus mengisi data awal (*dummy data* admin dll):
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
-
-7. **Jalankan Aplikasi**
-   Anda membutuhkan dua terminal yang berjalan bersamaan:
-
-   *Terminal 1 (Backend PHP Server):*
-   ```bash
-   php artisan serve
-   ```
-
-   *Terminal 2 (Vite Asset Bundler):*
-   ```bash
-   npm run dev
-   ```
-
-Aplikasi sekarang dapat diakses melalui `http://localhost:8000`.
-
-## 13. Ringkasan Kondisi Project Saat Ini
-
-Jika dirangkum, project sekarang sudah memiliki:
-
-- landing page publik desktop dan mobile yang berbeda tetapi konsisten
-- login dosen desktop dan mobile
-- login masyarakat desktop dan mobile
-- splash screen mobile-only
-- kartu akses pengajuan PKM yang jauh lebih matang
-- validasi submit yang seragam
-- popup feedback sukses/error yang seragam
-- helper data dummy vs backend
-- readiness untuk integrasi data per-user
-
-Dengan kata lain, dibanding `fe` dan `fe-2`, kondisi project sekarang sudah berada pada tahap frontend yang jauh lebih siap untuk:
-
-- finishing integrasi backend
-- pengosongan dummy data saat deploy
-- penguncian flow per user
-- publikasi lanjutan sebagai tahap berikut pengembangan
-
-## 14. Catatan Pengembangan
-
-README ini menjelaskan kondisi frontend terbaru yang diposisikan sebagai isi branch `fe-3`, yaitu opsi pengembangan lanjutan dari sisi Front-End Developer untuk dipaparkan ke Project Lead.
+Repositori ini digunakan untuk pengembangan internal SIGAPPA P3M Politeknik Pariwisata Makassar.

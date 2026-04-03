@@ -3,7 +3,7 @@ import { Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import {
     Filter, Download, Search, ChevronRight, Clock, X,
-    Edit, Trash2, CheckSquare, Square, Mail, Check
+    Edit, Trash2, CheckSquare, Square, Mail, Check, AlertCircle
 } from 'lucide-react';
 
 interface Pengajuan {
@@ -11,11 +11,25 @@ interface Pengajuan {
     judul_kegiatan: string;
     status_pengajuan: string;
     no_telepon?: string;
+    instansi_mitra?: string;
     created_at: string;
-    user?: { name: string; email: string };
+    kebutuhan?: string;
+    proposal?: string;
+    surat_permohonan?: string;
+    total_anggaran?: number;
+    rab_items?: { nama_item?: string; jumlah?: number; harga?: number; total?: number }[];
+    dana_perguruan_tinggi?: number;
+    dana_pemerintah?: number;
+    dana_lembaga_dalam?: number;
+    dana_lembaga_luar?: number;
+    nama_pengusul?: string;
+    email_pengusul?: string;
+    tipe_pengusul?: string;
+    user?: { name: string; email: string; role?: string };
     jenis_pkm?: { nama_jenis: string };
     provinsi?: string;
     kota_kabupaten?: string;
+    tim_kegiatan?: { nama_mahasiswa?: string; peran_tim?: string; pegawai?: { nama_pegawai?: string } }[];
 }
 
 interface PaginatedData {
@@ -46,6 +60,55 @@ const STATUS_OPTIONS = [
     { value: 'diterima', label: 'Diterima' },
     { value: 'ditolak', label: 'Ditolak' },
 ];
+
+const getSubmitterType = (item: Pengajuan): 'dosen' | 'masyarakat' => {
+    const source = String(item.tipe_pengusul || item.user?.role || '').toLowerCase();
+
+    return source === 'dosen' ? 'dosen' : 'masyarakat';
+};
+
+const getKetuaName = (item: Pengajuan): string => {
+    const ketua = item.tim_kegiatan?.find((member) =>
+        String(member.peran_tim || '').toLowerCase().includes('ketua')
+    );
+
+    return ketua?.pegawai?.nama_pegawai || ketua?.nama_mahasiswa || '';
+};
+
+const getSubmitterName = (item: Pengajuan): string =>
+    item.nama_pengusul || (getSubmitterType(item) === 'dosen' ? getKetuaName(item) : '') || item.user?.name || '-';
+
+const getSubmitterEmail = (item: Pengajuan): string =>
+    item.email_pengusul || item.user?.email || '-';
+
+const getIncompleteReasons = (item: Pengajuan): string[] => {
+    const reasons: string[] = [];
+    const isDosen = getSubmitterType(item) === 'dosen';
+
+    if (!getSubmitterName(item) || getSubmitterName(item) === '-') reasons.push('nama pengusul');
+    if (!getSubmitterEmail(item) || getSubmitterEmail(item) === '-') reasons.push('email');
+    if (!item.instansi_mitra) reasons.push('instansi');
+    if (!item.no_telepon) reasons.push('kontak');
+    if (!item.kebutuhan) reasons.push(isDosen ? 'deskripsi kegiatan' : 'kebutuhan');
+    if (!item.provinsi || !item.kota_kabupaten) reasons.push('lokasi');
+    if (!item.surat_permohonan) reasons.push('surat permohonan');
+
+    if (isDosen) {
+        const hasRabItems = (item.rab_items || []).some((rabItem) =>
+            String(rabItem.nama_item || '').trim() !== '' && Number(rabItem.jumlah || 0) > 0
+        );
+        if (!item.judul_kegiatan) reasons.push('judul kegiatan');
+        const hasBudget = hasRabItems
+            || Number(item.total_anggaran || 0) > 0
+            || Number(item.dana_perguruan_tinggi || 0) > 0
+            || Number(item.dana_pemerintah || 0) > 0
+            || Number(item.dana_lembaga_dalam || 0) > 0
+            || Number(item.dana_lembaga_luar || 0) > 0;
+        if (!hasBudget) reasons.push('RAB/biaya');
+    }
+
+    return reasons;
+};
 
 const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
     const [search, setSearch] = useState(filters.search || '');
@@ -235,6 +298,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                 <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Nama Kegiatan</th>
                                 <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Pengaju</th>
                                 <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Detail</th>
+                                <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Kelengkapan</th>
                                 <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-center">Status</th>
                                 <th className="py-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-right">Aksi</th>
                             </tr>
@@ -242,7 +306,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                         <tbody className="divide-y divide-zinc-100">
                             {listPengajuan.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="py-12 text-center text-zinc-400 text-[14px]">
+                                    <td colSpan={7} className="py-12 text-center text-zinc-400 text-[14px]">
                                         {hasFilters ? 'Tidak ada hasil untuk filter yang dipilih.' : 'Belum ada data pengajuan.'}
                                     </td>
                                 </tr>
@@ -250,6 +314,10 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                 listPengajuan.data.map((item) => {
                                     const st = STATUS_BADGE[item.status_pengajuan] || STATUS_BADGE.diproses;
                                     const checked = selectedIds.includes(item.id_pengajuan);
+                                    const submitterType = getSubmitterType(item);
+                                    const submitterName = getSubmitterName(item);
+                                    const incompleteReasons = getIncompleteReasons(item);
+                                    const isIncomplete = incompleteReasons.length > 0;
                                     return (
                                         <tr key={item.id_pengajuan} className={`hover:bg-zinc-50/50 transition-colors group ${checked ? 'bg-indigo-50/30' : ''}`}>
                                             {/* Checkbox */}
@@ -275,9 +343,14 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
 
                                             {/* Pengaju */}
                                             <td className="py-3 px-4">
-                                                <div className="text-[13px] font-medium text-zinc-800">{item.user?.name || '-'}</div>
+                                                <div className="text-[13px] font-medium text-zinc-800">{submitterName}</div>
+                                                <div className="mt-1">
+                                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${submitterType === 'dosen' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}`}>
+                                                        {submitterType === 'dosen' ? 'Auth Dosen' : 'Auth Masyarakat'}
+                                                    </span>
+                                                </div>
                                                 {item.no_telepon && (
-                                                    <div className="text-[11px] text-zinc-400 mt-0.5">📞 {item.no_telepon}</div>
+                                                    <div className="text-[11px] text-zinc-400 mt-1">No. HP: {item.no_telepon}</div>
                                                 )}
                                             </td>
 
@@ -287,6 +360,31 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                                                 <div className="text-[11px] text-zinc-400 mt-0.5 truncate max-w-[180px]">
                                                     {item.kota_kabupaten ? `${item.kota_kabupaten}, ${item.provinsi}` : 'Lokasi: TBD'}
                                                 </div>
+                                            </td>
+
+                                            <td className="py-3 px-4">
+                                                {isIncomplete ? (
+                                                    <div className="max-w-[250px] rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                                                        <div className="flex items-start gap-2">
+                                                            <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600" />
+                                                            <div>
+                                                                <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                                                                    Data Perlu Dilengkapi
+                                                                </div>
+                                                                <p className="mt-0.5 text-[11px] leading-relaxed text-amber-800">
+                                                                    Beberapa isian belum lengkap. Hubungi pengaju untuk melengkapi data.
+                                                                </p>
+                                                                <p className="mt-1 text-[10px] text-amber-700">
+                                                                    Kurang: {incompleteReasons.slice(0, 3).join(', ')}{incompleteReasons.length > 3 ? ', ...' : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                                                        Data lengkap
+                                                    </div>
+                                                )}
                                             </td>
 
                                             {/* Status badge */}
@@ -383,7 +481,7 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                         <div className="flex flex-wrap gap-1.5 flex-1">
                             {undanganRecipients.map(p => (
                                 <span key={p.id_pengajuan} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[11px] font-medium border border-indigo-100">
-                                    {p.user?.name ?? 'Pengaju'} &lt;{p.user?.email ?? '–'}&gt;
+                                    {getSubmitterName(p)} &lt;{getSubmitterEmail(p)}&gt;
                                     <button onClick={() => toggleOne(p.id_pengajuan)} className="hover:text-red-500">
                                         <X size={10} />
                                     </button>

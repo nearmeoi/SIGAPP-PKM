@@ -16,7 +16,7 @@ class PengajuanController extends Controller
 {
     public function index(Request $request)
     {
-        $listPengajuan = Pengajuan::with(['user', 'jenisPkm'])
+        $listPengajuan = Pengajuan::with(['user', 'jenisPkm', 'timKegiatan.pegawai'])
             ->when($request->search, function ($query, $search) {
                 $escaped = addcslashes($search, '\\%_');
                 $query->where(function ($q) use ($escaped) {
@@ -68,44 +68,48 @@ class PengajuanController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $request->validate([
-            'judul_kegiatan' => 'required|string|max:255',
-            'id_jenis_pkm' => 'nullable|exists:jenis_pkm,id_jenis_pkm',
-            'no_telepon' => 'nullable|string|max:25',
-            'instansi_mitra' => 'nullable|string|max:255',
-            'kebutuhan' => 'nullable|string',
-            'sumber_dana' => 'nullable|string|max:255',
-            'total_anggaran' => 'nullable|numeric|min:0',
-            'dana_perguruan_tinggi' => 'nullable|numeric|min:0',
-            'dana_pemerintah' => 'nullable|numeric|min:0',
-            'dana_lembaga_dalam' => 'nullable|numeric|min:0',
-            'dana_lembaga_luar' => 'nullable|numeric|min:0',
-            'tgl_mulai' => 'nullable|date',
-            'tgl_selesai' => 'nullable|date|after_or_equal:tgl_mulai',
-            'provinsi' => 'nullable|string|max:100',
-            'kota_kabupaten' => 'nullable|string|max:100',
-            'kecamatan' => 'nullable|string|max:100',
-            'kelurahan_desa' => 'nullable|string|max:100',
-            'alamat_lengkap' => 'nullable|string',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'status_pengajuan' => 'nullable|in:diproses,direvisi,diterima,ditolak,selesai',
-            'catatan_admin' => 'nullable|string|max:1000',
-            'proposal' => 'nullable|string|max:2048',
-            'surat_permohonan' => 'nullable|string|max:2048',
-            'rab' => 'nullable|string|max:2048',
+        $validated = $request->validate([
+            'judul_kegiatan' => 'sometimes|required|string|max:255',
+            'nama_pengusul' => 'sometimes|nullable|string|max:255',
+            'email_pengusul' => 'sometimes|nullable|email|max:255',
+            'id_jenis_pkm' => 'sometimes|nullable|exists:jenis_pkm,id_jenis_pkm',
+            'no_telepon' => 'sometimes|nullable|string|max:25',
+            'instansi_mitra' => 'sometimes|nullable|string|max:255',
+            'kebutuhan' => 'sometimes|nullable|string',
+            'sumber_dana' => 'sometimes|nullable|string|max:255',
+            'total_anggaran' => 'sometimes|nullable|numeric|min:0',
+            'dana_perguruan_tinggi' => 'sometimes|nullable|numeric|min:0',
+            'dana_pemerintah' => 'sometimes|nullable|numeric|min:0',
+            'dana_lembaga_dalam' => 'sometimes|nullable|numeric|min:0',
+            'dana_lembaga_luar' => 'sometimes|nullable|numeric|min:0',
+            'tgl_mulai' => 'sometimes|nullable|date',
+            'tgl_selesai' => 'sometimes|nullable|date|after_or_equal:tgl_mulai',
+            'provinsi' => 'sometimes|nullable|string|max:100',
+            'kota_kabupaten' => 'sometimes|nullable|string|max:100',
+            'kecamatan' => 'sometimes|nullable|string|max:100',
+            'kelurahan_desa' => 'sometimes|nullable|string|max:100',
+            'alamat_lengkap' => 'sometimes|nullable|string',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
+            'status_pengajuan' => 'sometimes|nullable|in:diproses,direvisi,diterima,ditolak,selesai',
+            'catatan_admin' => 'sometimes|nullable|string|max:1000',
+            'proposal' => 'sometimes|nullable|string|max:2048',
+            'surat_permohonan' => 'sometimes|nullable|string|max:2048',
+            'rab' => 'sometimes|nullable|string|max:2048',
+            'rab_items' => 'sometimes|array',
+            'rab_items.*.nama_item' => 'nullable|string|max:255',
+            'rab_items.*.jumlah' => 'nullable|numeric|min:1',
+            'rab_items.*.harga' => 'nullable|numeric|min:0',
         ]);
 
         $pengajuan = Pengajuan::findOrFail($id);
-        $pengajuan->update($request->only([
-            'judul_kegiatan', 'id_jenis_pkm', 'no_telepon', 'instansi_mitra',
-            'kebutuhan', 'sumber_dana', 'total_anggaran', 'dana_perguruan_tinggi',
-            'dana_pemerintah', 'dana_lembaga_dalam', 'dana_lembaga_luar',
-            'tgl_mulai', 'tgl_selesai',
-            'provinsi', 'kota_kabupaten', 'kecamatan', 'kelurahan_desa', 'alamat_lengkap',
-            'latitude', 'longitude', 'status_pengajuan', 'catatan_admin',
-            'proposal', 'surat_permohonan', 'rab',
-        ]));
+
+        if ($request->has('rab_items')) {
+            $validated['rab_items'] = $this->normalizeRabItems($request->input('rab_items', []));
+            $validated['total_anggaran'] = collect($validated['rab_items'])->sum('total');
+        }
+
+        $pengajuan->update($validated);
 
         return redirect()->back()->with('success', 'Pengajuan berhasil diperbarui.');
     }
@@ -135,6 +139,14 @@ class PengajuanController extends Controller
         ]);
 
         $pengajuan = Pengajuan::findOrFail($id);
+        $incompleteFields = $this->getIncompleteFields($pengajuan);
+
+        if ($incompleteFields !== []) {
+            return redirect()->back()->withErrors([
+                'status_pengajuan' => 'Pengajuan belum bisa diverifikasi karena data berikut masih belum lengkap: '.implode(', ', $incompleteFields).'.',
+            ]);
+        }
+
         $statusLama = $pengajuan->status_pengajuan;
         $statusBaru = $request->status_pengajuan;
 
@@ -153,6 +165,69 @@ class PengajuanController extends Controller
         }
 
         return redirect()->back()->with('success', 'Status pengajuan berhasil diperbarui.');
+    }
+
+    public function syncTim(Request $request, int $id)
+    {
+        $request->validate([
+            'dosen_terlibat' => 'nullable|array',
+            'dosen_terlibat.*' => 'nullable|string|max:255',
+            'staff_terlibat' => 'nullable|array',
+            'staff_terlibat.*' => 'nullable|string|max:255',
+            'mahasiswa_terlibat' => 'nullable|array',
+            'mahasiswa_terlibat.*' => 'nullable|string|max:255',
+        ]);
+
+        $pengajuan = Pengajuan::with('timKegiatan')->findOrFail($id);
+
+        TimKegiatan::where('id_pengajuan', $pengajuan->id_pengajuan)
+            ->where(function ($query) {
+                $query->whereNull('peran_tim')
+                    ->orWhereRaw('LOWER(peran_tim) not like ?', ['%ketua%']);
+            })
+            ->delete();
+
+        $rows = [];
+        $now = now();
+
+        foreach ($this->normalizeTeamEntries($request->input('dosen_terlibat', [])) as $name) {
+            $rows[] = [
+                'id_pengajuan' => $pengajuan->id_pengajuan,
+                'id_pegawai' => null,
+                'nama_mahasiswa' => $name,
+                'peran_tim' => 'Dosen',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        foreach ($this->normalizeTeamEntries($request->input('staff_terlibat', [])) as $name) {
+            $rows[] = [
+                'id_pengajuan' => $pengajuan->id_pengajuan,
+                'id_pegawai' => null,
+                'nama_mahasiswa' => $name,
+                'peran_tim' => 'Staff',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        foreach ($this->normalizeTeamEntries($request->input('mahasiswa_terlibat', [])) as $name) {
+            $rows[] = [
+                'id_pengajuan' => $pengajuan->id_pengajuan,
+                'id_pegawai' => null,
+                'nama_mahasiswa' => $name,
+                'peran_tim' => 'Mahasiswa',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($rows !== []) {
+            TimKegiatan::insert($rows);
+        }
+
+        return redirect()->back()->with('success', 'Tim pelaksana berhasil diperbarui.');
     }
 
     public function storeTim(Request $request, int $id)
@@ -210,6 +285,74 @@ class PengajuanController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Lokasi berhasil diperbarui.');
+    }
+
+    private function normalizeRabItems(array $items): array
+    {
+        return collect($items)
+            ->map(function ($item) {
+                $namaItem = trim((string) data_get($item, 'nama_item', ''));
+                $jumlah = (float) data_get($item, 'jumlah', 0);
+                $harga = (float) data_get($item, 'harga', 0);
+
+                if ($namaItem === '' || $jumlah <= 0) {
+                    return null;
+                }
+
+                return [
+                    'nama_item' => $namaItem,
+                    'jumlah' => $jumlah,
+                    'harga' => $harga,
+                    'total' => round($jumlah * $harga, 2),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function normalizeTeamEntries(array $items): array
+    {
+        return collect($items)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function getIncompleteFields(Pengajuan $pengajuan): array
+    {
+        $submitterType = strtolower((string) ($pengajuan->tipe_pengusul ?: $pengajuan->user?->role ?: 'masyarakat'));
+        $isDosen = $submitterType === 'dosen';
+
+        $fields = [
+            blank($pengajuan->nama_pengusul ?: $pengajuan->user?->name) ? 'nama pengusul' : null,
+            blank($pengajuan->email_pengusul ?: $pengajuan->user?->email) ? 'email pengusul' : null,
+            blank($pengajuan->instansi_mitra) ? 'instansi' : null,
+            blank($pengajuan->no_telepon) ? 'kontak / WhatsApp' : null,
+            blank($pengajuan->kebutuhan) ? ($isDosen ? 'deskripsi kegiatan' : 'kebutuhan PKM') : null,
+            blank($pengajuan->provinsi) ? 'provinsi' : null,
+            blank($pengajuan->kota_kabupaten) ? 'kota / kabupaten' : null,
+            blank($pengajuan->surat_permohonan) ? 'surat permohonan' : null,
+        ];
+
+        if ($isDosen) {
+            $rabItems = collect($pengajuan->rab_items ?? [])
+                ->filter(fn ($item) => filled(data_get($item, 'nama_item')) && (float) data_get($item, 'jumlah', 0) > 0)
+                ->values();
+
+            $fields = array_merge($fields, [
+                blank($pengajuan->judul_kegiatan) ? 'judul kegiatan PKM' : null,
+                $rabItems->isEmpty() ? 'rincian RAB' : null,
+                blank($pengajuan->sumber_dana)
+                    && ! $pengajuan->dana_perguruan_tinggi
+                    && ! $pengajuan->dana_pemerintah
+                    && ! $pengajuan->dana_lembaga_dalam
+                    && ! $pengajuan->dana_lembaga_luar ? 'sumber dana' : null,
+            ]);
+        }
+
+        return array_values(array_filter($fields));
     }
 
     /**

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
+import type { PageProps } from '@/types';
 
 // Import Specific Styling for Login
 import '../../../css/login.css';
@@ -8,13 +9,21 @@ import '../../../css/login.css';
 type AuthStep = 'nip-entry' | 'form-expand';
 type AuthMode = 'login' | 'register';
 
-export default function LoginDosenPortal(): JSX.Element {
+interface LoginDosenPortalProps {
+    initialNip?: string | null;
+    autoCheck?: boolean;
+}
+
+export default function LoginDosenPortal({ initialNip = null, autoCheck = false }: LoginDosenPortalProps) {
+    const { props } = usePage<PageProps & { flash?: { success?: string | null; error?: string | null } }>();
+    const flash = props.flash ?? {};
     const [step, setStep] = useState<AuthStep>('nip-entry');
     const [mode, setMode] = useState<AuthMode>('login');
     const [nipStatus, setNipStatus] = useState<{
-        status: 'idle' | 'checking' | 'registered' | 'claimable' | 'error';
+        status: 'idle' | 'checking' | 'registered' | 'claimable' | 'not_found' | 'error';
         message?: string;
     }>({ status: 'idle' });
+    const [hasAutoChecked, setHasAutoChecked] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         nip: '',
@@ -23,25 +32,55 @@ export default function LoginDosenPortal(): JSX.Element {
         password: '',
         password_confirmation: '',
         remember: false,
+        login_source: 'dosen',
     });
 
-    const handleNipCheck = async () => {
-        if (data.nip.length < 8) return;
-
+    const verifyNip = async (nipValue: string) => {
+        if (nipValue.length !== 18) return;
         setNipStatus({ status: 'checking' });
+
         try {
-            const response = await axios.post('/check-nip', { nip: data.nip });
+            const response = await axios.post('/check-nip', { nip: nipValue });
             const result = response.data;
 
             if (result.status === 'registered') {
                 setNipStatus({ status: 'registered', message: result.message });
                 setMode('login');
-                setData((prev) => ({ ...prev, email: result.email, name: result.name }));
+                clearErrors();
+                setData((prev) => ({
+                    ...prev,
+                    nip: nipValue,
+                    email: result.email,
+                    name: result.name,
+                    password: '',
+                    password_confirmation: '',
+                }));
                 setStep('form-expand');
             } else if (result.status === 'claimable') {
                 setNipStatus({ status: 'claimable', message: result.message });
                 setMode('register');
-                setData((prev) => ({ ...prev, name: result.name }));
+                clearErrors();
+                setData((prev) => ({
+                    ...prev,
+                    nip: nipValue,
+                    name: result.name,
+                    email: '',
+                    password: '',
+                    password_confirmation: '',
+                }));
+                setStep('form-expand');
+            } else if (result.status === 'not_found') {
+                setNipStatus({ status: 'not_found', message: result.message });
+                setMode('register');
+                clearErrors();
+                setData((prev) => ({
+                    ...prev,
+                    nip: nipValue,
+                    name: '',
+                    email: '',
+                    password: '',
+                    password_confirmation: '',
+                }));
                 setStep('form-expand');
             } else {
                 setNipStatus({ status: 'error', message: result.message });
@@ -51,6 +90,26 @@ export default function LoginDosenPortal(): JSX.Element {
             setNipStatus({ status: 'error', message: 'Terjadi kesalahan sistem.' });
         }
     };
+
+    const handleNipCheck = async () => {
+        await verifyNip(data.nip);
+    };
+
+    useEffect(() => {
+        if (!initialNip || !autoCheck || hasAutoChecked) {
+            return;
+        }
+
+        const sanitizedNip = initialNip.replace(/\D/g, '').slice(0, 18);
+        if (sanitizedNip.length !== 18) {
+            setHasAutoChecked(true);
+            return;
+        }
+
+        setData((prev) => ({ ...prev, nip: sanitizedNip }));
+        setHasAutoChecked(true);
+        void verifyNip(sanitizedNip);
+    }, [autoCheck, hasAutoChecked, initialNip]);
 
     const validateEmailDomain = () => {
         if (!data.email.endsWith('@poltekparmakassar.ac.id')) {
@@ -66,7 +125,7 @@ export default function LoginDosenPortal(): JSX.Element {
             return;
         }
 
-        const endpoint = mode === 'login' ? '/login' : '/register';
+        const endpoint = mode === 'login' ? '/login' : '/register?role=dosen&source=portal-dosen';
         post(endpoint, {
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -99,6 +158,20 @@ export default function LoginDosenPortal(): JSX.Element {
                         <h1 className="login-title">Verifikasi Identitas</h1>
                         <p className="login-subtitle">Masukkan NIP Anda untuk melanjutkan akses portal.</p>
 
+                        {flash.error && (
+                            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-800">
+                                <div className="font-semibold">Akses login tidak sesuai.</div>
+                                <div className="mt-1 text-red-700">{flash.error}</div>
+                            </div>
+                        )}
+
+                        {flash.success && (
+                            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[12.5px] text-emerald-800">
+                                <div className="font-semibold">Akun dosen berhasil dibuat.</div>
+                                <div className="mt-1 text-emerald-700">{flash.success}</div>
+                            </div>
+                        )}
+
                         <form onSubmit={submit}>
                             {/* NIP Input */}
                             <div className="input-group">
@@ -108,17 +181,22 @@ export default function LoginDosenPortal(): JSX.Element {
                                         type="text"
                                         id="nip"
                                         name="nip"
-                                        placeholder="Contoh: 19850101XXXXXXXX"
+                                        placeholder="Contoh: 198501012010011001"
                                         value={data.nip}
                                         onChange={(e) => {
-                                            setData('nip', e.target.value);
-                                            if (step === 'form-expand') setStep('nip-entry');
+                                            setData('nip', e.target.value.replace(/\D/g, '').slice(0, 18));
+                                            if (step === 'form-expand') {
+                                                setStep('nip-entry');
+                                                setNipStatus({ status: 'idle' });
+                                            }
                                         }}
+                                        inputMode="numeric"
+                                        maxLength={18}
                                         disabled={nipStatus.status === 'checking'}
                                         required
                                     />
                                     <i className="fa-solid fa-id-card input-icon"></i>
-                                    {data.nip.length >= 8 && step === 'nip-entry' && (
+                                    {data.nip.length === 18 && step === 'nip-entry' && (
                                         <button
                                             type="button"
                                             onClick={handleNipCheck}
@@ -129,11 +207,12 @@ export default function LoginDosenPortal(): JSX.Element {
                                     )}
                                 </div>
                                 {nipStatus.message && (
-                                    <div className={`nip-check-badge mt-2 ${nipStatus.status === 'error' ? 'error' : ''}`}>
-                                        <i className={`fa-solid ${nipStatus.status === 'error' ? 'fa-circle-xmark' : 'fa-circle-check'}`}></i>
+                                    <div className={`nip-check-badge mt-2 ${nipStatus.status === 'error' || nipStatus.status === 'not_found' ? 'error' : ''}`}>
+                                        <i className={`fa-solid ${nipStatus.status === 'error' || nipStatus.status === 'not_found' ? 'fa-circle-xmark' : 'fa-circle-check'}`}></i>
                                         {nipStatus.message}
                                     </div>
                                 )}
+                                {errors.nip && <span className="invalid-feedback">{errors.nip}</span>}
                             </div>
 
                             {/* Expanded Form Section */}
@@ -143,7 +222,13 @@ export default function LoginDosenPortal(): JSX.Element {
                                         Informasi Akun {mode === 'register' ? 'Baru' : ''}
                                     </div>
 
-                                    {/* Name Field (Readonly if claimable) */}
+                                    {mode === 'register' && nipStatus.status === 'not_found' && (
+                                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-700">
+                                            NIP ini belum memiliki akun dosen. Lengkapi form berikut untuk membuat akun baru dengan NIP tersebut.
+                                        </div>
+                                    )}
+
+                                    {/* Name Field */}
                                     <div className="input-group">
                                         <label htmlFor="name">Nama Lengkap</label>
                                         <div className="input-wrapper">
@@ -151,11 +236,14 @@ export default function LoginDosenPortal(): JSX.Element {
                                                 type="text"
                                                 id="name"
                                                 value={data.name}
-                                                readOnly
-                                                className="bg-white/50"
+                                                onChange={(e) => setData('name', e.target.value)}
+                                                readOnly={mode === 'login' || nipStatus.status === 'claimable'}
+                                                className={mode === 'login' || nipStatus.status === 'claimable' ? 'bg-white/50' : ''}
+                                                required
                                             />
                                             <i className="fa-solid fa-user input-icon"></i>
                                         </div>
+                                        {errors.name && <span className="invalid-feedback">{errors.name}</span>}
                                     </div>
 
                                     {/* Email Field */}

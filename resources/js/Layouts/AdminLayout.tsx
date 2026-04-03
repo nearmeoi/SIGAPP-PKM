@@ -47,7 +47,8 @@ const navItems: NavItem[] = [
     },
     { label: 'Arsip', href: '/admin/arsip', icon: Folder },
     { label: 'Testimoni', href: '/admin/testimoni', icon: MessageSquare },
-    ];
+    { label: 'Atur Template', href: '/admin/templates', icon: FileText },
+];
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     const { url, props } = usePage();
@@ -148,11 +149,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                                 <div key={item.label} className="mt-2">
                                     <button
                                         onClick={() => toggleDropdown(item.label)}
-                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[14px] font-bold transition-all duration-200 ${
-                                            active 
-                                            ? 'text-white bg-white/10' 
-                                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                                        }`}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[14px] font-bold transition-all duration-200 ${active
+                                                ? 'text-white bg-white/10'
+                                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <Icon size={18} className={active ? 'text-poltekpar-gold' : 'text-white/40'} />
@@ -169,11 +169,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                                                     <Link
                                                         key={child.label}
                                                         href={child.href}
-                                                        className={`block px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 ${
-                                                            childIsActive
-                                                            ? 'text-poltekpar-gold bg-white/5'
-                                                            : 'text-white/50 hover:text-white hover:bg-white/5'
-                                                        }`}
+                                                        className={`block px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 ${childIsActive
+                                                                ? 'text-poltekpar-gold bg-white/5'
+                                                                : 'text-white/50 hover:text-white hover:bg-white/5'
+                                                            }`}
                                                     >
                                                         {child.label}
                                                     </Link>
@@ -189,11 +188,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                             <Link
                                 key={item.label}
                                 href={item.href || '#'}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-bold transition-all duration-300 relative group ${
-                                    active
-                                    ? 'bg-poltekpar-primary text-white shadow-lg shadow-poltekpar-primary/20 translate-x-1'
-                                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-bold transition-all duration-300 relative group ${active
+                                        ? 'bg-poltekpar-primary text-white shadow-lg shadow-poltekpar-primary/20 translate-x-1'
+                                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                                    }`}
                             >
                                 <Icon size={18} className={active ? 'text-white' : 'text-white/40 group-hover:text-white transition-colors'} />
                                 {item.label}

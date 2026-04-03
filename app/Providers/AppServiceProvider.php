@@ -20,11 +20,14 @@ class AppServiceProvider extends ServiceProvider
     {
         // Inject YEAR() function for local SQLite compatibility
         if (DB::connection() instanceof SQLiteConnection) {
-            DB::connection()->getPdo()->sqliteCreateFunction('YEAR', function ($string) {
+            /** @var mixed $pdo */
+            $pdo = DB::connection()->getPdo();
+
+            $pdo->sqliteCreateFunction('YEAR', function ($string) {
                 return substr($string, 0, 4);
             }, 1);
 
-            DB::connection()->getPdo()->sqliteCreateFunction('FIELD', function () {
+            $pdo->sqliteCreateFunction('FIELD', function () {
                 $args = func_get_args();
                 if (count($args) < 2)
                     return 0;

@@ -9,6 +9,7 @@ use App\Models\Pengajuan;
 use App\Models\TimKegiatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PengajuanUserController extends Controller
@@ -44,13 +45,19 @@ class PengajuanUserController extends Controller
                     'proposal' => $p->proposal,
                     'surat_permohonan' => $p->surat_permohonan,
                     'rab' => $p->rab,
+                    'rab_items' => $p->rab_items ?? [],
                     'sumber_dana' => $p->sumber_dana,
                     'total_anggaran' => $p->total_anggaran,
+                    'dana_perguruan_tinggi' => $p->dana_perguruan_tinggi,
+                    'dana_pemerintah' => $p->dana_pemerintah,
+                    'dana_lembaga_dalam' => $p->dana_lembaga_dalam,
+                    'dana_lembaga_luar' => $p->dana_lembaga_luar,
                     'tgl_mulai' => optional($p->tgl_mulai)->format('Y-m-d'),
                     'tgl_selesai' => optional($p->tgl_selesai)->format('Y-m-d'),
+                    'tipe_pengusul' => $this->resolveSubmitterType($p),
                     'jenis_pkm' => $p->jenisPkm ? $p->jenisPkm->nama_jenis : null,
-                    'nama_pengusul' => $p->user ? $p->user->name : '',
-                    'email_pengusul' => $p->user ? $p->user->email : '',
+                    'nama_pengusul' => $this->resolveSubmitterName($p),
+                    'email_pengusul' => $this->resolveSubmitterEmail($p),
                     'kebutuhan' => $p->kebutuhan,
                     'tim_kegiatan' => $p->timKegiatan->map(fn($t) => [
                         'nama' => $t->pegawai ? $t->pegawai->nama_pegawai : $t->nama_mahasiswa,
@@ -84,6 +91,7 @@ class PengajuanUserController extends Controller
             'id_jenis_pkm' => 'nullable|exists:jenis_pkm,id_jenis_pkm',
             'judul_kegiatan' => 'required|string|max:255',
             'nama_dosen' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
             'instansi_mitra' => 'nullable|string|max:255',
             'no_telepon' => 'nullable|string|max:20',
             'provinsi' => 'required|string|max:100',
@@ -95,9 +103,13 @@ class PengajuanUserController extends Controller
             'total_anggaran' => 'nullable|numeric|min:0',
             'tgl_mulai' => 'nullable|date',
             'tgl_selesai' => 'nullable|date|after_or_equal:tgl_mulai',
-            'proposal_url' => 'nullable|string|max:2048',
-            'surat_permohonan_url' => 'nullable|string|max:2048',
+            'surat_proposal' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'surat_permohonan' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
             'rab' => 'nullable|string|max:2048',
+            'rab_items' => 'nullable|array',
+            'rab_items.*.nama_item' => 'nullable|string|max:255',
+            'rab_items.*.jumlah' => 'nullable|numeric|min:1',
+            'rab_items.*.harga' => 'nullable|numeric|min:0',
             'dosen_terlibat' => 'nullable|array',
             'dosen_terlibat.*' => 'string|max:255',
             'staff_terlibat' => 'nullable|array',
@@ -108,25 +120,45 @@ class PengajuanUserController extends Controller
 
         $defaultJenisPkm = JenisPkm::first();
 
+        $suratPermohonanUrl = null;
+        $suratProposalUrl = null;
+
+        if ($request->hasFile('surat_permohonan')) {
+            $suratPermohonanUrl = '/storage/' . $request->file('surat_permohonan')->store('pengajuan/dokumen', 'public');
+        }
+        if ($request->hasFile('surat_proposal')) {
+            $suratProposalUrl = '/storage/' . $request->file('surat_proposal')->store('pengajuan/dokumen', 'public');
+        }
+
+        $rabItems = $this->normalizeRabItems($request->input('rab_items', []));
+
         $pengajuan = Pengajuan::create([
             'id_user' => $user->id_user,
             'id_jenis_pkm' => $request->id_jenis_pkm ?? $defaultJenisPkm?->id_jenis_pkm ?? 1,
+            'tipe_pengusul' => 'dosen',
             'provinsi' => $request->provinsi,
             'kota_kabupaten' => $request->kota_kabupaten,
             'kecamatan' => $request->kecamatan ?? '',
             'kelurahan_desa' => $request->kelurahan_desa ?? '',
             'alamat_lengkap' => $request->alamat_lengkap ?? '',
             'judul_kegiatan' => $request->judul_kegiatan,
+            'nama_pengusul' => $request->nama_dosen,
+            'email_pengusul' => $request->email ?: $user->email,
             'kebutuhan' => $request->kebutuhan ?? '',
             'instansi_mitra' => $request->instansi_mitra ?? '',
             'no_telepon' => $request->no_telepon ?? '',
             'sumber_dana' => $request->sumber_dana ?? '',
-            'total_anggaran' => $request->total_anggaran ?? 0,
+            'total_anggaran' => $rabItems !== [] ? collect($rabItems)->sum('total') : ($request->total_anggaran ?? 0),
+            'dana_perguruan_tinggi' => $request->dana_perguruan_tinggi,
+            'dana_pemerintah' => $request->dana_pemerintah,
+            'dana_lembaga_dalam' => $request->dana_lembaga_dalam,
+            'dana_lembaga_luar' => $request->dana_lembaga_luar,
             'tgl_mulai' => $request->tgl_mulai,
             'tgl_selesai' => $request->tgl_selesai,
-            'proposal' => $request->proposal_url ?? '',
-            'surat_permohonan' => $request->surat_permohonan_url ?? '',
+            'proposal' => $suratProposalUrl ?? '',
+            'surat_permohonan' => $suratPermohonanUrl ?? '',
             'rab' => $request->rab ?? '',
+            'rab_items' => $rabItems,
             'status_pengajuan' => 'diproses',
         ]);
 
@@ -205,12 +237,15 @@ class PengajuanUserController extends Controller
         Pengajuan::create([
             'id_user' => Auth::id(),
             'id_jenis_pkm' => $defaultJenisPkm?->id_jenis_pkm ?? 1,
+            'tipe_pengusul' => 'masyarakat',
             'provinsi' => $request->provinsi,
             'kota_kabupaten' => $request->kota_kabupaten,
             'kecamatan' => $request->kecamatan ?? '',
             'kelurahan_desa' => $request->kelurahan_desa ?? '',
             'alamat_lengkap' => $request->alamat_lengkap ?? '',
             'judul_kegiatan' => 'Pengajuan PKM dari ' . $request->institution,
+            'nama_pengusul' => $request->name,
+            'email_pengusul' => $request->email,
             'kebutuhan' => $request->needs,
             'instansi_mitra' => $request->institution,
             'no_telepon' => $request->whatsapp,
@@ -240,5 +275,68 @@ class PengajuanUserController extends Controller
                 }
             }
         }
+    }
+
+    private function normalizeRabItems(array $items): array
+    {
+        return collect($items)
+            ->map(function ($item) {
+                $namaItem = trim((string) data_get($item, 'nama_item', ''));
+                $jumlah = (float) data_get($item, 'jumlah', 0);
+                $harga = (float) data_get($item, 'harga', 0);
+
+                if ($namaItem === '' || $jumlah <= 0) {
+                    return null;
+                }
+
+                return [
+                    'nama_item' => $namaItem,
+                    'jumlah' => $jumlah,
+                    'harga' => $harga,
+                    'total' => round($jumlah * $harga, 2),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function resolveSubmitterType(Pengajuan $pengajuan): string
+    {
+        $storedType = Str::lower((string) $pengajuan->tipe_pengusul);
+        if (in_array($storedType, ['dosen', 'masyarakat'], true)) {
+            return $storedType;
+        }
+
+        return Str::lower((string) $pengajuan->user?->role) === 'dosen' ? 'dosen' : 'masyarakat';
+    }
+
+    private function resolveSubmitterName(Pengajuan $pengajuan): string
+    {
+        if (!empty($pengajuan->nama_pengusul)) {
+            return $pengajuan->nama_pengusul;
+        }
+
+        if ($this->resolveSubmitterType($pengajuan) === 'dosen') {
+            $ketuaTim = $pengajuan->timKegiatan->first(function ($tim) {
+                return Str::contains(Str::lower((string) $tim->peran_tim), 'ketua');
+            });
+
+            $ketuaName = $ketuaTim?->pegawai?->nama_pegawai ?? $ketuaTim?->nama_mahasiswa;
+            if (!empty($ketuaName)) {
+                return $ketuaName;
+            }
+        }
+
+        return $pengajuan->user?->name ?? '';
+    }
+
+    private function resolveSubmitterEmail(Pengajuan $pengajuan): string
+    {
+        if (!empty($pengajuan->email_pengusul)) {
+            return $pengajuan->email_pengusul;
+        }
+
+        return $pengajuan->user?->email ?? '';
     }
 }

@@ -143,6 +143,9 @@ Route::middleware('guest')->group(function () {
     })->name('verification.notice');
 });
 
+// Public Template Downloader (Accessible for guests and authenticated users)
+Route::get('/template/{jenis}', [\App\Http\Controllers\Admin\TemplateDokumenController::class, 'downloadTemplate'])->name('template.download');
+
 // User Pages (Pengajuan & Status)
 Route::get('/pengajuan', [PengajuanUserController::class, 'index'])->name('pengajuan.form');
 Route::get('/cek-status', [PengajuanUserController::class, 'index'])->name('pengajuan.status');
@@ -170,6 +173,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/pengajuan/export', [PengajuanController::class, 'export'])->name('pengajuan.export');
         Route::get('/pengajuan', [PengajuanController::class, 'index'])->name('pengajuan.index');
         Route::post('/pengajuan/{id}/tim', [PengajuanController::class, 'storeTim'])->name('pengajuan.store_tim');
+        Route::put('/pengajuan/{id}/tim', [PengajuanController::class, 'syncTim'])->name('pengajuan.sync_tim');
         Route::get('/pengajuan/{id}', [PengajuanController::class, 'show'])->name('pengajuan.show');
         Route::put('/pengajuan/{id}', [PengajuanController::class, 'update'])->name('pengajuan.update');
         Route::delete('/pengajuan/{id}', [PengajuanController::class, 'destroy'])->name('pengajuan.destroy');
@@ -207,6 +211,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/master/jenis-pkm', [MasterDataController::class, 'storeJenis'])->name('master.jenis.store');
         Route::put('/master/jenis-pkm/{id}', [MasterDataController::class, 'updateJenis'])->name('master.jenis.update');
         Route::delete('/master/jenis-pkm/{id}', [MasterDataController::class, 'destroyJenis'])->name('master.jenis.destroy');
+
+        // Template Dokumen
+        Route::get('/templates', [\App\Http\Controllers\Admin\TemplateDokumenController::class, 'index'])->name('templates.index');
+        Route::post('/templates', [\App\Http\Controllers\Admin\TemplateDokumenController::class, 'store'])->name('templates.store');
+        Route::delete('/templates/{jenis}', [\App\Http\Controllers\Admin\TemplateDokumenController::class, 'destroy'])->name('templates.destroy');
 
         // Arsip CRUD
         Route::get('/arsip', [ArsipController::class, 'index'])->name('arsip.index');

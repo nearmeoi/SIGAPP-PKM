@@ -46,7 +46,7 @@ export default function Pengajuan({
     role = 'masyarakat',
     initialView = 'form',
     userSubmissions = null,
-}: PengajuanProps): JSX.Element {
+}: PengajuanProps) {
     const resolvedRole = role === 'dosen' ? 'dosen' : 'masyarakat';
 
     // Data pengajuan user — diinisialisasi dari props server
