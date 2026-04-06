@@ -7,6 +7,8 @@ use App\Models\Arsip;
 use App\Models\JenisPkm;
 use App\Models\Pengajuan;
 use App\Models\Testimoni;
+use App\Models\Kontak;
+use App\Models\EvaluasiSistem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -24,8 +26,11 @@ class LandingController extends Controller
                 'nama' => $p->judul_kegiatan,
                 'tahun' => $p->created_at?->year ?? date('Y'),
                 'jenis_pkm' => $p->jenisPkm?->nama_jenis ?? '',
-                'status' => ($p->status_pengajuan === 'selesai' || $p->aktivitas?->status_pelaksanaan === 'selesai') ? 'selesai' :
-                    (in_array($p->status_pengajuan, ['berlangsung', 'diterima']) ? 'berlangsung' :
+                'warna_icon' => $p->jenisPkm?->warna_icon ?? '',
+                'status' => $p->aktivitas
+                    ? ($p->aktivitas->status_pelaksanaan === 'selesai' ? 'selesai'
+                        : (in_array($p->aktivitas->status_pelaksanaan, ['berjalan', 'persiapan']) ? 'berlangsung' : 'belum_mulai'))
+                    : (in_array($p->status_pengajuan, ['diterima', 'berlangsung']) ? 'belum_mulai' : 
                         ($p->status_pengajuan === 'belum_diajukan' ? 'belum_mulai' : 'ada_pengajuan')),
                 'deskripsi' => $p->kebutuhan ?? '',
                 'thumbnail' => $p->aktivitas?->url_thumbnail ?? '',
@@ -103,6 +108,7 @@ class LandingController extends Controller
             'listJenisPkm' => $listJenisPkm,
             'chartStats' => $chartStats,
             'testimonials' => $testimonials,
+            'listKontak' => Kontak::orderBy('created_at', 'asc')->get()
         ]);
     }
 
@@ -205,6 +211,7 @@ class LandingController extends Controller
             'nama_pemberi' => 'required|string|max:255',
             'rating' => 'required|integer|min:1|max:5',
             'pesan_ulasan' => 'nullable|string|max:2000',
+            'masukan' => 'nullable|string|max:2000',
         ]);
 
         Testimoni::create([
@@ -212,6 +219,7 @@ class LandingController extends Controller
             'nama_pemberi' => $request->nama_pemberi,
             'rating' => $request->rating,
             'pesan_ulasan' => $request->pesan_ulasan,
+            'masukan' => $request->masukan,
         ]);
 
         return redirect()->back()->with('success', 'Testimoni berhasil dikirim.');
@@ -226,6 +234,7 @@ class LandingController extends Controller
             'nama_pemberi' => 'required|string|max:255',
             'rating' => 'required|integer|min:1|max:5',
             'pesan_ulasan' => 'nullable|string|max:2000',
+            'masukan' => 'nullable|string|max:2000',
         ]);
 
         Testimoni::create([
@@ -233,8 +242,28 @@ class LandingController extends Controller
             'nama_pemberi' => $request->nama_pemberi,
             'rating' => $request->rating,
             'pesan_ulasan' => $request->pesan_ulasan,
+            'masukan' => $request->masukan,
         ]);
 
         return redirect()->back()->with('success', 'Testimoni berhasil dikirim.');
+    }
+
+    public function storeEvaluasiSistem(Request $request)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'asal_instansi' => 'nullable|string|max:255',
+            'no_telp' => 'required|string|max:50',
+            'q1' => 'required|integer|min:1|max:5',
+            'q2' => 'required|integer|min:1|max:5',
+            'q3' => 'required|integer|min:1|max:5',
+            'q4' => 'required|integer|min:1|max:5',
+            'q5' => 'required|integer|min:1|max:5',
+            'masukan' => 'nullable|string|max:1000'
+        ]);
+
+        EvaluasiSistem::create($request->all());
+
+        return redirect()->back()->with('success', 'Terima kasih atas evaluasi Anda.');
     }
 }

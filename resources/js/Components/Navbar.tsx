@@ -25,6 +25,7 @@ const getNavLinks = (user: User | null): NavLink[] => {
 
     if (!user) {
         navLinks.push({ label: 'Panduan', href: '/panduan', icon: 'fa-book-open' });
+        navLinks.push({ label: 'Evaluasi Sistem', href: '/evaluasi', icon: 'fa-star' });
         return navLinks;
     }
 
@@ -35,6 +36,7 @@ const getNavLinks = (user: User | null): NavLink[] => {
     navLinks.push(
         { label: 'Cek Status', href: '/cek-status', icon: 'fa-magnifying-glass' },
         { label: 'Pengajuan', href: '/pengajuan', icon: 'fa-file-circle-plus' },
+        { label: 'Feedback', href: '/evaluasi', icon: 'fa-star' },
         { label: 'Panduan', href: '/panduan', icon: 'fa-book-open' }
     );
 

@@ -4,7 +4,7 @@ import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
 import { AlertCircle, ArrowLeft, CheckCircle, ExternalLink, File, Folder, MapPin, Plus, RotateCcw, Save, SquarePen, Trash2, User, Users, Wallet, X } from 'lucide-react';
 
-interface Pegawai { id_pegawai: number; nama_pegawai: string; nip?: string; }
+interface Pegawai { id_pegawai: number; nama_pegawai: string; nip?: string; role?: string | null; }
 interface TimKegiatan { id_tim: number; nama_mahasiswa?: string; peran_tim?: string; pegawai?: { nama_pegawai: string }; }
 interface Aktivitas { id_aktivitas: number; status_pelaksanaan: string; catatan_pelaksanaan?: string; }
 interface Arsip { id_arsip: number; nama_dokumen: string; jenis_arsip: string; url_dokumen?: string; }
@@ -60,6 +60,7 @@ interface DraftState {
     no_telepon: string;
     judul_kegiatan: string;
     kebutuhan: string;
+    id_jenis_pkm: number;
     provinsi: string;
     kota_kabupaten: string;
     kecamatan: string;
@@ -74,10 +75,14 @@ interface DraftState {
     surat_permohonan: string;
     proposal: string;
     rab: string;
+    ketua_tim: string;
     dosen_terlibat: string[];
     staff_terlibat: string[];
     mahasiswa_terlibat: string[];
     rab_items: RabItem[];
+    link_tambahan: {name: string; url: string}[];
+    file_surat_permohonan: File | null;
+    file_proposal: File | null;
 }
 
 interface DialogState {
@@ -139,6 +144,7 @@ const buildDraft = (pengajuan: Pengajuan, ketuaId?: number): DraftState => ({
     no_telepon: pengajuan.no_telepon || '',
     judul_kegiatan: pengajuan.judul_kegiatan || '',
     kebutuhan: pengajuan.kebutuhan || '',
+    id_jenis_pkm: pengajuan.jenis_pkm?.id_jenis_pkm || 1,
     provinsi: pengajuan.provinsi || '',
     kota_kabupaten: pengajuan.kota_kabupaten || '',
     kecamatan: pengajuan.kecamatan || '',
@@ -153,10 +159,14 @@ const buildDraft = (pengajuan: Pengajuan, ketuaId?: number): DraftState => ({
     surat_permohonan: pengajuan.surat_permohonan || '',
     proposal: pengajuan.proposal || '',
     rab: pengajuan.rab || '',
+    ketua_tim: ketuaId ? (getName(pengajuan.tim_kegiatan?.find(m => m.id_tim === ketuaId)) || getSubmitterName(pengajuan)) : (getType(pengajuan) === 'dosen' ? getSubmitterName(pengajuan) : ''),
     dosen_terlibat: roleItems(pengajuan.tim_kegiatan, 'dosen', ketuaId).length ? roleItems(pengajuan.tim_kegiatan, 'dosen', ketuaId) : [''],
     staff_terlibat: roleItems(pengajuan.tim_kegiatan, 'staff', ketuaId).length ? roleItems(pengajuan.tim_kegiatan, 'staff', ketuaId) : [''],
     mahasiswa_terlibat: roleItems(pengajuan.tim_kegiatan, 'mahasiswa', ketuaId).length ? roleItems(pengajuan.tim_kegiatan, 'mahasiswa', ketuaId) : [''],
     rab_items: normalizeRabItems(pengajuan.rab_items).length ? normalizeRabItems(pengajuan.rab_items) : [emptyRabItem()],
+    link_tambahan: linksOf(pengajuan.rab).length ? linksOf(pengajuan.rab) : [{name: '', url: ''}],
+    file_surat_permohonan: null,
+    file_proposal: null,
 });
 
 const Card = ({ title, icon, action, children }: { title: string; icon?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) => (
@@ -204,6 +214,7 @@ const EditableTeam = ({
     onChange,
     onAdd,
     onRemove,
+    suggestions = [],
 }: {
     title: string;
     items: string[];
@@ -211,13 +222,22 @@ const EditableTeam = ({
     onChange: (index: number, value: string) => void;
     onAdd: () => void;
     onRemove: (index: number) => void;
-}) => (
+    suggestions?: string[];
+}) => {
+    const listId = `list-${title.replace(/\s+/g, '-').toLowerCase()}`;
+    return (
     <div className="space-y-3">
         <div className="text-[13px] font-bold text-slate-600">{title}</div>
+        {suggestions.length > 0 && (
+            <datalist id={listId}>
+                {suggestions.map(s => <option key={s} value={s} />)}
+            </datalist>
+        )}
         {(items.length ? items : ['']).map((item, index) => (
             <div key={`${title}-${index}`} className="flex items-center gap-2">
                 <input
                     type="text"
+                    list={suggestions.length ? listId : undefined}
                     value={item}
                     onChange={(e) => onChange(index, e.target.value)}
                     placeholder={placeholder}
@@ -241,7 +261,8 @@ const EditableTeam = ({
             Tambah
         </button>
     </div>
-);
+    );
+};
 
 const RabTable = ({ items }: { items: RabItem[] }) => (
     items.length ? (
@@ -312,21 +333,32 @@ const EditableRabTable = ({
                                 </td>
                                 <td className="px-4 py-3">
                                     <input
-                                        type="number"
-                                        min="1"
-                                        value={Number(item.jumlah || 0)}
-                                        onChange={(e) => onChange(index, 'jumlah', e.target.value)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={item.jumlah === 0 || item.jumlah === undefined || item.jumlah === null ? '' : String(item.jumlah)}
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/\D/g, '');
+                                            onChange(index, 'jumlah', raw);
+                                        }}
+                                        placeholder="0"
                                         className="min-h-[40px] w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-poltekpar-primary"
                                     />
                                 </td>
                                 <td className="px-4 py-3">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={Number(item.harga || 0)}
-                                        onChange={(e) => onChange(index, 'harga', e.target.value)}
-                                        className="min-h-[40px] w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-poltekpar-primary"
-                                    />
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">Rp</span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={item.harga === 0 || item.harga === undefined || item.harga === null ? '' : Number(item.harga).toLocaleString('id-ID')}
+                                            onChange={(e) => {
+                                                const raw = e.target.value.replace(/\D/g, '');
+                                                onChange(index, 'harga', raw);
+                                            }}
+                                            placeholder="0"
+                                            className="min-h-[40px] w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 outline-none focus:border-poltekpar-primary"
+                                        />
+                                    </div>
                                 </td>
                                 <td className="px-4 py-3 font-semibold text-poltekpar-primary">{fmtMoney(total)}</td>
                                 <td className="px-4 py-3 text-right">
@@ -369,27 +401,61 @@ const EditField = ({
     wide?: boolean;
     type?: string;
     textarea?: boolean;
-}) => (
-    <div className={`${wide ? 'md:col-span-2' : ''} space-y-1.5`}>
-        <div className="text-xs font-semibold text-slate-700">{label}</div>
-        {textarea ? (
-            <textarea
-                value={String(value ?? '')}
-                onChange={(e) => onChange(e.target.value)}
-                className="min-h-[88px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
-            />
-        ) : (
-            <input
-                type={type}
-                value={String(value ?? '')}
-                onChange={(e) => onChange(e.target.value)}
-                className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
-            />
-        )}
-    </div>
-);
+}) => {
+    if (type === 'currency') {
+        const numVal = Number(value || 0);
+        const displayVal = numVal === 0 ? '' : numVal.toLocaleString('id-ID');
+        return (
+            <div className={`${wide ? 'md:col-span-2' : ''} space-y-1.5`}>
+                <div className="text-xs font-semibold text-slate-700">{label}</div>
+                <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">Rp</span>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={displayVal}
+                        onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            onChange(raw);
+                        }}
+                        placeholder="0"
+                        className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
+                    />
+                </div>
+            </div>
+        );
+    }
 
-export default function Detail({ pengajuan }: Props) {
+    return (
+        <div className={`${wide ? 'md:col-span-2' : ''} space-y-1.5`}>
+            <div className="text-xs font-semibold text-slate-700">{label}</div>
+            {textarea ? (
+                <textarea
+                    value={String(value ?? '')}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="min-h-[88px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
+                />
+            ) : (
+                <input
+                    type={type}
+                    value={String(value ?? '')}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
+                />
+            )}
+        </div>
+    );
+};
+
+export default function Detail({ pengajuan, listPegawai, listJenisPkm }: Props) {
+    React.useEffect(() => {
+        const handler = (e: ErrorEvent) => {
+            alert('JS Error: ' + e.message);
+        };
+        window.addEventListener('error', handler);
+        return () => window.removeEventListener('error', handler);
+    }, []);
+
     const [catatan, setCatatan] = useState(pengajuan.catatan_admin || '');
     const [selectedAction, setSelectedAction] = useState('');
     const [catatanError, setCatatanError] = useState('');
@@ -406,6 +472,7 @@ export default function Detail({ pengajuan }: Props) {
     const rabItems = useMemo(() => normalizeRabItems(pengajuan.rab_items), [pengajuan.rab_items]);
     const draftRabItems = useMemo(() => normalizeRabItems(draft.rab_items), [draft.rab_items]);
     const draftTotalRab = useMemo(() => draftRabItems.reduce((sum, item) => sum + Number(item.total || 0), 0), [draftRabItems]);
+    const hasKetua = (pengajuan.tim_kegiatan || []).some(m => String(m.peran_tim || '').toLowerCase().includes('ketua'));
     const missing = [
         !submitterName || submitterName === '-' ? 'Nama Pengusul' : '',
         !submitterEmail || submitterEmail === '-' ? 'Email Pengusul' : '',
@@ -415,17 +482,25 @@ export default function Detail({ pengajuan }: Props) {
         !pengajuan.provinsi ? 'Provinsi' : '',
         !pengajuan.kota_kabupaten ? 'Kota / Kabupaten' : '',
         !pengajuan.surat_permohonan ? 'Surat Permohonan' : '',
+        !hasKetua ? 'Ketua Tim PKM' : '',
+        (roleNames('dosen').length + roleNames('staff').length + roleNames('mahasiswa').length === 0) ? 'Tim Terlibat (Dosen/Staff/Mahasiswa)' : '',
+        rabItems.length === 0 ? 'Rincian RAB' : '',
         isDosen && !pengajuan.judul_kegiatan ? 'Judul Kegiatan PKM' : '',
-        isDosen && rabItems.length === 0 ? 'Rincian RAB' : '',
-        isDosen && !pengajuan.sumber_dana && !pengajuan.dana_perguruan_tinggi && !pengajuan.dana_pemerintah && !pengajuan.dana_lembaga_dalam && !pengajuan.dana_lembaga_luar ? 'Sumber Dana' : '',
-        isDosen && (roleNames('dosen').length + roleNames('staff').length + roleNames('mahasiswa').length === 0) ? 'Tim Terlibat (Dosen/Staff/Mahasiswa)' : '',
     ].filter(Boolean);
 
     const saveDecision = () => {
         if (!selectedAction) return;
         if (selectedAction === 'diterima' && missing.length > 0) {
-            // User requested to allow ACC even if data is incomplete
-            // Proceed without blocking
+            setConfirmDialog({
+                open: true,
+                title: 'Data Belum Lengkap',
+                message: `Pengajuan ini belum bisa diterima karena masih ada data yang kosong: ${missing.join(', ')}. Lengkapi dulu data tersebut sebelum menyetujui.`,
+                action: () => undefined,
+                variant: 'warning',
+                confirmLabel: 'Mengerti',
+                cancelLabel: 'Tutup',
+            });
+            return;
         }
         if (selectedAction === 'direvisi' && !catatan.trim()) {
             setCatatanError('Catatan revisi wajib diisi.');
@@ -446,11 +521,15 @@ export default function Detail({ pengajuan }: Props) {
         });
     };
 
-    const setDraftField = (field: keyof typeof draft, value: string) => {
+    const setDraftField = (field: keyof typeof draft, value: any) => {
         setDraft((prev) => ({ ...prev, [field]: value }));
     };
 
-    const setTeamFieldValue = (field: 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat', index: number, value: string) => {
+    const setTeamFieldValue = (field: 'ketua_tim' | 'dosen_terlibat' | 'staff_terlibat' | 'mahasiswa_terlibat', index: number, value: string) => {
+        if (field === 'ketua_tim') {
+            setDraft((prev) => ({ ...prev, ketua_tim: value }));
+            return;
+        }
         setDraft((prev) => {
             const items = [...prev[field]];
             items[index] = value;
@@ -501,17 +580,38 @@ export default function Detail({ pengajuan }: Props) {
         });
     };
 
-    const startEdit = (section: string) => setEditingSection(section);
+    const startEdit = (section: string) => {
+        try {
+            setEditingSection(section);
+        } catch (e: any) {
+            alert('Error at startEdit: ' + e.message);
+        }
+    };
     const cancelEdit = () => {
         setDraft(buildDraft(pengajuan, ketua?.id_tim));
         setEditingSection(null);
     };
 
     const saveSection = (section: string, payload: Record<string, any>, url?: string) => {
-        router.put(url || `/admin/pengajuan/${pengajuan.id_pengajuan}`, payload, {
+        const hasFiles = Object.values(payload).some(v => v instanceof window.File);
+        
+        const options = {
             preserveScroll: true,
             onSuccess: () => setEditingSection((current) => (current === section ? null : current)),
-        });
+            onError: (errors: any) => {
+                alert('Gagal menyimpan. Terdapat kesalahan validasi:\n' + Object.values(errors).join('\n'));
+            }
+        };
+
+        if (hasFiles) {
+            payload._method = 'put';
+            router.post(url || `/admin/pengajuan/${pengajuan.id_pengajuan}`, payload, {
+                ...options,
+                forceFormData: true
+            });
+        } else {
+            router.put(url || `/admin/pengajuan/${pengajuan.id_pengajuan}`, payload, options);
+        }
     };
 
     const sectionActions = (section: string, payload: Record<string, any>, url?: string) =>
@@ -596,17 +696,31 @@ export default function Detail({ pengajuan }: Props) {
                                 action={sectionActions('detail', {
                                     judul_kegiatan: draft.judul_kegiatan,
                                     kebutuhan: draft.kebutuhan,
+                                    id_jenis_pkm: draft.id_jenis_pkm,
                                 })}
                                 icon={<File size={16} className="text-slate-400" />}
                             >
                                 <div className="space-y-4">
                                     {editingSection === 'detail' ? (
                                         <>
+                                            <div className="md:col-span-2 space-y-1.5">
+                                                <div className="text-xs font-semibold text-slate-700">Jenis PKM</div>
+                                                <select
+                                                    value={draft.id_jenis_pkm}
+                                                    onChange={(e) => setDraftField('id_jenis_pkm', e.target.value)}
+                                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-poltekpar-primary"
+                                                >
+                                                    {listJenisPkm.map((jp) => (
+                                                        <option key={jp.id_jenis_pkm} value={jp.id_jenis_pkm}>{jp.nama_jenis}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <EditField label="Judul Kegiatan PKM" value={draft.judul_kegiatan} onChange={(v) => setDraftField('judul_kegiatan', v)} wide textarea />
                                             <EditField label="Kebutuhan / Deskripsi Singkat" value={draft.kebutuhan} onChange={(v) => setDraftField('kebutuhan', v)} wide textarea />
                                         </>
                                     ) : (
                                         <>
+                                            <Field label="Jenis PKM" value={pengajuan.jenis_pkm?.nama_jenis} wide />
                                             <Field label="Judul Kegiatan PKM" value={pengajuan.judul_kegiatan} wide />
                                             <Field label="Kebutuhan / Deskripsi Singkat" value={pengajuan.kebutuhan} wide />
                                         </>
@@ -647,6 +761,7 @@ export default function Detail({ pengajuan }: Props) {
                             <Card
                                 title="Tim Pelaksana"
                                 action={sectionActions('team', {
+                                    ketua_tim: draft.ketua_tim.trim(),
                                     dosen_terlibat: draft.dosen_terlibat.map((item) => item.trim()).filter(Boolean),
                                     staff_terlibat: draft.staff_terlibat.map((item) => item.trim()).filter(Boolean),
                                     mahasiswa_terlibat: draft.mahasiswa_terlibat.map((item) => item.trim()).filter(Boolean),
@@ -656,8 +771,9 @@ export default function Detail({ pengajuan }: Props) {
                                 {editingSection === 'team' ? (
                                     <div className="space-y-5">
                                         <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                                            {isDosen ? 'Ketua pengusul mengikuti data pada bagian Informasi Ketua Pengusul.' : 'Pengusul masyarakat tidak otomatis menjadi Ketua Tim. Admin harus mengisi anggota tim akademik.'} Admin dapat melengkapi anggota tim lainnya dari sini.
+                                            Admin dapat menyesuaikan anggota tim pelaksana dan memastikan siapa Ketua Tim.
                                         </div>
+                                        <EditField label="Ketua Tim PKM" value={draft.ketua_tim} onChange={(v) => setDraftField('ketua_tim', v)} />
                                         <EditableTeam
                                             title="Dosen Terlibat"
                                             items={draft.dosen_terlibat}
@@ -665,6 +781,7 @@ export default function Detail({ pengajuan }: Props) {
                                             onChange={(index, value) => setTeamFieldValue('dosen_terlibat', index, value)}
                                             onAdd={() => addTeamField('dosen_terlibat')}
                                             onRemove={(index) => removeTeamField('dosen_terlibat', index)}
+                                            suggestions={listPegawai?.filter(p => !p.role || p.role === 'dosen').map(p => p.nama_pegawai) || []}
                                         />
                                         <EditableTeam
                                             title="Staf Terlibat"
@@ -673,6 +790,7 @@ export default function Detail({ pengajuan }: Props) {
                                             onChange={(index, value) => setTeamFieldValue('staff_terlibat', index, value)}
                                             onAdd={() => addTeamField('staff_terlibat')}
                                             onRemove={(index) => removeTeamField('staff_terlibat', index)}
+                                            suggestions={listPegawai?.filter(p => !p.role || p.role === 'staff').map(p => p.nama_pegawai) || []}
                                         />
                                         <EditableTeam
                                             title="Mahasiswa Terlibat"
@@ -685,7 +803,7 @@ export default function Detail({ pengajuan }: Props) {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <Team title={isDosen ? "Ketua Pengusul" : "Perwakilan Masyarakat"} items={submitterName && submitterName !== '-' ? [submitterName] : []} />
+                                        <Team title="Ketua Tim PKM" items={draft.ketua_tim.trim() ? [draft.ketua_tim.trim()] : []} />
                                         <Team title="Dosen Terlibat" items={roleNames('dosen')} />
                                         <Team title="Staf Terlibat" items={roleNames('staff')} />
                                         <Team title="Mahasiswa Terlibat" items={roleNames('mahasiswa')} />
@@ -720,7 +838,6 @@ export default function Detail({ pengajuan }: Props) {
                             <Card
                                 title="Sumber Dana"
                                 action={sectionActions('funding', {
-                                    sumber_dana: draft.sumber_dana,
                                     dana_perguruan_tinggi: Number(draft.dana_perguruan_tinggi || 0),
                                     dana_pemerintah: Number(draft.dana_pemerintah || 0),
                                     dana_lembaga_dalam: Number(draft.dana_lembaga_dalam || 0),
@@ -731,15 +848,13 @@ export default function Detail({ pengajuan }: Props) {
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     {editingSection === 'funding' ? (
                                         <>
-                                            <EditField label="Sumber Dana Umum" value={draft.sumber_dana} onChange={(v) => setDraftField('sumber_dana', v)} wide />
-                                            <EditField label="Perguruan Tinggi" value={draft.dana_perguruan_tinggi} type="number" onChange={(v) => setDraftField('dana_perguruan_tinggi', v)} />
-                                            <EditField label="Pemerintah" value={draft.dana_pemerintah} type="number" onChange={(v) => setDraftField('dana_pemerintah', v)} />
-                                            <EditField label="Lembaga Dalam Negeri" value={draft.dana_lembaga_dalam} type="number" onChange={(v) => setDraftField('dana_lembaga_dalam', v)} />
-                                            <EditField label="Lembaga Luar Negeri" value={draft.dana_lembaga_luar} type="number" onChange={(v) => setDraftField('dana_lembaga_luar', v)} />
+                                            <EditField label="Perguruan Tinggi" value={draft.dana_perguruan_tinggi} type="currency" onChange={(v) => setDraftField('dana_perguruan_tinggi', v)} />
+                                            <EditField label="Pemerintah" value={draft.dana_pemerintah} type="currency" onChange={(v) => setDraftField('dana_pemerintah', v)} />
+                                            <EditField label="Lembaga Dalam Negeri" value={draft.dana_lembaga_dalam} type="currency" onChange={(v) => setDraftField('dana_lembaga_dalam', v)} />
+                                            <EditField label="Lembaga Luar Negeri" value={draft.dana_lembaga_luar} type="currency" onChange={(v) => setDraftField('dana_lembaga_luar', v)} />
                                         </>
                                     ) : (
                                         <>
-                                            <Field label="Sumber Dana Umum" value={pengajuan.sumber_dana} wide />
                                             <Field label="Perguruan Tinggi" value={fmtMoney(pengajuan.dana_perguruan_tinggi)} />
                                             <Field label="Pemerintah" value={fmtMoney(pengajuan.dana_pemerintah)} />
                                             <Field label="Lembaga Dalam Negeri" value={fmtMoney(pengajuan.dana_lembaga_dalam)} />
@@ -751,18 +866,68 @@ export default function Detail({ pengajuan }: Props) {
                             <Card
                                 title="Dokumen & Tautan"
                                 action={sectionActions('docs', {
-                                    surat_permohonan: draft.surat_permohonan,
+                                    surat_permohonan: draft.surat_permohonan, // Only sent to avoid validation clearing if no file
                                     proposal: draft.proposal,
-                                    rab: draft.rab,
+                                    file_surat_permohonan: draft.file_surat_permohonan,
+                                    file_proposal: draft.file_proposal,
+                                    rab: JSON.stringify(draft.link_tambahan.filter(l => l.url.trim() !== '')),
                                 })}
                                 icon={<Folder size={16} className="text-slate-400" />}
                             >
                                 <div className="space-y-4">
                                     {editingSection === 'docs' ? (
                                         <>
-                                            <EditField label="URL Surat Permohonan" value={draft.surat_permohonan} onChange={(v) => setDraftField('surat_permohonan', v)} />
-                                            <EditField label="URL Proposal" value={draft.proposal} onChange={(v) => setDraftField('proposal', v)} />
-                                            <EditField label="Link Tambahan (pisahkan dengan koma atau raw JSON array)" value={draft.rab} onChange={(v) => setDraftField('rab', v)} textarea />
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-semibold text-slate-700">Surat Permohonan <span className="text-slate-400 font-normal">(Opsional: unggah file baru untuk menimpa)</span></label>
+                                                {draft.surat_permohonan && (
+                                                    <div className="flex items-center gap-2 mb-2 p-2.5 bg-blue-50/50 border border-blue-100 rounded-lg">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-100/50 flex items-center justify-center text-blue-600"><Folder size={14} /></div>
+                                                        <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-blue-800">File sudah terdeteksi</p><p className="text-[10px] text-blue-600/70 truncate">{draft.surat_permohonan.split('/').pop()}</p></div>
+                                                        <a href={draft.surat_permohonan} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white text-[10px] font-bold text-blue-700 rounded shadow-sm border border-blue-200 hover:bg-blue-50 transition-colors">Lihat File</a>
+                                                    </div>
+                                                )}
+                                                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setDraftField('file_surat_permohonan', e.target.files?.[0] || null)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-poltekpar-primary file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-poltekpar-primary/10 file:text-poltekpar-primary" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-semibold text-slate-700">Proposal <span className="text-slate-400 font-normal">(Opsional: unggah file baru untuk menimpa)</span></label>
+                                                {draft.proposal && (
+                                                    <div className="flex items-center gap-2 mb-2 p-2.5 bg-blue-50/50 border border-blue-100 rounded-lg">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-100/50 flex items-center justify-center text-blue-600"><Folder size={14} /></div>
+                                                        <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-blue-800">File sudah terdeteksi</p><p className="text-[10px] text-blue-600/70 truncate">{draft.proposal.split('/').pop()}</p></div>
+                                                        <a href={draft.proposal} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white text-[10px] font-bold text-blue-700 rounded shadow-sm border border-blue-200 hover:bg-blue-50 transition-colors">Lihat File</a>
+                                                    </div>
+                                                )}
+                                                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setDraftField('file_proposal', e.target.files?.[0] || null)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-poltekpar-primary file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-poltekpar-primary/10 file:text-poltekpar-primary" />
+                                            </div>
+                                            <div className="space-y-3 pt-2 border-t border-slate-100/50">
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-xs font-semibold text-slate-700">Link Tambahan</label>
+                                                    <button type="button" onClick={() => setDraft(prev => ({ ...prev, link_tambahan: [...prev.link_tambahan, { name: '', url: '' }] }))} className="text-[11px] font-bold text-poltekpar-primary hover:opacity-70 flex items-center gap-1">
+                                                        <Plus size={12} /> Tambah
+                                                    </button>
+                                                </div>
+                                                {draft.link_tambahan.map((link, idx) => (
+                                                    <div key={idx} className="flex flex-col sm:flex-row items-center gap-2">
+                                                        <input type="text" placeholder="Nama Tautan (Opsional)..." value={link.name} onChange={e => {
+                                                            const newLinks = [...draft.link_tambahan];
+                                                            newLinks[idx].name = e.target.value;
+                                                            setDraft(prev => ({ ...prev, link_tambahan: newLinks }));
+                                                        }} className="w-full sm:w-1/3 min-h-[44px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 outline-none focus:border-poltekpar-primary" />
+                                                        <div className="flex-1 w-full flex items-center gap-2">
+                                                            <input type="url" placeholder="https://..." value={link.url} onChange={e => {
+                                                                const newLinks = [...draft.link_tambahan];
+                                                                newLinks[idx].url = e.target.value;
+                                                                setDraft(prev => ({ ...prev, link_tambahan: newLinks }));
+                                                            }} className="flex-1 min-h-[44px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 outline-none focus:border-poltekpar-primary" />
+                                                            {draft.link_tambahan.length > 1 && (
+                                                                <button type="button" onClick={() => setDraft(prev => ({ ...prev, link_tambahan: prev.link_tambahan.filter((_, i) => i !== idx) }))} className="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </>
                                     ) : (
                                         <>
@@ -777,9 +942,9 @@ export default function Detail({ pengajuan }: Props) {
                 </div>
 
                 <div className="space-y-6">
-                    <Card title="Ringkasan Pengajuan" icon={<File size={16} className="text-slate-400" />}><div className="space-y-4"><Field label="Sumber Pengajuan" value={isDosen ? 'Auth Dosen' : 'Auth Masyarakat'} /><Field label="Jenis PKM" value={pengajuan.jenis_pkm?.nama_jenis} /><Field label="Email Pengaju" value={submitterEmail} /><Field label="Tanggal Pengajuan" value={fmtDate(pengajuan.created_at)} />{isDosen && <><Field label="Tanggal Mulai" value={fmtDate(pengajuan.tgl_mulai)} /><Field label="Tanggal Selesai" value={fmtDate(pengajuan.tgl_selesai)} /></>}</div></Card>
+                    <Card title="Ringkasan Pengajuan" icon={<File size={16} className="text-slate-400" />}><div className="space-y-4"><Field label="Sumber Pengajuan" value={isDosen ? 'Auth Dosen' : 'Auth Masyarakat'} /><Field label="Email Pengaju" value={submitterEmail} /><Field label="Tanggal Pengajuan" value={fmtDate(pengajuan.created_at)} />{isDosen && <><Field label="Tanggal Mulai" value={fmtDate(pengajuan.tgl_mulai)} /><Field label="Tanggal Selesai" value={fmtDate(pengajuan.tgl_selesai)} /></>}</div></Card>
                     {pengajuan.catatan_admin && <div className="rounded-xl border border-amber-200 bg-white p-5 shadow-sm"><div className="mb-1 text-[12px] font-bold uppercase tracking-wider text-amber-700">Catatan Terakhir</div><p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-slate-700">{pengajuan.catatan_admin}</p></div>}
-                    {pengajuan.status_pengajuan !== 'selesai' && <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"><div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4"><h2 className="text-[14px] font-semibold text-zinc-900">Verifikasi Berkas</h2></div><div className="space-y-6 p-5"><div className="grid grid-cols-1 gap-3"><button onClick={() => setSelectedAction('diterima')} className={`flex items-center justify-between rounded-lg border px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'diterima' ? 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-emerald-200 bg-emerald-50/30 text-emerald-700'}`}><div className="flex items-center gap-3"><CheckCircle size={18} />Diterima</div></button><button onClick={() => setSelectedAction('direvisi')} className={`flex items-center justify-between rounded-lg border px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'direvisi' ? 'border-amber-300 bg-amber-50 text-amber-800 shadow-sm' : 'border-amber-200 bg-amber-50/30 text-amber-700'}`}><div className="flex items-center gap-3"><RotateCcw size={18} />Revisi</div></button><button onClick={() => setSelectedAction('ditolak')} className={`flex items-center justify-between rounded-lg border px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'ditolak' ? 'border-red-300 bg-red-50 text-red-800 shadow-sm' : 'border-red-200 bg-red-50/30 text-red-700'}`}><div className="flex items-center gap-3"><X size={18} />Ditolak</div></button></div>{selectedAction === 'direvisi' && <div className="pt-2"><textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={4} placeholder="Catatan revisi..." className="w-full rounded-md border border-zinc-200 p-3 text-[13px] outline-none" />{catatanError && <p className="mt-1.5 text-[12px] text-red-500">{catatanError}</p>}</div>}<button onClick={saveDecision} disabled={!selectedAction || (selectedAction === 'direvisi' && !catatan.trim())} className={`w-full rounded-xl py-3 text-[14px] font-bold ${selectedAction && (selectedAction !== 'direvisi' || catatan.trim()) ? 'bg-zinc-900 text-white' : 'cursor-not-allowed bg-zinc-100 text-zinc-400'}`}>Verifikasi</button></div></div>}
+                    {pengajuan.status_pengajuan !== 'selesai' && <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"><div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4"><h2 className="text-[14px] font-semibold text-zinc-900">Verifikasi Berkas</h2></div><div className="space-y-6 p-5"><div className="grid grid-cols-1 gap-3"><button onClick={() => setSelectedAction('diterima')} className={`flex items-center justify-between rounded-lg border-2 px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'diterima' ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-md ring-2 ring-emerald-200 scale-[1.02] font-bold' : 'border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:border-emerald-300'}`}><div className="flex items-center gap-3"><CheckCircle size={18} />Diterima</div>{selectedAction === 'diterima' && <span className="text-[11px] bg-emerald-500 text-white px-2.5 py-1 rounded-full font-bold">TERPILIH</span>}</button><button onClick={() => setSelectedAction('direvisi')} className={`flex items-center justify-between rounded-lg border-2 px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'direvisi' ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-md ring-2 ring-amber-200 scale-[1.02] font-bold' : 'border-amber-200 bg-amber-50/30 text-amber-700 hover:border-amber-300'}`}><div className="flex items-center gap-3"><RotateCcw size={18} />Revisi</div>{selectedAction === 'direvisi' && <span className="text-[11px] bg-amber-500 text-white px-2.5 py-1 rounded-full font-bold">TERPILIH</span>}</button><button onClick={() => setSelectedAction('ditolak')} className={`flex items-center justify-between rounded-lg border-2 px-4 py-3 text-[14px] font-medium transition-all ${selectedAction === 'ditolak' ? 'border-red-500 bg-red-50 text-red-900 shadow-md ring-2 ring-red-200 scale-[1.02] font-bold' : 'border-red-200 bg-red-50/30 text-red-700 hover:border-red-300'}`}><div className="flex items-center gap-3"><X size={18} />Ditolak</div>{selectedAction === 'ditolak' && <span className="text-[11px] bg-red-500 text-white px-2.5 py-1 rounded-full font-bold">TERPILIH</span>}</button></div>{selectedAction === 'direvisi' && <div className="pt-2"><div className="flex items-center gap-2 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[12px] font-bold text-amber-700"><AlertCircle size={14} className="shrink-0" />Catatan revisi wajib diisi sebelum verifikasi.</div><textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={4} placeholder="Catatan revisi..." className="w-full rounded-md border border-zinc-200 p-3 text-[13px] outline-none focus:border-poltekpar-primary focus:ring-2 focus:ring-poltekpar-primary/20" />{catatanError && <p className="mt-1.5 text-[12px] text-red-500">{catatanError}</p>}</div>}<button onClick={saveDecision} disabled={!selectedAction || (selectedAction === 'direvisi' && !catatan.trim())} className={`w-full rounded-xl py-3 text-[14px] font-bold ${selectedAction && (selectedAction !== 'direvisi' || catatan.trim()) ? 'bg-zinc-900 text-white' : 'cursor-not-allowed bg-zinc-100 text-zinc-400'}`}>Verifikasi</button></div></div>}
                 </div>
             </div>
 

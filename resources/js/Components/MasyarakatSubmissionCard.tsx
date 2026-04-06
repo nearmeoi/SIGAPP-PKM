@@ -198,8 +198,12 @@ export default function MasyarakatSubmissionCard({
                     status: 'diproses'
                 });
                 onUpdateSubmissionStatus?.('diproses');
-                setFeedbackDialog({ show: true, type: 'success', title: 'Pengajuan Berhasil', message: 'Pengajuan Anda telah dikirim.' });
+                setFeedbackDialog({ show: true, type: 'success', title: 'Pengajuan Berhasil', message: 'Pengajuan Anda telah dikirim. Mengarahkan ke halaman status...' });
                 reset();
+                // Redirect to cek-status after a brief delay so the user sees the success message
+                setTimeout(() => {
+                    router.visit('/cek-status');
+                }, 1800);
             },
             onError: () => {
                 setIsMockSubmitting(false);
@@ -288,16 +292,30 @@ export default function MasyarakatSubmissionCard({
                                         </div>
                                         {selectedDetail.rab && (
                                             <div className="space-y-2 pt-2 border-t border-slate-200">
-                                                {selectedDetail.rab.split(',').map((link, i) => {
-                                                    const url = link.trim();
-                                                    if (!url) return null;
-                                                    return (
-                                                        <p key={i} className="text-[12px] bg-white p-2 rounded-lg border border-slate-100">
-                                                            <span className="text-slate-500 font-bold text-[10px] uppercase block mb-0.5">Tautan Tambahan {i + 1}: </span>
-                                                            <a href={url} target="_blank" className="text-poltekpar-primary font-medium hover:underline break-all">{url}</a>
-                                                        </p>
-                                                    );
-                                                })}
+                                                {(() => {
+                                                    try {
+                                                        const arr = JSON.parse(selectedDetail.rab);
+                                                        if (Array.isArray(arr)) {
+                                                            return arr.map((item, i) => (
+                                                                <p key={i} className="text-[12px] bg-white p-2 rounded-lg border border-slate-100">
+                                                                    <span className="text-slate-500 font-bold text-[10px] uppercase block mb-0.5">{item.name || `Tautan Tambahan ${i + 1}`}: </span>
+                                                                    <a href={item.url} target="_blank" className="text-poltekpar-primary font-medium hover:underline break-all">{item.url}</a>
+                                                                </p>
+                                                            ));
+                                                        }
+                                                    } catch(e) {}
+                                                    
+                                                    return selectedDetail.rab.split(',').map((link, i) => {
+                                                        const url = link.trim();
+                                                        if (!url) return null;
+                                                        return (
+                                                            <p key={i} className="text-[12px] bg-white p-2 rounded-lg border border-slate-100">
+                                                                <span className="text-slate-500 font-bold text-[10px] uppercase block mb-0.5">Tautan Tambahan {i + 1}: </span>
+                                                                <a href={url} target="_blank" className="text-poltekpar-primary font-medium hover:underline break-all">{url}</a>
+                                                            </p>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         )}
                                     </div>
@@ -318,7 +336,7 @@ export default function MasyarakatSubmissionCard({
                     </div>
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-wrap justify-end gap-3">
-                        {['diterima', 'berlangsung', 'selesai'].includes(selectedDetail.status) && (
+                        {selectedDetail.status === 'selesai' && (
                             <a target="_blank" rel="noopener noreferrer" href={`/testimoni/${selectedDetail.kode_unik || selectedDetail.id}`} className="px-6 py-2 bg-emerald-500 text-white text-sm font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-sm flex items-center gap-2">
                                 <i className="fa-solid fa-comment-dots"></i> Isi Testimoni PKM
                             </a>

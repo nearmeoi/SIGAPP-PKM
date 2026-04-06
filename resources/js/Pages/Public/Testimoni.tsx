@@ -13,6 +13,7 @@ export default function Testimoni({ namaKegiatan = 'NAMA KEGIATAN PKM', kode }: 
         nama_pemberi: '',
         rating: 0,
         pesan_ulasan: '',
+        masukan: '',
     });
 
     const [hover, setHover] = useState(0);
@@ -171,8 +172,20 @@ export default function Testimoni({ namaKegiatan = 'NAMA KEGIATAN PKM', kode }: 
                                             value={data.pesan_ulasan}
                                             onChange={e => setData('pesan_ulasan', e.target.value)}
                                             className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold placeholder:text-slate-300 focus:border-poltekpar-primary focus:ring-4 focus:ring-poltekpar-primary/5 transition-all outline-none min-h-[140px]"
-                                            placeholder="Tuliskan pengalaman, kesan, dan saran Anda selama mengikuti kegiatan ini..."
+                                            placeholder="Tuliskan pengalaman dan kesan Anda selama mengikuti kegiatan ini..."
                                             required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-black text-slate-600 uppercase tracking-widest ml-1">
+                                            Masukan / Saran <span className="text-slate-400 font-bold ml-1 tracking-normal capitalize">(Opsional)</span>
+                                        </label>
+                                        <textarea
+                                            value={data.masukan}
+                                            onChange={e => setData('masukan', e.target.value)}
+                                            className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold placeholder:text-slate-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none min-h-[100px]"
+                                            placeholder="Tuliskan masukan atau saran perbaikan untuk kegiatan di masa mendatang..."
                                         />
                                     </div>
 

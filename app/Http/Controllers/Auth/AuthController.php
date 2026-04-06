@@ -152,9 +152,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
 
-
-
-            $default = $user->role === 'admin' ? '/admin/dashboard' : '/';
+            $default = in_array($user->role, ['admin', 'superadmin']) ? '/admin/dashboard' : '/';
 
             return redirect()->intended($default);
         }

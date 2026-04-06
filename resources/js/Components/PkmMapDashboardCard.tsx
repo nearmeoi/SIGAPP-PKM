@@ -26,6 +26,16 @@ function MapSizeInvalidator({ watchKey }: { watchKey: string }): null {
     return null;
 }
 
+function FlyToMarker({ lat, lng }: { lat: number | null; lng: number | null }) {
+    const map = useMap();
+    useEffect(() => {
+        if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+            map.flyTo([lat, lng], 15, { duration: 1.5, easeLinearity: 0.25 });
+        }
+    }, [lat, lng, map]);
+    return null;
+}
+
 function MapSummaryOverlay({
     total,
     selesai,
@@ -52,12 +62,12 @@ function MapSummaryOverlay({
     const panelClass = isCollapsed ? 'opacity-0 scale-50 -translate-x-[80%] pointer-events-none' : 'opacity-100 scale-100 translate-x-0 relative';
 
     return (
-        <div className={`absolute bottom-8 left-8 z-[1000] flex items-end gap-3 pointer-events-none transition-all duration-500 ease-in-out ${wrapClass}`}>
+        <div className={`absolute bottom-4 left-4 md:bottom-8 md:left-8 z-[1000] flex flex-col md:flex-row items-end md:items-end gap-3 pointer-events-none transition-all duration-500 ease-in-out ${wrapClass}`}>
             <button onClick={() => setIsCollapsed((value) => !value)} className="w-10 h-10 mb-1 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 flex items-center justify-center text-slate-500 hover:text-sigappa-primary hover:scale-105 active:scale-95 transition-all outline-none z-10 pointer-events-auto" title={isCollapsed ? 'Tampilkan Informasi Map' : 'Sembunyikan Informasi Map'}>
-                <i className={`fa-solid ${isCollapsed ? 'fa-chart-pie' : 'fa-chevron-left'} transition-transform duration-300`}></i>
+                <i className={`fa-solid ${isCollapsed ? 'fa-chart-pie' : 'fa-chevron-down md:fa-chevron-left'} transition-transform duration-300`}></i>
             </button>
-            <div className={`flex items-end gap-3 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] origin-left flex-1 ${panelClass}`}>
-                <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-1 shadow-2xl border border-white/40 whitespace-nowrap pointer-events-auto">
+            <div className={`flex flex-col items-start md:flex-row md:items-end gap-3 transition-all duration-500 origin-bottom md:origin-left flex-1 ${panelClass}`}>
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-1 shadow-2xl border border-white/40 whitespace-nowrap pointer-events-auto max-w-[calc(100vw-32px)] overflow-x-auto">
                     <MapLegend className="bg-transparent border-none shadow-none" compact typesMeta={typesMeta} selectedTypes={selectedTypes} onToggleType={onToggleType} selectedStatuses={selectedStatuses} onToggleStatus={onToggleStatus} />
                 </div>
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-3 shadow-2xl border border-white/40 flex items-center gap-5 whitespace-nowrap mb-1 pointer-events-auto">
@@ -122,9 +132,9 @@ export default function PkmMapDashboardCard({ pkmData, watchKey = 'pkm-map' }: {
     const totalBerlangsung = filteredPkmData.filter((item) => item.status === 'berlangsung').length;
 
     return (
-        <div className="bg-white rounded-[40px] shadow-2xl shadow-sigappa-navy/5 border border-slate-100 overflow-hidden mb-8 p-4 md:p-6">
-            <div className="mb-4"><h2 className="text-xl md:text-2xl font-bold text-slate-900">Dashboard Evaluasi <span className="text-poltekpar-primary">PKM</span></h2></div>
-            <div className="relative w-full h-[650px] md:h-[75vh] min-h-[500px] rounded-[32px] border border-slate-100 overflow-hidden z-10 shadow-inner">
+        <div className="bg-white rounded-2xl sm:rounded-[32px] lg:rounded-[40px] shadow-2xl shadow-sigappa-navy/5 border border-slate-100 overflow-hidden mb-6 sm:mb-8 p-3 sm:p-4 md:p-6">
+            <div className="mb-3 sm:mb-4"><h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900">Dashboard Sebaran <span className="text-poltekpar-primary">PKM</span></h2></div>
+            <div className="relative w-full h-[400px] sm:h-[500px] md:h-[650px] lg:h-[75vh] min-h-[350px] rounded-2xl sm:rounded-[24px] lg:rounded-[32px] border border-slate-100 overflow-hidden z-10 shadow-inner">
                 <MapContainer center={[-2.5, 118]} zoom={5} className="w-full h-full" zoomControl={false}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
                     {filteredPkmData.map((pkm) => {
@@ -133,13 +143,17 @@ export default function PkmMapDashboardCard({ pkmData, watchKey = 'pkm-map' }: {
                         return <Marker key={pkm.id} position={[parseFloat(String(pkm.lat)), parseFloat(String(pkm.lng))]} icon={createPkmMarkerIcon(pkm.status, markerColor)} eventHandlers={{ click: () => setSelectedPkm(pkm) }} />;
                     })}
                     <MapSizeInvalidator watchKey={watchKey} />
+                    <FlyToMarker
+                        lat={selectedPkm ? parseFloat(String(selectedPkm.lat)) : null}
+                        lng={selectedPkm ? parseFloat(String(selectedPkm.lng)) : null}
+                    />
                 </MapContainer>
                 {/* Year Filter Dropdown */}
-                <div className="absolute top-6 left-6 z-[1000]">
+                <div className="absolute top-4 left-4 md:top-6 md:left-6 z-[1000]">
                     <div className="relative">
                         <button 
                             onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                            className="bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3 text-sm font-black text-slate-700 hover:text-poltekpar-primary hover:scale-[1.02] active:scale-95 transition-all"
+                            className="bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl rounded-2xl px-4 md:px-5 py-2.5 md:py-3 flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black text-slate-700 hover:text-poltekpar-primary hover:scale-[1.02] active:scale-95 transition-all"
                         >
                             <i className="fa-solid fa-calendar-days text-poltekpar-primary/70"></i>
                             {availableYears.find(y => y.value === selectedYear)?.label || 'Semua Tahun'}
@@ -164,16 +178,16 @@ export default function PkmMapDashboardCard({ pkmData, watchKey = 'pkm-map' }: {
                         </div>
                     </div>
                 </div>
-                <div className={`absolute top-6 right-6 z-[1000] transition-all duration-500 ease-in-out ${isListSidebarOpen || !!selectedPkm ? 'opacity-0 -translate-y-4 pointer-events-none scale-90' : 'opacity-100 translate-y-0 scale-100'}`}>
-                    <button onClick={() => { setIsListSidebarOpen(true); setSelectedPkm(null); }} className="bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3 text-sm font-black text-slate-700 hover:text-poltekpar-primary hover:scale-[1.02] active:scale-95 transition-all">
-                        <i className="fa-solid fa-list-ul"></i>DAFTAR KEGIATAN PKM
+                <div className={`absolute top-4 right-4 md:top-6 md:right-6 z-[1000] transition-all duration-500 ease-in-out ${isListSidebarOpen || !!selectedPkm ? 'opacity-0 -translate-y-4 pointer-events-none scale-90' : 'opacity-100 translate-y-0 scale-100'}`}>
+                    <button onClick={() => { setIsListSidebarOpen(true); setSelectedPkm(null); }} className="bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl rounded-2xl px-4 md:px-5 py-2.5 md:py-3 flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black text-slate-700 hover:text-poltekpar-primary hover:scale-[1.02] active:scale-95 transition-all">
+                        <i className="fa-solid fa-list-ul"></i><span className="hidden sm:inline">DAFTAR KEGIATAN PKM</span><span className="sm:hidden">DAFTAR PKM</span>
                     </button>
                 </div>
                 <MapSummaryOverlay total={totalPkm} selesai={totalSelesai} berlangsung={totalBerlangsung} forceHide={isListSidebarOpen || !!selectedPkm} typesMeta={typesMeta} selectedTypes={selectedTypes} onToggleType={(key) => setSelectedTypes((value) => value.includes(key) ? value.filter((item) => item !== key) : [...value, key])} selectedStatuses={selectedStatuses} onToggleStatus={(key) => setSelectedStatuses((value) => value.includes(key) ? value.filter((item) => item !== key) : [...value, key])} />
-                <div className={`absolute top-8 bottom-8 right-8 w-[400px] max-w-[calc(100%-64px)] bg-white/95 backdrop-blur-xl rounded-[40px] shadow-2xl z-[1150] overflow-hidden flex flex-col transition-transform duration-700 border border-white/60 ${(!isListSidebarOpen && !selectedPkm) ? 'translate-x-[120%]' : 'translate-x-0'}`}>
+                <div className={`absolute top-0 bottom-0 right-0 sm:top-4 sm:bottom-4 sm:right-4 md:top-8 md:bottom-8 md:right-8 w-full sm:w-[360px] md:w-[400px] max-w-full sm:max-w-[calc(100%-32px)] md:max-w-[calc(100%-64px)] bg-white/95 backdrop-blur-xl sm:rounded-2xl md:rounded-[40px] shadow-2xl z-[1150] overflow-hidden flex flex-col transition-transform duration-700 border border-white/60 ${(!isListSidebarOpen && !selectedPkm) ? 'translate-x-[120%]' : 'translate-x-0'}`}>
                     {selectedPkm ? (
                         <>
-                            <div className="p-8 pb-4 bg-white/95 backdrop-blur-xl z-20 border-b border-slate-100 flex-shrink-0 animate-in fade-in duration-300">
+                            <div className="p-5 sm:p-6 md:p-8 pb-4 bg-white/95 backdrop-blur-xl z-20 border-b border-slate-100 flex-shrink-0 animate-in fade-in duration-300">
                                 <div className="flex items-center gap-4">
                                     {isListSidebarOpen && (
                                         <button onClick={() => setSelectedPkm(null)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-200 transition-all flex items-center justify-center flex-shrink-0"><i className="fa-solid fa-arrow-left"></i></button>

@@ -160,20 +160,18 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
         if (thumbnailAktivitas) {
             formData.append('thumbnail', thumbnailAktivitas);
         }
+        // Include location data in the same save action
+        if (lat !== null && lng !== null) {
+            formData.append('latitude', String(lat));
+            formData.append('longitude', String(lng));
+            formData.append('provinsi', provinsi);
+            formData.append('kota_kabupaten', kotaKabupaten);
+            formData.append('kecamatan', kecamatan);
+            formData.append('kelurahan_desa', kelurahanDesa);
+            formData.append('alamat_lengkap', alamatLengkap);
+            formData.append('save_location', '1');
+        }
         router.post(`/admin/aktivitas/${aktivitas.id_aktivitas}`, formData);
-    };
-
-    const handleSaveLokasi = () => {
-        if (lat === null || lng === null) return;
-        router.put(`/admin/pengajuan/${pengajuan.id_pengajuan}/lokasi`, {
-            latitude: lat,
-            longitude: lng,
-            provinsi: provinsi,
-            kota_kabupaten: kotaKabupaten,
-            kecamatan: kecamatan,
-            kelurahan_desa: kelurahanDesa,
-            alamat_lengkap: alamatLengkap,
-        });
     };
 
     const handleDelete = () => setConfirmOpen(true);
@@ -278,10 +276,6 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                     <option value="selesai">🟢 Selesai</option>
                                 </select>
                             </div>
-                            <button onClick={handleSimpan}
-                                className="w-full flex justify-center items-center gap-2 py-3 rounded-lg text-[14px] font-bold text-white bg-zinc-900 hover:bg-zinc-800 shadow-md transition-colors">
-                                <Save size={16} /> Simpan Perubahan
-                            </button>
                         </div>
                     </div>
 
@@ -408,9 +402,9 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                 </div>
                             </div>
 
-                            <button onClick={handleSaveLokasi} disabled={lat === null || lng === null}
-                                className="w-full flex justify-center items-center gap-2 py-2.5 rounded-lg text-[13px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm">
-                                <MapPin size={14} /> Simpan Lokasi & Alamat
+                            <button onClick={handleSimpan}
+                                className="w-full flex justify-center items-center gap-2 py-3 rounded-lg text-[14px] font-bold text-white bg-zinc-900 hover:bg-zinc-800 shadow-md transition-colors">
+                                <Save size={16} /> Simpan Semua Perubahan
                             </button>
                         </div>
                     </div>

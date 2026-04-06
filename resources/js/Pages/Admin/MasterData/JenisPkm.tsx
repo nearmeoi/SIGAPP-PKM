@@ -12,14 +12,28 @@ interface JenisPkm {
 
 interface Props {
     listJenisPkm: JenisPkm[];
+    filters?: { sort?: string; direction?: string };
 }
 
-const JenisPkmPage: React.FC<Props> = ({ listJenisPkm }) => {
+const JenisPkmPage: React.FC<Props> = ({ listJenisPkm, filters }) => {
     const [modalOpen, setModalOpen] = useState(false);
     const [nama, setNama] = useState('');
     const [warna, setWarna] = useState('');
     const [editId, setEditId] = useState<number | null>(null);
     const [search, setSearch] = useState('');
+    const [sortField, setSortField] = useState(filters?.sort || 'nama_jenis');
+    const [sortDir, setSortDir] = useState(filters?.direction || 'asc');
+
+    const handleSort = (field: string) => {
+        const isAsc = sortField === field && sortDir === 'asc';
+        const newDir = isAsc ? 'desc' : 'asc';
+        setSortField(field);
+        setSortDir(newDir);
+        router.get('/admin/master/jenis-pkm', {
+            sort: field,
+            direction: newDir,
+        }, { preserveState: true, replace: true });
+    };
 
     const PRESET_COLORS = [
         '#ef4444', '#f97316', '#f59e0b', '#10b981', '#14b8a6',
@@ -27,16 +41,28 @@ const JenisPkmPage: React.FC<Props> = ({ listJenisPkm }) => {
         '#d946ef', '#f43f5e', '#71717a', '#18181b'
     ];
 
-    const openCreate = () => { setEditId(null); setNama(''); setWarna(''); setModalOpen(true); };
+    const generateRandomColor = () => {
+        const hue = Math.floor(Math.random() * 360);
+        const sat = 55 + Math.floor(Math.random() * 30); // 55-85%
+        const lum = 40 + Math.floor(Math.random() * 20); // 40-60%
+        // Convert HSL to hex
+        const h = hue, s = sat / 100, l = lum / 100;
+        const a2 = s * Math.min(l, 1 - l);
+        const f = (n: number) => { const k = (n + h / 30) % 12; const c = l - a2 * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * c).toString(16).padStart(2, '0'); };
+        return `#${f(0)}${f(8)}${f(4)}`;
+    };
+
+    const openCreate = () => { setEditId(null); setNama(''); setWarna(generateRandomColor()); setModalOpen(true); };
     const openEdit = (item: JenisPkm) => { setEditId(item.id_jenis_pkm); setNama(item.nama_jenis); setWarna(item.warna_icon || ''); setModalOpen(true); };
     const closeModal = () => { setModalOpen(false); setEditId(null); setNama(''); setWarna(''); };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const finalWarna = warna || generateRandomColor();
         if (editId) {
-            router.put(`/admin/master/jenis-pkm/${editId}`, { nama_jenis: nama, warna_icon: warna }, { onSuccess: closeModal });
+            router.put(`/admin/master/jenis-pkm/${editId}`, { nama_jenis: nama, warna_icon: finalWarna }, { onSuccess: closeModal });
         } else {
-            router.post('/admin/master/jenis-pkm', { nama_jenis: nama, warna_icon: warna }, { onSuccess: closeModal });
+            router.post('/admin/master/jenis-pkm', { nama_jenis: nama, warna_icon: finalWarna }, { onSuccess: closeModal });
         }
     };
 
@@ -86,8 +112,12 @@ const JenisPkmPage: React.FC<Props> = ({ listJenisPkm }) => {
                         <thead>
                             <tr className="border-b border-zinc-200">
                                 <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider w-12 text-center">ID</th>
-                                <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Nama Kategori</th>
-                                <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider w-32">Warna Ikon</th>
+                                <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider cursor-pointer hover:bg-zinc-100" onClick={() => handleSort('nama_jenis')}>
+                                    Nama Kategori {sortField === 'nama_jenis' && (sortDir === 'asc' ? '↑' : '↓')}
+                                </th>
+                                <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider w-32 cursor-pointer hover:bg-zinc-100" onClick={() => handleSort('warna_icon')}>
+                                    Warna Ikon {sortField === 'warna_icon' && (sortDir === 'asc' ? '↑' : '↓')}
+                                </th>
                                 <th className="py-3 px-6 text-zinc-500 text-[11px] font-semibold uppercase tracking-wider text-right w-24">Aksi</th>
                             </tr>
                         </thead>

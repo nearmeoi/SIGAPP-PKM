@@ -16,6 +16,9 @@ class PengajuanController extends Controller
 {
     public function index(Request $request)
     {
+        $sortField = $request->get('sort', 'created_at');
+        $sortDir = $request->get('direction', 'desc');
+        
         $listPengajuan = Pengajuan::with(['user', 'jenisPkm', 'timKegiatan.pegawai'])
             ->when($request->search, function ($query, $search) {
                 $escaped = addcslashes($search, '\\%_');
@@ -27,8 +30,11 @@ class PengajuanController extends Controller
             ->when($request->status, function ($query, $status) {
                 $query->where('status_pengajuan', $status);
             })
-            ->orderByRaw("FIELD(status_pengajuan, 'diproses', 'diterima', 'direvisi', 'ditolak')")
-            ->latest()
+            ->when($sortField === 'status_pengajuan', function ($query) use ($sortDir) {
+                $query->orderByRaw("FIELD(status_pengajuan, 'diproses', 'diterima', 'direvisi', 'ditolak') " . $sortDir);
+            }, function ($query) use ($sortField, $sortDir) {
+                $query->orderBy($sortField, $sortDir);
+            })
             ->paginate(10)
             ->withQueryString();
 
@@ -37,6 +43,8 @@ class PengajuanController extends Controller
             'filters' => [
                 'search' => $request->search ?? '',
                 'status' => $request->status ?? '',
+                'sort' => $sortField,
+                'direction' => $sortDir,
             ],
         ]);
     }
@@ -51,8 +59,16 @@ class PengajuanController extends Controller
             'arsip',
         ])->findOrFail($id);
 
-        $listPegawai = Pegawai::orderBy('nama_pegawai')
-            ->get(['id_pegawai', 'nama_pegawai', 'nip']);
+        $listPegawai = Pegawai::with('user:id_user,role')->orderBy('nama_pegawai')
+            ->get(['id_pegawai', 'id_user', 'nama_pegawai', 'nip'])
+            ->map(function ($p) {
+                return [
+                    'id_pegawai' => $p->id_pegawai,
+                    'nama_pegawai' => $p->nama_pegawai,
+                    'nip' => $p->nip,
+                    'role' => $p->user ? $p->user->role : null,
+                ];
+            });
 
         $listJenisPkm = JenisPkm::orderBy('nama_jenis')->get();
 
@@ -95,6 +111,8 @@ class PengajuanController extends Controller
             'catatan_admin' => 'sometimes|nullable|string|max:1000',
             'proposal' => 'sometimes|nullable|string|max:2048',
             'surat_permohonan' => 'sometimes|nullable|string|max:2048',
+            'file_proposal' => 'sometimes|nullable|file|mimes:pdf,doc,docx|max:10240',
+            'file_surat_permohonan' => 'sometimes|nullable|file|mimes:pdf,doc,docx|max:10240',
             'rab' => 'sometimes|nullable|string|max:2048',
             'rab_items' => 'sometimes|array',
             'rab_items.*.nama_item' => 'nullable|string|max:255',
@@ -107,6 +125,13 @@ class PengajuanController extends Controller
         if ($request->has('rab_items')) {
             $validated['rab_items'] = $this->normalizeRabItems($request->input('rab_items', []));
             $validated['total_anggaran'] = collect($validated['rab_items'])->sum('total');
+        }
+
+        if ($request->hasFile('file_surat_permohonan')) {
+            $validated['surat_permohonan'] = '/storage/' . $request->file('file_surat_permohonan')->store('pengajuan/dokumen', 'public');
+        }
+        if ($request->hasFile('file_proposal')) {
+            $validated['proposal'] = '/storage/' . $request->file('file_proposal')->store('pengajuan/dokumen', 'public');
         }
 
         $pengajuan->update($validated);
@@ -139,12 +164,16 @@ class PengajuanController extends Controller
         ]);
 
         $pengajuan = Pengajuan::findOrFail($id);
-        $incompleteFields = $this->getIncompleteFields($pengajuan);
 
-        if ($incompleteFields !== []) {
-            return redirect()->back()->withErrors([
-                'status_pengajuan' => 'Pengajuan belum bisa diverifikasi karena data berikut masih belum lengkap: '.implode(', ', $incompleteFields).'.',
-            ]);
+        // Only check completeness when accepting or completing — allow revisi/tolak/diproses freely
+        if (in_array($request->status_pengajuan, ['diterima', 'selesai'])) {
+            $incompleteFields = $this->getIncompleteFields($pengajuan);
+
+            if ($incompleteFields !== []) {
+                return redirect()->back()->withErrors([
+                    'status_pengajuan' => 'Pengajuan belum bisa diverifikasi karena data berikut masih belum lengkap: '.implode(', ', $incompleteFields).'.',
+                ]);
+            }
         }
 
         $statusLama = $pengajuan->status_pengajuan;
@@ -170,6 +199,7 @@ class PengajuanController extends Controller
     public function syncTim(Request $request, int $id)
     {
         $request->validate([
+            'ketua_tim' => 'nullable|string|max:255',
             'dosen_terlibat' => 'nullable|array',
             'dosen_terlibat.*' => 'nullable|string|max:255',
             'staff_terlibat' => 'nullable|array',
@@ -180,15 +210,22 @@ class PengajuanController extends Controller
 
         $pengajuan = Pengajuan::with('timKegiatan')->findOrFail($id);
 
-        TimKegiatan::where('id_pengajuan', $pengajuan->id_pengajuan)
-            ->where(function ($query) {
-                $query->whereNull('peran_tim')
-                    ->orWhereRaw('LOWER(peran_tim) not like ?', ['%ketua%']);
-            })
-            ->delete();
+        TimKegiatan::where('id_pengajuan', $pengajuan->id_pengajuan)->delete();
 
         $rows = [];
         $now = now();
+
+        $ketuaName = trim($request->input('ketua_tim', ''));
+        if ($ketuaName !== '') {
+            $rows[] = [
+                'id_pengajuan' => $pengajuan->id_pengajuan,
+                'id_pegawai' => null,
+                'nama_mahasiswa' => $ketuaName,
+                'peran_tim' => 'Ketua',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
 
         foreach ($this->normalizeTeamEntries($request->input('dosen_terlibat', [])) as $name) {
             $rows[] = [
@@ -277,11 +314,11 @@ class PengajuanController extends Controller
         $pengajuan->update([
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'provinsi' => $request->provinsi,
-            'kota_kabupaten' => $request->kota_kabupaten,
-            'kecamatan' => $request->kecamatan,
-            'kelurahan_desa' => $request->kelurahan_desa,
-            'alamat_lengkap' => $request->alamat_lengkap,
+            'provinsi' => $request->provinsi ?: $pengajuan->provinsi,
+            'kota_kabupaten' => $request->kota_kabupaten ?: $pengajuan->kota_kabupaten,
+            'kecamatan' => $request->kecamatan ?: $pengajuan->kecamatan,
+            'kelurahan_desa' => $request->kelurahan_desa ?: $pengajuan->kelurahan_desa,
+            'alamat_lengkap' => $request->alamat_lengkap ?: $pengajuan->alamat_lengkap,
         ]);
 
         return redirect()->back()->with('success', 'Lokasi berhasil diperbarui.');
@@ -325,6 +362,19 @@ class PengajuanController extends Controller
         $submitterType = strtolower((string) ($pengajuan->tipe_pengusul ?: $pengajuan->user?->role ?: 'masyarakat'));
         $isDosen = $submitterType === 'dosen';
 
+        // Load tim kegiatan if not already loaded
+        if (! $pengajuan->relationLoaded('timKegiatan')) {
+            $pengajuan->load('timKegiatan');
+        }
+
+        $tim = $pengajuan->timKegiatan ?? collect();
+        $hasKetua = $tim->contains(fn ($m) => str_contains(strtolower((string) $m->peran_tim), 'ketua'));
+        $totalAnggota = $tim->filter(fn ($m) => ! str_contains(strtolower((string) $m->peran_tim), 'ketua'))->count();
+
+        $rabItems = collect($pengajuan->rab_items ?? [])
+            ->filter(fn ($item) => filled(data_get($item, 'nama_item')) && (float) data_get($item, 'jumlah', 0) > 0)
+            ->values();
+
         $fields = [
             blank($pengajuan->nama_pengusul ?: $pengajuan->user?->name) ? 'nama pengusul' : null,
             blank($pengajuan->email_pengusul ?: $pengajuan->user?->email) ? 'email pengusul' : null,
@@ -334,22 +384,13 @@ class PengajuanController extends Controller
             blank($pengajuan->provinsi) ? 'provinsi' : null,
             blank($pengajuan->kota_kabupaten) ? 'kota / kabupaten' : null,
             blank($pengajuan->surat_permohonan) ? 'surat permohonan' : null,
+            ! $hasKetua ? 'Ketua Tim PKM' : null,
+            $totalAnggota === 0 ? 'Tim Terlibat (Dosen/Staff/Mahasiswa)' : null,
+            $rabItems->isEmpty() ? 'Rincian RAB' : null,
         ];
 
         if ($isDosen) {
-            $rabItems = collect($pengajuan->rab_items ?? [])
-                ->filter(fn ($item) => filled(data_get($item, 'nama_item')) && (float) data_get($item, 'jumlah', 0) > 0)
-                ->values();
-
-            $fields = array_merge($fields, [
-                blank($pengajuan->judul_kegiatan) ? 'judul kegiatan PKM' : null,
-                $rabItems->isEmpty() ? 'rincian RAB' : null,
-                blank($pengajuan->sumber_dana)
-                    && ! $pengajuan->dana_perguruan_tinggi
-                    && ! $pengajuan->dana_pemerintah
-                    && ! $pengajuan->dana_lembaga_dalam
-                    && ! $pengajuan->dana_lembaga_luar ? 'sumber dana' : null,
-            ]);
+            $fields[] = blank($pengajuan->judul_kegiatan) ? 'judul kegiatan PKM' : null;
         }
 
         return array_values(array_filter($fields));

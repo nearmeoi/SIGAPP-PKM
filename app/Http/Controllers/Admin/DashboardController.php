@@ -39,10 +39,10 @@ class DashboardController extends Controller
                 'jenis_pkm' => $p->jenisPkm?->nama_jenis ?? '',
                 'warna_icon' => $p->jenisPkm?->warna_icon ?? '#64748b',
                 'tahun' => $p->created_at?->year ?? date('Y'),
-                // Status pin: ikuti status aktivitas jika ada, fallback ke status pengajuan
-                'status' => $p->aktivitas?->status_pelaksanaan === 'selesai'
-                    ? 'selesai'
-                    : ($p->status_pengajuan === 'diterima' ? 'berlangsung' : $p->status_pengajuan),
+                'status' => $p->aktivitas
+                    ? ($p->aktivitas->status_pelaksanaan === 'selesai' ? 'selesai'
+                        : (in_array($p->aktivitas->status_pelaksanaan, ['berjalan', 'persiapan']) ? 'berlangsung' : 'belum_mulai'))
+                    : ($p->status_pengajuan === 'diterima' ? 'belum_mulai' : $p->status_pengajuan),
                 'status_pengajuan' => $p->status_pengajuan,
                 'deskripsi' => $p->kebutuhan ?? '',
                 'thumbnail' => $p->aktivitas?->url_thumbnail,

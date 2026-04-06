@@ -444,9 +444,16 @@ export default function DosenSubmissionCard({
                                                 </ul>
                                             </div>
                                         )}
-                                        <div className="pt-2 border-t border-slate-100/50">
-                                            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1 block">Sumber Dana (Akumulatif)</span>
-                                            <p className="text-sm text-slate-900 font-semibold">{(selectedDetail.sumber_dana || '').replace(/,\s*$/, '') || '-'}</p>
+                                        <div className="pt-2 border-t border-slate-100/50 space-y-1.5">
+                                            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1 block">Sumber Dana</span>
+                                            {(selectedDetail.dana_perguruan_tinggi || selectedDetail.dana_pemerintah || selectedDetail.dana_lembaga_dalam || selectedDetail.dana_lembaga_luar) ? (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {selectedDetail.dana_perguruan_tinggi ? <div className="p-2 bg-white rounded-lg border border-slate-100"><span className="text-[9px] font-bold text-slate-400 uppercase block">Perguruan Tinggi</span><span className="text-xs font-bold text-slate-800">Rp {Number(selectedDetail.dana_perguruan_tinggi).toLocaleString('id-ID')}</span></div> : null}
+                                                    {selectedDetail.dana_pemerintah ? <div className="p-2 bg-white rounded-lg border border-slate-100"><span className="text-[9px] font-bold text-slate-400 uppercase block">Pemerintah</span><span className="text-xs font-bold text-slate-800">Rp {Number(selectedDetail.dana_pemerintah).toLocaleString('id-ID')}</span></div> : null}
+                                                    {selectedDetail.dana_lembaga_dalam ? <div className="p-2 bg-white rounded-lg border border-slate-100"><span className="text-[9px] font-bold text-slate-400 uppercase block">Lembaga Dalam Negeri</span><span className="text-xs font-bold text-slate-800">Rp {Number(selectedDetail.dana_lembaga_dalam).toLocaleString('id-ID')}</span></div> : null}
+                                                    {selectedDetail.dana_lembaga_luar ? <div className="p-2 bg-white rounded-lg border border-slate-100"><span className="text-[9px] font-bold text-slate-400 uppercase block">Lembaga Luar Negeri</span><span className="text-xs font-bold text-slate-800">Rp {Number(selectedDetail.dana_lembaga_luar).toLocaleString('id-ID')}</span></div> : null}
+                                                </div>
+                                            ) : <p className="text-xs text-slate-400 italic">Belum ada data sumber dana.</p>}
                                         </div>
                                     </div>
                                 </section>

@@ -1,35 +1,53 @@
 import React from 'react';
+import { usePage } from '@inertiajs/react';
 
 export default function Footer() {
+    const { listKontak } = usePage<any>().props;
+    const kontaks = listKontak || [];
+
     const handleScrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
         <>
-            <footer className="bg-slate-900 text-white" itemScope="itemscope" itemType="https://schema.org/WPFooter">
+            <footer className="bg-slate-900 text-white" itemScope itemType="https://schema.org/WPFooter">
                 <div className="max-w-7xl mx-auto px-6 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
                         {/* Contact Info */}
                         <div>
                             <h3 className="text-lg font-bold mb-4 text-slate-100">Kontak Kami</h3>
                             <ul className="space-y-3">
-                                <li className="flex items-start gap-3">
-                                    <i className="fa-solid fa-map-marker-alt text-poltekpar-gold mt-1"></i>
-                                    <span className="text-slate-300 text-sm leading-relaxed">
-                                        Jl. Gunung Rinjani, Kota Mandiri Tanjung Bunga, Makassar 90224
-                                    </span>
-                                </li>
-                                <li className="flex items-center gap-3">
-                                    <i className="fa-solid fa-phone-alt text-poltekpar-gold"></i>
-                                    <span className="text-slate-300 text-sm">(0411) 838456</span>
-                                </li>
-                                <li className="flex items-center gap-3">
-                                    <i className="fa-solid fa-envelope text-poltekpar-gold"></i>
-                                    <a href="mailto:p3m@poltekparmakassar.ac.id" className="text-slate-300 text-sm hover:text-poltekpar-primary transition-colors">
-                                        p3m@poltekparmakassar.ac.id
-                                    </a>
-                                </li>
+                                {kontaks.length > 0 ? (
+                                    kontaks.map((k: any) => (
+                                        <li key={k.id_kontak} className="flex items-start gap-3">
+                                            {k.ikon ? <i className={`${k.ikon} text-poltekpar-gold mt-1 w-4 text-center`}></i> : <i className="fa-solid fa-address-book text-poltekpar-gold mt-1 w-4 text-center"></i>}
+                                            <div className="flex flex-col">
+                                                {k.label && <span className="text-[11px] font-bold text-poltekpar-gold/80 uppercase tracking-widest leading-none mb-1">{k.label}</span>}
+                                                <span className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{k.nilai_kontak}</span>
+                                            </div>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <>
+                                        <li className="flex items-start gap-3">
+                                            <i className="fa-solid fa-map-marker-alt text-poltekpar-gold mt-1"></i>
+                                            <span className="text-slate-300 text-sm leading-relaxed">
+                                                Jl. Gunung Rinjani, Kota Mandiri Tanjung Bunga, Makassar 90224
+                                            </span>
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <i className="fa-solid fa-phone-alt text-poltekpar-gold"></i>
+                                            <span className="text-slate-300 text-sm">(0411) 838456</span>
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <i className="fa-solid fa-envelope text-poltekpar-gold"></i>
+                                            <a href="mailto:p3m@poltekparmakassar.ac.id" className="text-slate-300 text-sm hover:text-poltekpar-primary transition-colors">
+                                                p3m@poltekparmakassar.ac.id
+                                            </a>
+                                        </li>
+                                    </>
+                                )}
                             </ul>
 
                             <h3 className="text-lg font-bold mt-6 mb-4 text-slate-100">Follow</h3>

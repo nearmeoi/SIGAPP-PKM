@@ -35,15 +35,37 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:admin,dosen,masyarakat',
+            'role' => 'required|in:superadmin,admin,dosen,masyarakat,secret_account',
+            'nip' => 'required_if:role,dosen',
         ]);
 
-        User::create([
+        if ($request->role === 'dosen') {
+            $pegawai = \App\Models\Pegawai::where('nip', $request->nip)->first();
+            if (!$pegawai && !$request->boolean('force_create_pegawai')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'nip_not_found' => 'NIP tidak terdata di Data Pegawai.'
+                ]);
+            }
+        }
+
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
         ]);
+
+        if ($request->role === 'dosen') {
+            if (isset($pegawai) && $pegawai) {
+                $pegawai->update(['id_user' => $user->id_user]);
+            } else {
+                \App\Models\Pegawai::create([
+                    'id_user' => $user->id_user,
+                    'nip' => $request->nip,
+                    'nama_pegawai' => $user->name,
+                ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'User berhasil ditambahkan.');
     }
@@ -53,7 +75,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$id.',id_user',
-            'role' => 'required|in:admin,dosen,masyarakat',
+            'role' => 'required|in:superadmin,admin,dosen,masyarakat,secret_account',
             'password' => 'nullable|string|min:8',
         ]);
 
@@ -75,10 +97,10 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($user->role === 'admin') {
-            $adminCount = User::where('role', 'admin')->count();
-            if ($adminCount <= 1) {
-                return redirect()->back()->with('error', 'Tidak bisa menghapus admin terakhir.');
+        if ($user->role === 'admin' || $user->role === 'superadmin' || $user->role === 'secret_account') {
+            $count = User::where('role', $user->role)->count();
+            if ($count <= 1) {
+                return redirect()->back()->with('error', 'Tidak bisa menghapus akun vital terakhir.');
             }
         }
 

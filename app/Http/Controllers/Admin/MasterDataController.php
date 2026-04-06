@@ -10,12 +10,19 @@ use Inertia\Inertia;
 class MasterDataController extends Controller
 {
     // === JENIS PKM ===
-    public function indexJenis()
+    public function indexJenis(Request $request)
     {
-        $listJenisPkm = JenisPkm::all();
+        $sortField = $request->get('sort', 'nama_jenis');
+        $sortDir = $request->get('direction', 'asc');
+
+        $listJenisPkm = JenisPkm::orderBy($sortField, $sortDir)->get();
 
         return Inertia::render('Admin/MasterData/JenisPkm', [
             'listJenisPkm' => $listJenisPkm,
+            'filters' => [
+                'sort' => $sortField,
+                'direction' => $sortDir,
+            ],
         ]);
     }
 

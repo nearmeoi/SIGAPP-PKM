@@ -160,7 +160,7 @@ export default function AdminEvalCharts({ pieChartData, barChartData }: AdminEva
                     <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Data langsung dari database</p>
                 </div>
                 <div className="ml-auto px-4 py-2 bg-poltekpar-primary/10 text-poltekpar-primary rounded-2xl text-sm font-black">
-                    {totalPengajuan} Total Pengajuan
+                    {totalPengajuan} Pengajuan
                 </div>
             </div>
 

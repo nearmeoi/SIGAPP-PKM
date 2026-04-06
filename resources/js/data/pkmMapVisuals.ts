@@ -12,20 +12,6 @@ export interface PkmStatusMeta {
     markerIcon: string;
 }
 
-import L from 'leaflet';
-
-export interface PkmTypeMeta {
-    key: string;
-    label: string;
-    color: string;
-}
-
-export interface PkmStatusMeta {
-    key: string;
-    label: string;
-    markerIcon: string;
-}
-
 export const PKM_STATUS_META: Record<string, PkmStatusMeta> = {
     selesai: {
         key: 'selesai',

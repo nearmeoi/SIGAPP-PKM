@@ -6,6 +6,8 @@ import { ExternalLink, Search, Folder, X, FileText, Eye, Plus, Trash2, Edit } fr
 
 interface ArsipItem {
     id_arsip: number;
+    id_aktivitas?: number;
+    id_pengajuan?: number;
     nama_dokumen: string;
     jenis_arsip: string;
     url_dokumen?: string;
@@ -13,60 +15,75 @@ interface ArsipItem {
     created_at: string;
     updated_at: string;
     pengajuan?: {
-        id_pengajuan: number;
         judul_kegiatan: string;
-        user?: { name: string };
-    };
-    aktivitas?: {
-        id_aktivitas: number;
-        pengajuan?: {
-            judul_kegiatan: string;
-        };
     };
 }
 
+interface AktivitasGroupedArsip {
+    id_aktivitas: number;
+    id_pengajuan: number;
+    created_at: string;
+    pengajuan?: {
+        judul_kegiatan: string;
+        user?: { name: string };
+        jenis_pkm?: { nama_jenis: string };
+    };
+    arsip: ArsipItem[];
+}
+
 interface PaginatedData {
-    data: ArsipItem[];
+    data: AktivitasGroupedArsip[];
     current_page: number;
     last_page: number;
     total: number;
 }
 
+interface AvailableAktivitas {
+    id_aktivitas: number;
+    id_pengajuan: number;
+    judul_kegiatan: string;
+}
+
 interface Props {
-    listArsip: PaginatedData;
+    listGroupedArsip: PaginatedData;
+    listAvailableAktivitas: AvailableAktivitas[];
     filters: {
         search: string;
+        sort?: string;
+        direction?: string;
     };
 }
 
 const jenisOptions = [
     { value: 'laporan_akhir', label: 'Laporan Akhir' },
-    { value: 'daftar_hadir', label: 'Daftar Hadir' },
-    { value: 'foto_kegiatan', label: 'Foto Kegiatan' },
+    { value: 'dokumentasi', label: 'Dokumentasi' },
     { value: 'dokumen_lain', label: 'Dokumen Lain' },
 ];
 
 const jenisLabel: Record<string, string> = {
     laporan_akhir: 'Laporan Akhir',
-    daftar_hadir: 'Daftar Hadir',
-    foto_kegiatan: 'Foto Kegiatan',
+    dokumentasi: 'Dokumentasi',
     dokumen_lain: 'Dokumen Lain',
 };
 
-const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
+const ArsipPage: React.FC<Props> = ({ listGroupedArsip, listAvailableAktivitas, filters }) => {
     const [previewItem, setPreviewItem] = useState<ArsipItem | null>(null);
     const [search, setSearch] = useState(filters.search || '');
+    const [sortField, setSortField] = useState(filters.sort || 'created_at');
+    const [sortDir, setSortDir] = useState(filters.direction || 'desc');
     const [modalOpen, setModalOpen] = useState(false);
+    const [expandedIds, setExpandedIds] = useState<number[]>([]);
     const [editing, setEditing] = useState<ArsipItem | null>(null);
     const [form, setForm] = useState({
         id_pengajuan: '',
+        id_aktivitas: '',
         nama_dokumen: '',
         jenis_arsip: 'laporan_akhir',
         url_dokumen: '',
         keterangan: '',
     });
 
-    const items = listArsip.data || [];
+    const items = listGroupedArsip.data || [];
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -77,16 +94,33 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    const applySort = (field: string) => {
+        const isAsc = sortField === field && sortDir === 'asc';
+        const newDir = isAsc ? 'desc' : 'asc';
+        setSortField(field);
+        setSortDir(newDir);
+        router.get('/admin/arsip', {
+            search: search || undefined,
+            sort: field,
+            direction: newDir,
+        }, { preserveState: true, replace: true });
+    };
+
+    const toggleExpand = (id: number) => {
+        setExpandedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
     const openCreate = () => {
         setEditing(null);
-        setForm({ id_pengajuan: '', nama_dokumen: '', jenis_arsip: 'laporan_akhir', url_dokumen: '', keterangan: '' });
+        setForm({ id_pengajuan: '', id_aktivitas: '', nama_dokumen: '', jenis_arsip: 'laporan_akhir', url_dokumen: '', keterangan: '' });
         setModalOpen(true);
     };
 
-    const openEdit = (a: ArsipItem) => {
+    const openEdit = (a: ArsipItem, id_aktivitas: number, id_pengajuan: number) => {
         setEditing(a);
         setForm({
-            id_pengajuan: a.pengajuan?.id_pengajuan?.toString() || '',
+            id_pengajuan: id_pengajuan.toString() || '',
+            id_aktivitas: id_aktivitas.toString() || '',
             nama_dokumen: a.nama_dokumen,
             jenis_arsip: a.jenis_arsip,
             url_dokumen: a.url_dokumen || '',
@@ -156,11 +190,15 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                     <table className="w-full text-left min-w-[900px]">
                         <thead>
                             <tr className="border-b border-zinc-200">
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Dokumen</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Nama Aktivitas</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Jenis</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Last Update</th>
-                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-right w-28">Aksi</th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 w-10"></th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 cursor-pointer hover:bg-zinc-100" onClick={() => applySort('judul_kegiatan')}>
+                                    Nama Kegiatan {sortField === 'judul_kegiatan' && (sortDir === 'asc' ? '↑' : '↓')}
+                                </th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Ketua Tim</th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 cursor-pointer hover:bg-zinc-100" onClick={() => applySort('created_at')}>
+                                    Last Update {sortField === 'created_at' && (sortDir === 'asc' ? '↑' : '↓')}
+                                </th>
+                                <th className="py-3 px-6 text-[11px] font-semibold uppercase tracking-wider text-right w-24">Jumlah File</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
@@ -168,63 +206,70 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                                 <tr>
                                     <td colSpan={5} className="py-12 text-center text-zinc-400 font-medium text-[13px]">Tidak ada dokumen arsip yang ditemukan.</td>
                                 </tr>
-                            ) : items.map((a) => (
-                                <tr key={a.id_arsip} className="hover:bg-zinc-50/50 transition-colors group">
-                                    <td className="py-4 px-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 flex-shrink-0">
-                                                <FileText size={14} />
-                                            </div>
-                                            <div className="font-semibold text-zinc-900 text-[14px]">
-                                                {a.nama_dokumen}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <div className="text-[13px] text-zinc-600 font-medium truncate max-w-[250px]" title={a.aktivitas?.pengajuan?.judul_kegiatan || a.pengajuan?.judul_kegiatan || ''}>
-                                            {a.aktivitas?.pengajuan?.judul_kegiatan || a.pengajuan?.judul_kegiatan || 'Kegiatan Tidak Ditemukan'}
-                                        </div>
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[12px] font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                            <Folder size={12} className="opacity-70" /> {jenisLabel[a.jenis_arsip] || a.jenis_arsip}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 text-[13px] text-zinc-500">
-                                        {new Date(a.updated_at || a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                    </td>
-                                    <td className="py-4 px-6 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => setPreviewItem(a)}
-                                                className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
-                                                title="Preview"
-                                            >
-                                                <Eye size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => openEdit(a)}
-                                                className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(a.id_arsip)}
-                                                className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                title="Hapus"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                            ) : items.map((a) => {
+                                const isExpanded = expandedIds.includes(a.id_aktivitas);
+                                return (
+                                    <React.Fragment key={a.id_aktivitas}>
+                                        <tr className="hover:bg-zinc-50/50 transition-colors group cursor-pointer" onClick={() => toggleExpand(a.id_aktivitas)}>
+                                            <td className="py-4 px-6 text-center">
+                                                <button className="text-zinc-400 hover:text-zinc-600">
+                                                    {isExpanded ? '▼' : '▶'}
+                                                </button>
+                                            </td>
+                                            <td className="py-4 px-6 text-[14px] font-semibold text-zinc-900 truncate max-w-[300px]" title={a.pengajuan?.judul_kegiatan}>
+                                                {a.pengajuan?.judul_kegiatan || 'Tidak Ada Judul'}
+                                            </td>
+                                            <td className="py-4 px-6 text-[13px] text-zinc-600">
+                                                {a.pengajuan?.user?.name || '-'}
+                                            </td>
+                                            <td className="py-4 px-6 text-[13px] text-zinc-500">
+                                                {new Date(a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-medium text-zinc-700">
+                                                {a.arsip?.length || 0} File
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (a.arsip?.length > 0) && (
+                                            <tr className="bg-zinc-50/50">
+                                                <td colSpan={5} className="p-0 border-b border-zinc-100">
+                                                    <div className="px-12 py-4 bg-zinc-50/30 shadow-inner">
+                                                        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-3">Daftar Arsip</h4>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {a.arsip.map(arsip => (
+                                                                <div key={arsip.id_arsip} className="flex items-center justify-between bg-white border border-zinc-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                                        <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 flex-shrink-0">
+                                                                            <FileText size={14} />
+                                                                        </div>
+                                                                        <div className="overflow-hidden">
+                                                                            <div className="font-semibold text-zinc-900 text-[13px] truncate" title={arsip.nama_dokumen}>
+                                                                                {arsip.nama_dokumen}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-zinc-500 mt-0.5 inline-flex items-center gap-1">
+                                                                                <Folder size={10} className="opacity-70" /> {jenisLabel[arsip.jenis_arsip] || arsip.jenis_arsip}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-1">
+                                                                        <button onClick={(e) => { e.stopPropagation(); setPreviewItem({...arsip, pengajuan: a.pengajuan}); }} className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100" title="Preview"><Eye size={14} /></button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); openEdit(arsip, a.id_aktivitas, a.id_pengajuan); }} className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 hover:bg-amber-50" title="Edit"><Edit size={14} /></button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(arsip.id_arsip); }} className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50" title="Hapus"><Trash2 size={14} /></button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
                 <div className="px-6 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-                    <span className="text-[12px] font-medium text-zinc-500">{listArsip.total} total dokumen</span>
+                    <span className="text-[12px] font-medium text-zinc-500">{listGroupedArsip.total} grup aktivitas</span>
                 </div>
             </div>
 
@@ -301,9 +346,27 @@ const ArsipPage: React.FC<Props> = ({ listArsip, filters }) => {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">ID Pengajuan <span className="text-red-500">*</span></label>
-                                <input name="id_pengajuan" value={form.id_pengajuan} onChange={e => setForm({ ...form, id_pengajuan: e.target.value })} required type="number" placeholder="Linked Event ID"
-                                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 text-zinc-900 placeholder-zinc-400 transition-all" />
+                                <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">Pilih Aktivitas (Selesai pada tahun ini) <span className="text-red-500">*</span></label>
+                                <select 
+                                    name="id_aktivitas" 
+                                    value={form.id_aktivitas} 
+                                    onChange={e => {
+                                        const selId = e.target.value;
+                                        setForm({ 
+                                            ...form, 
+                                            id_aktivitas: selId, 
+                                            id_pengajuan: listAvailableAktivitas.find(a => a.id_aktivitas.toString() === selId)?.id_pengajuan.toString() || '' 
+                                        });
+                                    }} 
+                                    disabled={!!editing}
+                                    required
+                                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 text-zinc-900 placeholder-zinc-400 transition-all font-semibold"
+                                >
+                                    <option value="" disabled>-- Pilih Aktivitas --</option>
+                                    {listAvailableAktivitas.map(a => (
+                                        <option key={a.id_aktivitas} value={a.id_aktivitas}>{a.judul_kegiatan}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">Judul Dokumen <span className="text-red-500">*</span></label>

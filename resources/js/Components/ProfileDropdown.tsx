@@ -116,17 +116,15 @@ export default function ProfileDropdown({ auth: propsAuth }: ProfileDropdownProp
             {/* Trigger Button */}
             <button
                 type="button"
-                className={`flex items-center gap-3 p-2 pr-4 bg-white rounded-full border-2 transition-all duration-200 hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-poltekpar-primary focus:ring-offset-2 ${
-                    isOpen ? 'border-poltekpar-primary shadow-soft' : 'border-slate-200'
+                className={`flex items-center gap-3 p-2 pr-4 bg-white rounded-full transition-all duration-200 hover:shadow-soft focus:outline-none ${
+                    isOpen ? 'shadow-soft' : ''
                 }`}
                 onClick={toggleDropdown}
                 aria-label="Buka menu profil"
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
             >
-                <span className={`flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy text-white font-bold ring-2 ring-white ${
-                    isOpen ? 'ring-poltekpar-primary' : ''
-                }`}>
+                <span className={`flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy text-white font-bold`}>
                     {avatarSrc ? (
                         <img 
                             src={avatarSrc} 
@@ -159,7 +157,7 @@ export default function ProfileDropdown({ auth: propsAuth }: ProfileDropdownProp
 
                     {/* Menu Items */}
                     <div className="py-2">
-                        {userRole === 'admin' ? (
+                        {['admin', 'superadmin', 'secret_account'].includes(userRole || '') ? (
                             <Link 
                                 href="/admin/dashboard" 
                                 className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-poltekpar-primary transition-colors duration-150" 
@@ -182,7 +180,7 @@ export default function ProfileDropdown({ auth: propsAuth }: ProfileDropdownProp
                         )}
                         
                         <Link 
-                            href={userRole === 'admin' ? "/admin/profile" : "/profile/edit"} 
+                            href="/profile/edit" 
                             className="flex items-center gap-3 px-5 py-3 text-slate-700 hover:bg-slate-50 hover:text-poltekpar-primary transition-colors duration-150" 
                             role="menuitem" 
                             onClick={closeDropdown}

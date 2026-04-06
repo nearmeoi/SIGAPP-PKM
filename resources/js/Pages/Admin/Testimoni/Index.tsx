@@ -1,40 +1,35 @@
-import React, { useState, useCallback } from 'react';
-import { router } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
-import ConfirmDialog from '../../../Components/ConfirmDialog';
-import { Activity, MessageSquare, Plus, Edit, Trash2, X, Star } from 'lucide-react';
+import { Eye, MessageSquare, Star, Search, X, ChevronDown, ChevronUp, Trash2, Pencil } from 'lucide-react';
 
 interface TestimoniItem {
     id_testimoni: number;
     nama_pemberi: string;
     rating: number;
     pesan_ulasan: string;
+    masukan?: string | null;
     created_at: string;
-    id_aktivitas?: number | null;
-    aktivitas?: {
-        id_aktivitas: number;
-        pengajuan?: {
-            judul_kegiatan: string;
-            user?: { name: string };
-        };
-    };
 }
 
-interface AktivitasOption {
+interface AktivitasItem {
     id_aktivitas: number;
-    judul_kegiatan: string;
+    pengajuan?: {
+        judul_kegiatan: string;
+    };
+    testimoni: TestimoniItem[];
 }
 
 interface PaginatedData {
-    data: TestimoniItem[];
+    data: AktivitasItem[];
     current_page: number;
     last_page: number;
     total: number;
 }
 
 interface Props {
-    listTestimoni: PaginatedData;
-    listAktivitas?: AktivitasOption[];
+    listGroupedTestimoni: PaginatedData;
+    filters?: { search?: string };
 }
 
 const MetricCard = ({ title, val, subval }: { title: string, val: string | number, subval?: string }) => (
@@ -48,189 +43,279 @@ const MetricCard = ({ title, val, subval }: { title: string, val: string | numbe
     </div>
 );
 
-const TestimoniPage: React.FC<Props> = ({ listTestimoni, listAktivitas = [] }) => {
-    const items = listTestimoni.data || [];
-    const avgRating = items.length > 0
-        ? (items.reduce((acc, t) => acc + (t.rating || 0), 0) / items.length).toFixed(1)
+const TestimoniPage: React.FC<Props> = ({ listGroupedTestimoni, filters }) => {
+    const items = listGroupedTestimoni.data || [];
+    
+    // Flatten just to calculate average in the visible page easily
+    const allTestimoni = items.flatMap(a => a.testimoni);
+    const avgRating = allTestimoni.length > 0
+        ? (allTestimoni.reduce((a, b) => a + b.rating, 0) / allTestimoni.length).toFixed(1)
         : '0.0';
-    const positiveCount = items.filter(t => t.rating >= 4).length;
-    const positivePercent = items.length > 0 ? Math.round((positiveCount / items.length) * 100) : 0;
+    const totalReviews = allTestimoni.length;
+    
+    const [search, setSearch] = useState(filters?.search || '');
+    const [selectedTestimoni, setSelectedTestimoni] = useState<TestimoniItem | null>(null);
+    const [expandedRow, setExpandedRow] = useState<number | null>(null);
+    const [editingTestimoni, setEditingTestimoni] = useState<TestimoniItem | null>(null);
+    const [editForm, setEditForm] = useState({ nama_pemberi: '', rating: 5, pesan_ulasan: '', masukan: '' });
 
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<TestimoniItem | null>(null);
-    const [form, setForm] = useState({ id_aktivitas: '', nama_pemberi: '', rating: 0, pesan_ulasan: '' });
-    const [hover, setHover] = useState(0);
-    const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; action: () => void }>({
-        open: false, title: '', message: '', action: () => {},
-    });
+    // Get user role for permission checks
+    const { props } = usePage();
+    const userRole = (props as any).auth?.user?.role || 'admin';
 
-    const openCreate = () => {
-        setEditing(null);
-        setForm({ id_aktivitas: '', nama_pemberi: '', rating: 0, pesan_ulasan: '' });
-        setHover(0);
-        setModalOpen(true);
+    const toggleRow = (id: number) => {
+        setExpandedRow(prev => prev === id ? null : id);
     };
 
-    const openEdit = (t: TestimoniItem) => {
-        setEditing(t);
-        setForm({
-            id_aktivitas: t.id_aktivitas?.toString() || '',
-            nama_pemberi: t.nama_pemberi,
-            rating: t.rating,
-            pesan_ulasan: t.pesan_ulasan,
-        });
-        setHover(t.rating);
-        setModalOpen(true);
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (form.rating === 0) return;
-        if (editing) {
-            router.put(`/admin/testimoni/${editing.id_testimoni}`, {
-                id_aktivitas: form.id_aktivitas || null,
-                nama_pemberi: form.nama_pemberi,
-                rating: form.rating,
-                pesan_ulasan: form.pesan_ulasan,
-            }, { onSuccess: () => setModalOpen(false) });
-        } else {
-            router.post('/admin/testimoni', {
-                id_aktivitas: form.id_aktivitas || null,
-                nama_pemberi: form.nama_pemberi,
-                rating: form.rating,
-                pesan_ulasan: form.pesan_ulasan,
-            }, { onSuccess: () => setModalOpen(false) });
-        }
+        router.get('/admin/testimoni', { search }, { preserveState: true });
     };
 
-    const handleDelete = (t: TestimoniItem) => {
-        setConfirmDialog({
-            open: true,
-            title: 'Hapus Testimoni',
-            message: `Hapus testimoni dari "${t.nama_pemberi}"?`,
-            action: () => router.delete(`/admin/testimoni/${t.id_testimoni}`),
+    const handleDelete = (id: number) => {
+        if (!confirm('Yakin ingin menghapus testimoni ini?')) return;
+        router.delete(`/admin/testimoni/${id}`, { preserveScroll: true });
+    };
+
+    const openEditModal = (t: TestimoniItem) => {
+        setEditingTestimoni(t);
+        setEditForm({ nama_pemberi: t.nama_pemberi, rating: t.rating, pesan_ulasan: t.pesan_ulasan || '', masukan: t.masukan || '' });
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTestimoni) return;
+        router.put(`/admin/testimoni/${editingTestimoni.id_testimoni}`, editForm, {
+            preserveScroll: true,
+            onSuccess: () => setEditingTestimoni(null),
         });
     };
 
     return (
-        <AdminLayout title="">
+        <AdminLayout title="Kelola Testimoni">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Reviews & Feedback</h1>
-                    <p className="text-zinc-500 text-[14px] mt-1">Feedback terkumpul dari peserta kegiatan pengabdian.</p>
+                    <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Kumpulan Ulasan PKM</h1>
+                    <p className="text-zinc-500 text-[14px] mt-1">Ulasan disatukan berdasarkan Judul Kegiatan PKM.</p>
                 </div>
-                <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white rounded-lg text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow-sm">
-                    <Plus size={14} /> Tambah Testimoni
-                </button>
+                <div>
+                    <form onSubmit={handleSearch} className="relative">
+                        <input 
+                            type="text" 
+                            placeholder="Cari aktivitas..." 
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="bg-white border border-zinc-200 rounded-lg pl-10 pr-4 py-2.5 text-[13px] font-medium w-[250px] outline-none focus:border-poltekpar-primary focus:ring-1 focus:ring-poltekpar-primary"
+                        />
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    </form>
+                </div>
             </div>
 
             {/* Summary stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-                <MetricCard title="Average Rating" val={avgRating} subval="/ 5.0" />
-                <MetricCard title="Total Reviews" val={listTestimoni.total} />
-                <MetricCard title="Positive Feedback" val={`${positivePercent}%`} subval="≥ 4 stars" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+                <MetricCard title="Total Aktivitas Terulas" val={listGroupedTestimoni.total} />
+                <MetricCard title="Rata-rata Rating (Page ini)" val={avgRating} subval="/ 5.0" />
+                <MetricCard title="Total Ulasan (Page ini)" val={totalReviews} />
             </div>
 
-            {/* Review cards */}
             {items.length === 0 ? (
                 <div className="bg-white rounded-xl border border-zinc-200 shadow-sm py-16 flex flex-col items-center justify-center text-center">
                     <MessageSquare size={32} className="text-zinc-300 mb-3" />
-                    <div className="text-zinc-900 text-[14px] font-medium">Belum ada testimoni</div>
-                    <div className="text-zinc-500 text-[13px] mt-1">Klik "Tambah Testimoni" untuk menambahkan.</div>
+                    <div className="text-zinc-900 text-[14px] font-medium">Belum ada aktivitas yang memiliki ulasan</div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {items.map((t) => (
-                        <div key={t.id_testimoni} className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full group">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex gap-1">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <Star key={s} size={14} fill={s <= t.rating ? '#0f172a' : 'none'} className={s <= t.rating ? 'text-zinc-900' : 'text-zinc-200'} />
-                                    ))}
-                                </div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => openEdit(t)} className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 hover:bg-amber-50">
-                                        <Edit size={13} />
-                                    </button>
-                                    <button onClick={() => handleDelete(t)} className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50">
-                                        <Trash2 size={13} />
-                                    </button>
-                                </div>
-                            </div>
-                            <p className="text-zinc-700 text-[14px] leading-relaxed flex-1 italic">"{t.pesan_ulasan}"</p>
-                            <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
-                                <div>
-                                    <div className="font-semibold text-zinc-900 text-[13px]">{t.nama_pemberi}</div>
-                                    <div className="text-zinc-400 text-[11px] mt-0.5 truncate max-w-[200px]">{t.aktivitas?.pengajuan?.judul_kegiatan || 'Unknown Event'}</div>
-                                </div>
-                                <div className="text-[12px] font-medium text-zinc-400">
-                                    {new Date(t.created_at).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+                    <table className="w-full text-left">
+                        <thead className="bg-zinc-50 border-b border-zinc-200 text-[12px] uppercase text-zinc-500">
+                            <tr>
+                                <th className="px-6 py-4 font-bold">Judul Kegiatan PKM</th>
+                                <th className="px-6 py-4 font-bold">Jumlah Testimoni</th>
+                                <th className="px-6 py-4 font-bold">Rata-rata Rating</th>
+                                <th className="px-6 py-4 font-bold w-32 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 text-[13.5px]">
+                            {items.map(aktivitas => {
+                                const count = aktivitas.testimoni.length;
+                                const avg = count > 0 ? (aktivitas.testimoni.reduce((a, b) => a + b.rating, 0) / count).toFixed(1) : '0';
+                                const isExpanded = expandedRow === aktivitas.id_aktivitas;
+
+                                return (
+                                    <React.Fragment key={aktivitas.id_aktivitas}>
+                                        <tr 
+                                            onClick={() => toggleRow(aktivitas.id_aktivitas)} 
+                                            className={`hover:bg-zinc-50/50 cursor-pointer transition-colors ${isExpanded ? 'bg-zinc-50' : ''}`}
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-zinc-900 line-clamp-2">
+                                                    {aktivitas.pengajuan?.judul_kegiatan || 'Tanpa Judul'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-zinc-700">
+                                                <span className="bg-poltekpar-primary/10 text-poltekpar-primary px-3 py-1 rounded-full text-[12px] font-bold">
+                                                    {count} Ulasan
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 font-bold text-zinc-800 flex items-center gap-1.5 pt-4">
+                                                <Star size={16} className="text-yellow-400 fill-yellow-400" /> {avg}
+                                            </td>
+                                            <td className="px-6 py-4 text-center text-zinc-400">
+                                                {isExpanded ? <ChevronUp size={20} className="mx-auto" /> : <ChevronDown size={20} className="mx-auto" />}
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr>
+                                                <td colSpan={4} className="bg-zinc-50 border-t border-zinc-100 p-0">
+                                                    <div className="p-6 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+                                                        <h4 className="text-[12px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Daftar Testimoni ({count})</h4>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                            {aktivitas.testimoni.map((t, index) => (
+                                                                <div key={t.id_testimoni} className="bg-white border rounded-xl p-4 shadow-sm border-zinc-200/80 hover:border-zinc-300 transition-colors flex flex-col h-full">
+                                                                    <div className="flex items-center justify-between mb-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-poltekpar-primary to-blue-400 flex items-center justify-center text-white font-bold text-[12px] shadow-inner shadow-white/20">
+                                                                                {t.nama_pemberi.substring(0, 2).toUpperCase()}
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="font-bold text-[13px] text-zinc-900 tracking-tight">{t.nama_pemberi}</div>
+                                                                                <div className="text-[10px] text-zinc-400 font-medium">{new Date(t.created_at).toLocaleDateString('id-ID', {day: 'numeric', month:'short', year:'numeric'})}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex gap-0.5">
+                                                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                                                <Star key={s} size={12} className={s <= t.rating ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm' : 'text-zinc-200'} />
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className="text-zinc-600 text-[13px] italic line-clamp-2 mb-4 flex-1">"{t.pesan_ulasan || 'Tidak ada pesan tertulis'}"</p>
+                                                                    
+                                                                    <div className="flex gap-2 mt-auto">
+                                                                        <button onClick={() => setSelectedTestimoni(t)} className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-[12px] py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                                                            <Eye size={14}/> Detail
+                                                                        </button>
+                                                                        {userRole === 'superadmin' && (
+                                                                            <button onClick={() => openEditModal(t)} className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[12px] py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1">
+                                                                                <Pencil size={13}/>
+                                                                            </button>
+                                                                        )}
+                                                                        <button onClick={() => handleDelete(t.id_testimoni)} className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[12px] py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1">
+                                                                            <Trash2 size={13}/>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                )
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
-            {modalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setModalOpen(false)}>
-                    <div className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm" />
-                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-                        <div className="px-6 py-4 border-b flex items-center justify-between">
-                            <h3 className="text-[16px] font-bold">{editing ? 'Edit Testimoni' : 'Tambah Testimoni'}</h3>
-                            <button onClick={() => setModalOpen(false)}><X size={18} /></button>
-                        </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="text-[12px] font-medium text-zinc-600 mb-1.5 block">Aktivitas Terkait</label>
-                                <div className="relative">
-                                    <select value={form.id_aktivitas} onChange={e => setForm({ ...form, id_aktivitas: e.target.value })}
-                                        className="w-full border-2 border-zinc-100 rounded-2xl pl-10 pr-10 py-3 text-[13px] font-bold text-zinc-800 bg-white hover:bg-zinc-50 outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-300 transition-all shadow-sm appearance-none cursor-pointer">
-                                        <option value="">-- Tidak Ditautkan (Umum) --</option>
-                                        {listAktivitas.map(a => (
-                                            <option key={a.id_aktivitas} value={a.id_aktivitas}>{a.judul_kegiatan}</option>
-                                        ))}
-                                    </select>
-                                    <Activity size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                                    </div>
+            {/* Pagination Placeholder if needed */}
+
+            {/* Modal Detail Individu Testimoni */}
+            {selectedTestimoni && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm"
+                     onClick={() => setSelectedTestimoni(null)}>
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200" 
+                         onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header Modal */}
+                        <div className="p-6 border-b border-zinc-100 flex items-start justify-between bg-zinc-50/50">
+                            <div className="flex gap-4 items-center">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-poltekpar-primary to-blue-400 flex items-center justify-center text-white font-bold text-[18px] shadow-inner shadow-white/20">
+                                    {selectedTestimoni.nama_pemberi.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h3 className="text-[18px] font-bold text-zinc-900 leading-snug">{selectedTestimoni.nama_pemberi}</h3>
+                                    <div className="text-[12px] font-medium text-zinc-400">{new Date(selectedTestimoni.created_at).toLocaleDateString('id-ID', {day: 'numeric', month:'long', year:'numeric'})}</div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="text-[12px] font-medium text-zinc-600 mb-1.5 block">Nama Lengkap</label>
-                                <input type="text" value={form.nama_pemberi} onChange={e => setForm({ ...form, nama_pemberi: e.target.value })} required
-                                    className="w-full border-2 border-zinc-100 rounded-2xl px-4 py-3 text-[13px] font-bold text-zinc-800 focus:bg-white bg-zinc-50 outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-300 transition-all placeholder:font-normal" placeholder="John Doe..."/>
-                            </div>
-                            <div>
-                                <label className="text-[12px] font-medium text-zinc-600 mb-1 block">Rating</label>
-                                <div className="flex gap-1">
-                                    {[1, 2, 3, 4, 5].map(s => (
-                                        <button type="button" key={s} onClick={() => setForm({ ...form, rating: s })} onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(form.rating)}>
-                                            <Star size={24} fill={(hover || form.rating) >= s ? '#0f172a' : 'none'}
-                                                className={(hover || form.rating) >= s ? 'text-zinc-900' : 'text-zinc-200'} />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-[12px] font-medium text-zinc-600 mb-1.5 block">Pesan & Kesan</label>
-                                <textarea value={form.pesan_ulasan} onChange={e => setForm({ ...form, pesan_ulasan: e.target.value })} required rows={4}
-                                    className="w-full border-2 border-zinc-100 rounded-2xl px-4 py-3 text-[13px] font-bold text-zinc-800 focus:bg-white bg-zinc-50 outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-300 transition-all resize-none placeholder:font-normal" placeholder="Tuliskan ulasan..." />
-                            </div>
-                            <button type="submit" disabled={form.rating === 0}
-                                className="w-full bg-zinc-900 text-white py-3.5 rounded-2xl text-[14px] font-bold hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-xl shadow-zinc-900/10 active:scale-[0.98]">
-                                {editing ? 'Simpan Perubahan' : 'Publish Testimoni'}
+                            <button onClick={() => setSelectedTestimoni(null)} className="p-2 bg-white rounded-full border border-zinc-200 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all flex-shrink-0 shadow-sm shadow-zinc-200/50 hover:scale-105 active:scale-95">
+                                <X size={18} />
                             </button>
-                        </form>
+                        </div>
+
+                        <div className="p-6 font-[Inter] space-y-5">
+                            <div className="flex bg-zinc-50 px-4 py-2.5 rounded-xl border border-zinc-100 w-max gap-1">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star key={s} size={18} className={s <= selectedTestimoni.rating ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm' : 'text-zinc-200'} />
+                                ))}
+                            </div>
+                            <div className="space-y-4">
+                                {selectedTestimoni.pesan_ulasan && (
+                                    <div className="bg-zinc-50 rounded-xl p-5 border border-zinc-100">
+                                        <div className="text-[12px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><MessageSquare size={14}/> Kesan & Pesan</div>
+                                        <p className="text-zinc-800 text-[14px] leading-relaxed italic">"{selectedTestimoni.pesan_ulasan}"</p>
+                                    </div>
+                                )}
+                                {selectedTestimoni.masukan && (
+                                    <div className="bg-amber-50/50 border border-amber-100/50 rounded-xl p-5">
+                                        <div className="text-[12px] font-bold text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Star size={14} className="fill-amber-400 opacity-50"/> Kritik & Saran (Masukan)</div>
+                                        <p className="text-amber-900/90 text-[14px] leading-relaxed whitespace-pre-wrap">
+                                            {selectedTestimoni.masukan}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex justify-end">
+                            <button onClick={() => setSelectedTestimoni(null)} className="px-6 py-2 bg-zinc-900 text-white text-[13px] font-bold rounded-lg hover:bg-zinc-800 transition-all">Tutup</button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            <ConfirmDialog open={confirmDialog.open} title={confirmDialog.title} message={confirmDialog.message}
-                onConfirm={() => { confirmDialog.action(); setConfirmDialog(prev => ({ ...prev, open: false })); }}
-                onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))} variant="danger" />
+            {/* Edit Testimoni Modal (Superadmin Only) */}
+            {editingTestimoni && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm"
+                     onClick={() => setEditingTestimoni(null)}>
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                         onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                            <h3 className="text-[18px] font-bold text-zinc-900">Edit Testimoni</h3>
+                            <button onClick={() => setEditingTestimoni(null)} className="p-2 bg-white rounded-full border border-zinc-200 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-700">Nama Pemberi</label>
+                                <input type="text" value={editForm.nama_pemberi} onChange={e => setEditForm(prev => ({ ...prev, nama_pemberi: e.target.value }))} className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-poltekpar-primary" required />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-700">Rating</label>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map(s => (
+                                        <button key={s} type="button" onClick={() => setEditForm(prev => ({ ...prev, rating: s }))} className="p-1">
+                                            <Star size={24} className={s <= editForm.rating ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-200'} />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-700">Kesan & Pesan</label>
+                                <textarea value={editForm.pesan_ulasan} onChange={e => setEditForm(prev => ({ ...prev, pesan_ulasan: e.target.value }))} rows={3} className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-poltekpar-primary" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-700">Kritik & Saran</label>
+                                <textarea value={editForm.masukan} onChange={e => setEditForm(prev => ({ ...prev, masukan: e.target.value }))} rows={3} className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-poltekpar-primary" />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setEditingTestimoni(null)} className="flex-1 py-2.5 rounded-lg border border-zinc-200 text-zinc-600 font-bold text-sm hover:bg-zinc-50">Batal</button>
+                                <button type="submit" className="flex-1 py-2.5 rounded-lg bg-poltekpar-primary text-white font-bold text-sm hover:bg-poltekpar-navy">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 };

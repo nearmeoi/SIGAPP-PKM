@@ -25,7 +25,7 @@ class PengajuanUserController extends Controller
         // Ambil pengajuan milik user dari database
         $userSubmissions = $user
             ? Pengajuan::where('id_user', $user->id_user)
-                ->with(['timKegiatan.pegawai', 'jenisPkm', 'user'])
+                ->with(['timKegiatan.pegawai', 'jenisPkm', 'user', 'aktivitas'])
                 ->latest()
                 ->get()
                 ->map(fn($p) => [
@@ -34,7 +34,10 @@ class PengajuanUserController extends Controller
                     'judul' => $p->judul_kegiatan,
                     'ringkasan' => $p->kebutuhan ?: ($p->instansi_mitra ?: '-'),
                     'tanggal' => optional($p->created_at)->format('d M Y') ?? '-',
-                    'status' => $p->status_pengajuan,
+                    'status' => $p->aktivitas 
+                        ? ($p->aktivitas->status_pelaksanaan === 'selesai' ? 'selesai' 
+                            : (in_array($p->aktivitas->status_pelaksanaan, ['berjalan', 'persiapan']) ? 'berlangsung' : 'diterima'))
+                        : $p->status_pengajuan,
                     'catatan' => $p->catatan_admin,
                     'instansi_mitra' => $p->instansi_mitra,
                     'no_telepon' => $p->no_telepon,
