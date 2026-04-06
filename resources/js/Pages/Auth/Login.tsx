@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import type { PageProps } from '@/types';
 
 // Import Specific Styling for Login
 import '../../../css/login.css';
@@ -8,9 +9,12 @@ interface LoginFormData {
     email: string;
     password: string;
     remember: boolean;
+    login_source: string;
 }
 
-export default function Login(): JSX.Element {
+export default function Login() {
+    const { props } = usePage<PageProps & { flash?: { success?: string | null; error?: string | null } }>();
+    const flash = props.flash ?? {};
     const [showPassword, setShowPassword] = useState(false);
 
     // Initialize Inertia's useForm hook for state management and validation handling
@@ -18,6 +22,7 @@ export default function Login(): JSX.Element {
         email: '',
         password: '',
         remember: false,
+        login_source: 'general',
     });
 
     // Handle form submission using form.post
@@ -55,6 +60,13 @@ export default function Login(): JSX.Element {
                     <div className="login-body">
                         <h1 className="login-title">Selamat Datang</h1>
                         <p className="login-subtitle">Silakan masuk menggunakan kredensial Anda</p>
+
+                        {flash.error && (
+                            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-800">
+                                <div className="font-semibold">Akses login tidak sesuai.</div>
+                                <div className="mt-1 text-red-700">{flash.error}</div>
+                            </div>
+                        )}
 
                         <form onSubmit={submit}>
                             {/* Email Input */}
@@ -140,6 +152,24 @@ export default function Login(): JSX.Element {
                                 )}
                             </button>
                         </form>
+
+                        <div className="login-divider-text">ATAU</div>
+
+                        <Link
+                            href="/login/dosen"
+                            className="btn-login-dosen-secondary group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                    <i className="fa-solid fa-user-tie"></i>
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Akses sebagai Akun Dosen</div>
+                                    <div className="text-[11px] text-slate-400 font-medium">Masuk atau aktivasi akun lewat verifikasi NIP</div>
+                                </div>
+                            </div>
+                            <i className="fa-solid fa-chevron-right text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"></i>
+                        </Link>
 
                         <div className="login-divider"></div>
 

@@ -12,23 +12,19 @@ export interface PkmStatusMeta {
     markerIcon: string;
 }
 
-export const PKM_TYPE_META: Record<string, PkmTypeMeta> = {
-    pendampingan_desa: {
-        key: 'pendampingan_desa',
-        label: 'PKM Pendampingan Desa',
-        color: '#15325F', // poltekpar-primary
-    },
-    bimbingan_teknis: {
-        key: 'bimbingan_teknis',
-        label: 'PKM Bimbingan Teknis',
-        color: '#DCAF67', // poltekpar-gold
-    },
-    mahasiswa_prodi: {
-        key: 'mahasiswa_prodi',
-        label: 'PKM Mahasiswa / Prodi',
-        color: '#0D1F3C', // poltekpar-navy
-    },
-};
+import L from 'leaflet';
+
+export interface PkmTypeMeta {
+    key: string;
+    label: string;
+    color: string;
+}
+
+export interface PkmStatusMeta {
+    key: string;
+    label: string;
+    markerIcon: string;
+}
 
 export const PKM_STATUS_META: Record<string, PkmStatusMeta> = {
     selesai: {
@@ -53,33 +49,55 @@ export const PKM_STATUS_META: Record<string, PkmStatusMeta> = {
     },
 };
 
-const normalizeTypeKey = (value: any): string => {
-    const normalized = String(value ?? '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+// Palette warna curated — dipakai jika warna_icon dari DB tidak ada atau semua sama
+export const COLOR_PALETTE = [
+    '#15325F', // poltekpar-primary (navy biru)
+    '#DCAF67', // poltekpar-gold
+    '#2563eb', // biru terang
+    '#10b981', // emerald
+    '#f59e0b', // amber
+    '#ef4444', // merah
+    '#8b5cf6', // violet
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#f97316', // orange
+];
 
-    if (normalized.includes('pendampingan') || normalized.includes('desa')) {
-        return 'pendampingan_desa';
-    }
+/**
+ * Mengekstrak jenis PKM secara dinamis dari seluruh pkmData yang ada.
+ * Memastikan semua chart, marker map, dan legend menggunakan warna yang sama (palette fallback jika perlu).
+ */
+export const extractDynamicPkmTypes = (pkmData: any[]): PkmTypeMeta[] => {
+    if (!Array.isArray(pkmData) || pkmData.length === 0) return [];
 
-    if (normalized.includes('bimbingan') || normalized.includes('teknis')) {
-        return 'bimbingan_teknis';
-    }
+    const jenisMap = new Map<string, { rawLabel: string, color: string }>();
+    pkmData.forEach((item) => {
+        const rawLabel = String(item?.jenis_pkm ?? '').trim() || 'Lainnya';
+        if (!jenisMap.has(rawLabel)) {
+            const rawColor = (item as any)?.warna_icon;
+            const hasValidColor = rawColor && typeof rawColor === 'string' && rawColor.startsWith('#');
+            jenisMap.set(rawLabel, { rawLabel, color: hasValidColor ? rawColor : '' });
+        }
+    });
 
-    if (normalized.includes('mahasiswa') || normalized.includes('prodi')) {
-        return 'mahasiswa_prodi';
-    }
+    const allColors = [...jenisMap.values()].map((j) => j.color).filter(Boolean);
+    const uniqueColors = new Set(allColors);
+    const colorsAreUseful = uniqueColors.size > 1 || (uniqueColors.size === 1 && jenisMap.size === 1);
 
-    return 'mahasiswa_prodi';
-};
+    let colorIndex = 0;
+    return Array.from(jenisMap.values()).map((jenis) => {
+        const labelStr = jenis.rawLabel;
+        // User request 3: "penamaan PKM harus diawali dengan pkm di jenis pkm"
+        const displayLabel = labelStr.toLowerCase().startsWith('pkm') ? labelStr : `PKM ${labelStr}`;
 
-export const getPkmTypeMeta = (pkm: any): PkmTypeMeta => {
-    // If warna_icon is provided from DB, use it
-    if (pkm?.warna_icon && typeof pkm.warna_icon === 'string' && pkm.warna_icon.startsWith('#')) {
-        const rawType = pkm?.jenis_pkm ?? pkm?.jenisPkm ?? pkm?.jenis ?? pkm?.type ?? pkm?.category;
-        const baseMeta = PKM_TYPE_META[normalizeTypeKey(rawType)] ?? PKM_TYPE_META.mahasiswa_prodi;
-        return { ...baseMeta, color: pkm.warna_icon };
-    }
-    const rawType = pkm?.jenis_pkm ?? pkm?.jenisPkm ?? pkm?.jenis ?? pkm?.type ?? pkm?.category;
-    return PKM_TYPE_META[normalizeTypeKey(rawType)] ?? PKM_TYPE_META.mahasiswa_prodi;
+        return {
+            key: labelStr,
+            label: displayLabel,
+            color: colorsAreUseful && jenis.color
+                ? jenis.color
+                : COLOR_PALETTE[colorIndex++ % COLOR_PALETTE.length],
+        };
+    });
 };
 
 export const getPkmStatusMeta = (status: any): PkmStatusMeta => {
@@ -87,14 +105,14 @@ export const getPkmStatusMeta = (status: any): PkmStatusMeta => {
     return PKM_STATUS_META[statusKey] ?? PKM_STATUS_META.berlangsung;
 };
 
-export const createPkmMarkerIcon = (pkm: any) => {
-    const typeMeta = getPkmTypeMeta(pkm);
-    const statusMeta = getPkmStatusMeta(pkm?.status);
+// Menggunakan tipe meta statis bila hanya 1 elemen (fallback), tapi lebih baik kirim color statis override dari caller
+export const createPkmMarkerIcon = (status: string, color: string) => {
+    const statusMeta = getPkmStatusMeta(status);
 
     return L.divIcon({
         className: 'custom-leaflet-marker',
         html: `
-            <div class="pkm-map-marker-wrap" style="--pkm-marker-color: ${typeMeta.color}">
+            <div class="pkm-map-marker-wrap" style="--pkm-marker-color: ${color}">
                 <div class="pkm-map-marker">
                     <span class="pkm-map-marker__inner">
                         <i class="fa-solid ${statusMeta.markerIcon}"></i>
@@ -109,5 +127,4 @@ export const createPkmMarkerIcon = (pkm: any) => {
     });
 };
 
-export const PKM_LEGEND_TYPES = Object.values(PKM_TYPE_META);
 export const PKM_LEGEND_STATUSES = Object.values(PKM_STATUS_META);

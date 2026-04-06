@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
+    private const DUMMY_DOSEN_PASSWORD = 'Dosen#2026';
+
     /**
      * Run the database seeds.
      */
@@ -43,6 +45,65 @@ class UserSeeder extends Seeder
                 'posisi' => 'Dosen Tetap',
             ]
         );
+
+        $dummyDosenAccounts = [
+            [
+                'name' => 'Dr. Rina Puspitasari, M.Par.',
+                'email' => 'rina.puspitasari@poltekparmakassar.ac.id',
+                'nip' => '197803122005012001',
+                'jabatan' => 'Dosen',
+                'posisi' => 'Dosen Tetap',
+            ],
+            [
+                'name' => 'Andi Saputra, S.ST.Par., M.M.',
+                'email' => 'andi.saputra@poltekparmakassar.ac.id',
+                'nip' => '198104252008011002',
+                'jabatan' => 'Dosen',
+                'posisi' => 'Koordinator Prodi',
+            ],
+            [
+                'name' => 'Nur Aisyah, M.Tr.Par.',
+                'email' => 'nur.aisyah@poltekparmakassar.ac.id',
+                'nip' => '198611032011012003',
+                'jabatan' => 'Dosen',
+                'posisi' => 'Dosen Tetap',
+            ],
+            [
+                'name' => 'Fadli Rahman, S.Pd., M.Pd.',
+                'email' => 'fadli.rahman@poltekparmakassar.ac.id',
+                'nip' => '199002142015041004',
+                'jabatan' => 'Dosen',
+                'posisi' => 'Sekretaris Jurusan',
+            ],
+            [
+                'name' => 'Maya Kartika, S.ST.Par., M.Sc.',
+                'email' => 'maya.kartika@poltekparmakassar.ac.id',
+                'nip' => '199307182018092005',
+                'jabatan' => 'Dosen',
+                'posisi' => 'Dosen Praktisi',
+            ],
+        ];
+
+        foreach ($dummyDosenAccounts as $account) {
+            $user = User::updateOrCreate(
+                ['email' => $account['email']],
+                [
+                    'name' => $account['name'],
+                    'password' => Hash::make(self::DUMMY_DOSEN_PASSWORD),
+                    'role' => 'dosen',
+                ]
+            );
+
+            Pegawai::updateOrCreate(
+                ['nip' => $account['nip']],
+                [
+                    'id_user' => $user->id_user,
+                    'nama_pegawai' => $account['name'],
+                    'jabatan' => $account['jabatan'],
+                    'posisi' => $account['posisi'],
+                ]
+            );
+        }
 
         // 3. Akun Masyarakat
         User::updateOrCreate(

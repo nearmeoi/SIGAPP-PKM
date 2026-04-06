@@ -37,7 +37,13 @@ const PegawaiPage: React.FC<Props> = ({ listPegawai, filters }) => {
     const openEdit = (item: Pegawai) => { setEditId(item.id_pegawai); setForm({ nip: item.nip || '', nama_pegawai: item.nama_pegawai, jabatan: item.jabatan || '', posisi: item.posisi || '' }); setModalOpen(true); };
     const closeModal = () => { setModalOpen(false); setEditId(null); };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setForm({
+            ...form,
+            [name]: name === 'nip' ? value.replace(/\D/g, '').slice(0, 18) : value,
+        });
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -173,7 +179,7 @@ const PegawaiPage: React.FC<Props> = ({ listPegawai, filters }) => {
                             </div>
                             <div>
                                 <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">NIP</label>
-                                <input name="nip" value={form.nip} onChange={handleChange} placeholder="Masukkan NIP"
+                                <input name="nip" value={form.nip} onChange={handleChange} placeholder="Masukkan 18 digit NIP" inputMode="numeric" maxLength={18}
                                     className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 text-zinc-900 placeholder-zinc-400 transition-all" />
                             </div>
                             <div>

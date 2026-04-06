@@ -13,8 +13,7 @@ import {
     ChartOptions,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { resolvePublicPkmData } from '@/data/sigapData';
-import { PKM_LEGEND_TYPES, getPkmTypeMeta } from '@/data/pkmMapVisuals';
+import { extractDynamicPkmTypes } from '@/data/pkmMapVisuals';
 import type { PkmData } from '@/types';
 
 ChartJS.register(
@@ -33,7 +32,7 @@ const COLORS = {
     textMuted: '#64748b',
 };
 
-const fallbackPkmData = resolvePublicPkmData(null);
+
 
 interface ChartSource {
     barData: ChartData<'bar'>;
@@ -49,15 +48,15 @@ const buildBarOptions = (compactMobile = false): ChartOptions<'bar'> => ({
             labels: {
                 usePointStyle: true,
                 pointStyle: 'circle',
-                padding: compactMobile ? 14 : 20,
-                font: { size: compactMobile ? 11 : 13, weight: '600', family: "'Segoe UI', sans-serif" },
+                padding: 20,
+                font: { size: 12, weight: 600, family: "'Segoe UI', sans-serif" },
                 color: COLORS.textMuted,
             },
         },
         title: { display: false },
         tooltip: {
             backgroundColor: '#0f172a',
-            titleFont: { size: 13, weight: '700' },
+            titleFont: { size: 13, weight: 700 },
             bodyFont: { size: 12 },
             padding: 12,
             cornerRadius: 10,
@@ -72,8 +71,9 @@ const buildBarOptions = (compactMobile = false): ChartOptions<'bar'> => ({
         x: {
             grid: { display: false },
             ticks: {
-                font: { size: compactMobile ? 11 : 12, weight: '600' },
+                font: { size: 12, weight: 600 },
                 color: COLORS.textMuted,
+                padding: 10,
             },
         },
         y: {
@@ -99,8 +99,8 @@ const buildDoughnutOptions = (compactMobile = false): ChartOptions<'doughnut'> =
             labels: {
                 usePointStyle: true,
                 pointStyle: 'circle',
-                padding: compactMobile ? 12 : 16,
-                font: { size: compactMobile ? 10 : 12, weight: '600', family: "'Segoe UI', sans-serif" },
+                padding: 16,
+                font: { size: 12, weight: 600, family: "'Segoe UI', sans-serif" },
                 color: COLORS.textMuted,
                 boxWidth: compactMobile ? 8 : 10,
             },
@@ -108,7 +108,7 @@ const buildDoughnutOptions = (compactMobile = false): ChartOptions<'doughnut'> =
         title: { display: false },
         tooltip: {
             backgroundColor: '#0f172a',
-            titleFont: { size: 13, weight: '700' },
+            titleFont: { size: 13, weight: 700 }, // Harus numeric 700 atau 'bold'
             bodyFont: { size: 12 },
             padding: 12,
             cornerRadius: 10,
@@ -120,45 +120,54 @@ const buildDoughnutOptions = (compactMobile = false): ChartOptions<'doughnut'> =
 });
 
 const buildChartSource = (pkmData: PkmData[] = []): ChartSource => {
-    const sourceData = Array.isArray(pkmData) && pkmData.length > 0 ? pkmData : fallbackPkmData;
+    if (!Array.isArray(pkmData) || pkmData.length === 0) {
+        return {
+            barData: { labels: [], datasets: [] },
+            doughnutData: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: '#ffffff', borderWidth: 3, hoverOffset: 14 }] },
+        };
+    }
 
+    // Kumpulkan semua jenis PKM unik dari data MySQL (dinamis, tidak hardcoded)
+    const typesMeta = extractDynamicPkmTypes(pkmData);
+
+    // Kumpulkan semua tahun unik dari data MySQL
     const years = [...new Set(
-        sourceData
+        pkmData
             .map((item) => Number(item?.tahun))
             .filter((year) => Number.isFinite(year))
     )].sort((a, b) => a - b);
 
-    const groupedByTypePerYear = PKM_LEGEND_TYPES.map((typeMeta) => ({
-        ...typeMeta,
-        data: years.map((year) => (
-            sourceData.filter((item) => Number(item?.tahun) === year && getPkmTypeMeta(item).key === typeMeta.key).length
-        )),
+    // Bar chart: per tahun per jenis
+    const barDatasets = typesMeta.map((typeMeta) => ({
+        label: typeMeta.label,
+        data: years.map((year) =>
+            pkmData.filter((item) => Number(item?.tahun) === year && (String(item?.jenis_pkm ?? '').trim() || 'Lainnya') === typeMeta.key).length
+        ),
+        backgroundColor: typeMeta.color,
+        borderRadius: 6,
+        borderSkipped: false as const,
+        barPercentage: 0.8,
+        categoryPercentage: 0.8,
     }));
 
-    const groupedByTypeTotals = PKM_LEGEND_TYPES.map((typeMeta) => ({
-        ...typeMeta,
-        total: sourceData.filter((item) => getPkmTypeMeta(item).key === typeMeta.key).length,
+    // Doughnut chart: total per jenis
+    const doughnutTotals = typesMeta.map((typeMeta) => ({
+        label: typeMeta.label,
+        total: pkmData.filter((item) => (String(item?.jenis_pkm ?? '').trim() || 'Lainnya') === typeMeta.key).length,
+        color: typeMeta.color,
     }));
 
     return {
         barData: {
             labels: years,
-            datasets: groupedByTypePerYear.map((item) => ({
-                label: item.label,
-                data: item.data,
-                backgroundColor: item.color,
-                borderRadius: 6,
-                borderSkipped: false,
-                barPercentage: 0.55,
-                categoryPercentage: 0.7,
-            })),
+            datasets: barDatasets,
         },
         doughnutData: {
-            labels: groupedByTypeTotals.map((item) => item.label),
+            labels: doughnutTotals.map((item) => item.label),
             datasets: [
                 {
-                    data: groupedByTypeTotals.map((item) => item.total),
-                    backgroundColor: groupedByTypeTotals.map((item) => item.color),
+                    data: doughnutTotals.map((item) => item.total),
+                    backgroundColor: doughnutTotals.map((item) => item.color),
                     borderColor: '#ffffff',
                     borderWidth: 3,
                     hoverOffset: 14,
@@ -179,39 +188,39 @@ export default function LandingCharts({ compactMobile = false, pkmData = [] }: L
     const doughnutOptions = useMemo(() => buildDoughnutOptions(compactMobile), [compactMobile]);
 
     return (
-        <section className="px-4 py-4 space-y-6" id="visualisasi-data">
+        <section className="px-6 py-8 flex flex-col gap-8" id="visualisasi-data">
             {/* Bar Chart */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                <div className="px-2 py-1.5 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy flex items-center justify-center text-white shadow-md">
-                            <i className="fa-solid fa-chart-column text-xs"></i>
+            <div className="bg-white rounded-[28px] shadow-2xl shadow-sigappa-navy/5 border border-slate-100 overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-poltekpar-primary to-poltekpar-navy flex items-center justify-center text-white shadow-lg">
+                            <i className="fa-solid fa-chart-column text-lg"></i>
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-slate-900">Jumlah PKM Per Tahun</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Perbandingan jumlah PKM per tahun berdasarkan jenis program yang berjalan</p>
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight">Jumlah PKM Per Tahun</h3>
+                            <p className="text-sm font-bold text-slate-400 mt-1 leading-snug">Perbandingan jumlah PKM per tahun berdasarkan jenis program yang berjalan</p>
                         </div>
                     </div>
                 </div>
-                <div className="p-1.5 h-72">
+                <div className="p-6 h-[400px]">
                     <Bar data={chartSource.barData} options={barOptions} />
                 </div>
             </div>
 
             {/* Doughnut Chart */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                <div className="px-2 py-1.5 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md">
-                            <i className="fa-solid fa-chart-pie text-xs"></i>
+            <div className="bg-white rounded-[28px] shadow-2xl shadow-sigappa-navy/5 border border-slate-100 overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg">
+                            <i className="fa-solid fa-chart-pie text-lg"></i>
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-slate-900">Sebaran Lokasi PKM</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Distribusi jenis PKM yang tersebar pada lokasi pengabdian yang tercatat</p>
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight">Sebaran Lokasi PKM</h3>
+                            <p className="text-sm font-bold text-slate-400 mt-1 leading-snug">Distribusi jenis PKM yang tersebar pada lokasi pengabdian yang tercatat</p>
                         </div>
                     </div>
                 </div>
-                <div className="p-1.5 h-72">
+                <div className="p-6 h-[400px] flex items-center justify-center">
                     <Doughnut data={chartSource.doughnutData} options={doughnutOptions} />
                 </div>
             </div>

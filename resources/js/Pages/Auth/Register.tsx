@@ -12,9 +12,14 @@ interface RegisterFormData {
     password_confirmation: string;
 }
 
-export default function Register(): JSX.Element {
+interface RegisterProps {
+    preferredRole?: 'dosen' | 'masyarakat';
+}
+
+export default function Register({ preferredRole = 'masyarakat' }: RegisterProps): JSX.Element {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const isDosenRegistration = preferredRole === 'dosen';
 
     // Initialize Inertia's useForm hook for state management and validation handling
     const { data, setData, post, processing, errors, reset } = useForm<RegisterFormData>({
@@ -36,7 +41,7 @@ export default function Register(): JSX.Element {
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        post('/register', {
+        post(isDosenRegistration ? '/register?role=dosen' : '/register', {
             // Reset the password fields if the registration attempt fails
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -44,7 +49,7 @@ export default function Register(): JSX.Element {
 
     return (
         <div className="login-page">
-            <Head title="Daftar Akun - P3M Poltekpar Makassar" />
+            <Head title={`${isDosenRegistration ? 'Register Dosen' : 'Daftar Akun'} - P3M Poltekpar Makassar`} />
 
             <div className="login-container">
                 <div className="login-card" style={{ maxWidth: '480px' }}>
@@ -66,8 +71,12 @@ export default function Register(): JSX.Element {
 
                     {/* Register Form Body */}
                     <div className="login-body">
-                        <h1 className="login-title">Daftar Akun</h1>
-                        <p className="login-subtitle">Bergabunglah dengan sistem informasi P3M</p>
+                        <h1 className="login-title">{isDosenRegistration ? 'Register Dosen' : 'Daftar Akun'}</h1>
+                        <p className="login-subtitle">
+                            {isDosenRegistration
+                                ? 'Masukkan data akun dosen Anda. NIP akan dipakai sebagai identitas pendaftaran.'
+                                : 'Bergabunglah dengan sistem informasi P3M'}
+                        </p>
 
                         <form onSubmit={submit}>
 
@@ -94,19 +103,22 @@ export default function Register(): JSX.Element {
                                 )}
                             </div>
 
-                            {/* NIP Input (Opsional untuk Dosen) */}
+                            {/* NIP Input */}
                             <div className="input-group">
-                                <label htmlFor="nip">NIP (Opsional)</label>
+                                <label htmlFor="nip">NIP {isDosenRegistration ? '' : '(Opsional)'}</label>
                                 <div className="input-wrapper">
                                     <input
                                         type="text"
                                         id="nip"
                                         name="nip"
-                                        placeholder="Khusus Dosen/Pegawai Poltekpar"
+                                        placeholder="Khusus Dosen/Pegawai, 18 digit angka"
                                         value={data.nip}
-                                        onChange={(e) => setData('nip', e.target.value)}
+                                        onChange={(e) => setData('nip', e.target.value.replace(/\D/g, '').slice(0, 18))}
                                         className={errors.nip ? 'is-invalid' : ''}
+                                        inputMode="numeric"
+                                        maxLength={18}
                                         autoComplete="off"
+                                        required={isDosenRegistration}
                                     />
                                     <i className="fa-regular fa-id-card input-icon"></i>
                                 </div>
@@ -205,7 +217,7 @@ export default function Register(): JSX.Element {
                                     </>
                                 ) : (
                                     <>
-                                        Daftar Akun <i className="fa-solid fa-user-plus"></i>
+                                        {isDosenRegistration ? 'Daftar Akun Dosen' : 'Daftar Akun'} <i className="fa-solid fa-user-plus"></i>
                                     </>
                                 )}
                             </button>
@@ -215,9 +227,9 @@ export default function Register(): JSX.Element {
 
                         {/* Login Prompt Link */}
                         <div className="register-prompt">
-                            Sudah memiliki akun?
-                            <Link href="/login" className="register-link">
-                                Masuk di sini
+                            {isDosenRegistration ? 'Sudah memiliki akun dosen?' : 'Sudah memiliki akun?'}
+                            <Link href={isDosenRegistration ? '/login/dosen' : '/login'} className="register-link">
+                                {isDosenRegistration ? 'Masuk portal dosen' : 'Masuk di sini'}
                             </Link>
                         </div>
                     </div>

@@ -312,7 +312,7 @@
     transition: background-color 0.2s ease;
 }
 
-.auth-search-item + .auth-search-item {
+.auth-search-item+.auth-search-item {
     border-top: 1px solid #f1f5f9;
 }
 
@@ -833,4 +833,81 @@
         padding: 12px 20px;
         border-radius: 12px;
     }
+}
+
+/* ============================================
+   New Dosen Portal Styles
+   ============================================ */
+
+.login-divider-text {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #cbd5e1;
+    letter-spacing: 1px;
+    margin: 24px 0;
+    position: relative;
+    text-transform: uppercase;
+}
+
+.login-divider-text::before,
+.login-divider-text::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 30px);
+    height: 1px;
+    background: #f1f5f9;
+}
+
+.login-divider-text::before {
+    left: 0;
+}
+
+.login-divider-text::after {
+    right: 0;
+}
+
+.btn-login-dosen-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 18px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-login-dosen-secondary:hover {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.12);
+}
+
+.nip-check-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f0fdf4;
+    color: #16a34a;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+.nip-check-badge.error {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.expanded-form-container {
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }

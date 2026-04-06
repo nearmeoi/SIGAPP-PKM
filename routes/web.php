@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\PengajuanController;
 use App\Http\Controllers\Admin\SearchController;
+use App\Http\Controllers\Admin\TemplateDokumenController;
 use App\Http\Controllers\Admin\TestimoniController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
@@ -130,6 +131,7 @@ Route::post('/testimoni/{kode}', [LandingController::class, 'storeTestimoni'])->
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
+    Route::post('/check-nip', [AuthController::class, 'checkNip'])->name('check-nip');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 
@@ -141,6 +143,13 @@ Route::middleware('guest')->group(function () {
         return Inertia::render('Auth/VerifyEmail');
     })->name('verification.notice');
 });
+
+// Public Template Downloader (Accessible for guests and authenticated users)
+Route::get('/template/{jenis}', [TemplateDokumenController::class, 'downloadTemplate'])->name('template.download');
+
+// User Pages (Pengajuan & Status)
+Route::get('/pengajuan', [PengajuanUserController::class, 'index'])->name('pengajuan.form');
+Route::get('/cek-status', [PengajuanUserController::class, 'index'])->name('pengajuan.status');
 
 // ─────────────────────────────────────────────
 // Authenticated routes
@@ -169,6 +178,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/pengajuan/export', [PengajuanController::class, 'export'])->name('pengajuan.export');
         Route::get('/pengajuan', [PengajuanController::class, 'index'])->name('pengajuan.index');
         Route::post('/pengajuan/{id}/tim', [PengajuanController::class, 'storeTim'])->name('pengajuan.store_tim');
+        Route::put('/pengajuan/{id}/tim', [PengajuanController::class, 'syncTim'])->name('pengajuan.sync_tim');
         Route::get('/pengajuan/{id}', [PengajuanController::class, 'show'])->name('pengajuan.show');
         Route::put('/pengajuan/{id}', [PengajuanController::class, 'update'])->name('pengajuan.update');
         Route::delete('/pengajuan/{id}', [PengajuanController::class, 'destroy'])->name('pengajuan.destroy');
@@ -206,6 +216,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/master/jenis-pkm', [MasterDataController::class, 'storeJenis'])->name('master.jenis.store');
         Route::put('/master/jenis-pkm/{id}', [MasterDataController::class, 'updateJenis'])->name('master.jenis.update');
         Route::delete('/master/jenis-pkm/{id}', [MasterDataController::class, 'destroyJenis'])->name('master.jenis.destroy');
+
+        // Template Dokumen
+        Route::get('/templates', [TemplateDokumenController::class, 'index'])->name('templates.index');
+        Route::post('/templates', [TemplateDokumenController::class, 'store'])->name('templates.store');
+        Route::delete('/templates/{jenis}', [TemplateDokumenController::class, 'destroy'])->name('templates.destroy');
 
         // Arsip CRUD
         Route::get('/arsip', [ArsipController::class, 'index'])->name('arsip.index');

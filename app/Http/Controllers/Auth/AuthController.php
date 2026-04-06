@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pegawai;
+use App\Models\Pengajuan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,6 @@ class AuthController extends Controller
 
     public function showLogin()
     {
-        // Jika sudah login, arahkan ke dashboard sesuai role
         if (Auth::check()) {
             return redirect($this->dashboardUrl());
         }
@@ -37,27 +37,44 @@ class AuthController extends Controller
             return redirect($this->dashboardUrl());
         }
 
-        $user = $request->user();
+        return Inertia::render('Auth/LoginDosenPortal', [
+            'initialNip' => $request->query('nip'),
+            'autoCheck' => $request->boolean('autocheck'),
+        ]);
+    }
 
-        return Inertia::render('Auth/LoginDosen', [
-            'auth' => [
-                'user' => $user
-                    ? [
-                        'id' => $user->id_user,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'role' => $user->role ?? 'dosen',
-                        'avatar' => $user->avatar ?? null,
-                    ]
-                    : [
-                        'id' => 'preview-dosen',
-                        'name' => 'Akun Dosen SIGAP',
-                        'email' => 'dosen@poltekparmakassar.ac.id',
-                        'role' => 'dosen',
-                        'avatar' => null,
-                    ],
-            ],
-            'pkmData' => [],
+    public function checkNip(Request $request)
+    {
+        $request->validate([
+            'nip' => ['required', 'regex:/^\d{18}$/'],
+        ], [
+            'nip.regex' => 'NIP harus terdiri dari 18 digit angka.',
+        ]);
+
+        $pegawai = Pegawai::where('nip', $request->nip)->first();
+
+        if (! $pegawai) {
+            return response()->json([
+                'status' => 'not_found',
+                'message' => 'NIP belum memiliki akun dosen. Silakan lengkapi data registrasi.',
+            ]);
+        }
+
+        if ($pegawai->id_user) {
+            $user = User::where('id_user', $pegawai->id_user)->first();
+
+            return response()->json([
+                'status' => 'registered',
+                'email' => $user->email,
+                'name' => $user->name,
+                'message' => 'NIP sudah terdaftar. Silakan masukkan kata sandi.',
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'claimable',
+            'name' => $pegawai->nama_pegawai,
+            'message' => 'NIP ditemukan. Silakan lengkapi data registrasi Anda.',
         ]);
     }
 
@@ -68,6 +85,36 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
+        $pkmData = Pengajuan::with(['aktivitas.testimoni', 'timKegiatan', 'jenisPkm'])
+            ->whereNotNull('latitude')
+            ->get()
+            ->map(fn ($pengajuan) => [
+                'id' => $pengajuan->id_pengajuan,
+                'nama' => $pengajuan->judul_kegiatan,
+                'tahun' => $pengajuan->created_at?->year ?? date('Y'),
+                'jenis_pkm' => $pengajuan->jenisPkm?->nama_jenis ?? '',
+                'status' => ($pengajuan->status_pengajuan === 'selesai' || $pengajuan->aktivitas?->status_pelaksanaan === 'selesai')
+                    ? 'selesai'
+                    : (in_array($pengajuan->status_pengajuan, ['berlangsung', 'diterima']) ? 'berlangsung' : ($pengajuan->status_pengajuan === 'belum_diajukan' ? 'belum_mulai' : 'ada_pengajuan')),
+                'deskripsi' => $pengajuan->kebutuhan ?? '',
+                'thumbnail' => $pengajuan->aktivitas?->url_thumbnail ?? '',
+                'provinsi' => $pengajuan->provinsi ?? '',
+                'kabupaten' => $pengajuan->kota_kabupaten ?? '',
+                'kecamatan' => $pengajuan->kecamatan ?? '',
+                'desa' => $pengajuan->kelurahan_desa ?? '',
+                'lat' => (float) ($pengajuan->latitude ?? 0),
+                'lng' => (float) ($pengajuan->longitude ?? 0),
+                'total_anggaran' => $pengajuan->total_anggaran ?? 0,
+                'tim_kegiatan' => $pengajuan->timKegiatan->map(fn ($tim) => [
+                    'nama' => $tim->nama_anggota,
+                    'peran' => $tim->peran,
+                ])->toArray(),
+                'testimoni' => ($pengajuan->aktivitas?->testimoni ?? collect())->map(fn ($testimoni) => [
+                    'nama_pemberi' => $testimoni->nama_pemberi,
+                    'rating' => (int) $testimoni->rating,
+                    'pesan_ulasan' => $testimoni->pesan_ulasan,
+                ])->toArray(),
+            ]);
 
         return Inertia::render('Auth/LoginMasyarakat', [
             'auth' => [
@@ -87,7 +134,7 @@ class AuthController extends Controller
                         'avatar' => null,
                     ],
             ],
-            'pkmData' => [],
+            'pkmData' => $pkmData,
         ]);
     }
 
@@ -97,12 +144,33 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
+        $loginSource = $request->input('login_source', 'general');
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $user = Auth::user();
 
-            // Arahkan ke dashboard sesuai role; intended() fallback ke default role URL
-            $default = Auth::user()->role === 'admin' ? '/admin/dashboard' : '/';
+            if ($user->role === 'dosen' && $loginSource !== 'dosen') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()
+                    ->route('login')
+                    ->with('error', 'Akun dosen harus masuk melalui tombol "Akses sebagai Akun Dosen" di bawah.');
+            }
+
+            if ($user->role === 'masyarakat' && $loginSource === 'dosen') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()
+                    ->route('login.dosen')
+                    ->with('error', 'Akun masyarakat harus login melalui Login Umum.');
+            }
+
+            $default = $user->role === 'admin' ? '/admin/dashboard' : '/';
 
             return redirect()->intended($default);
         }
@@ -112,67 +180,80 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    public function showRegister()
+    public function showRegister(Request $request)
     {
-        // Jika sudah login, arahkan ke dashboard sesuai role
         if (Auth::check()) {
             return redirect($this->dashboardUrl());
         }
 
-        return Inertia::render('Auth/Register');
+        $preferredRole = $request->query('role') === 'dosen' ? 'dosen' : 'masyarakat';
+
+        return Inertia::render('Auth/Register', [
+            'preferredRole' => $preferredRole,
+        ]);
     }
 
     public function register(Request $request)
     {
+        $preferredRole = $request->query('role') === 'dosen' ? 'dosen' : 'masyarakat';
+        $portalDosenFlow = $request->query('source') === 'portal-dosen';
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'nip' => ['nullable', 'string', 'max:30'],
+            'nip' => [$preferredRole === 'dosen' ? 'required' : 'nullable', 'regex:/^\d{18}$/'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'nip.required' => 'NIP wajib diisi untuk registrasi dosen.',
+            'nip.regex' => 'NIP harus terdiri dari 18 digit angka.',
         ]);
 
         $role = 'masyarakat';
-        $pegawaiId = null;
+        $pegawai = null;
 
-        // Hanya berikan role dosen jika:
-        // 1. NIP diisi
-        // 2. NIP ditemukan di tabel pegawai
-        // 3. Pegawai tersebut BELUM terhubung ke user manapun (belum diklaim)
-        // Wrap dalam transaction untuk cegah race condition saat klaim NIP
         if ($request->filled('nip')) {
-            $result = DB::transaction(function () use ($request, &$role, &$pegawaiId) {
-                $pegawai = Pegawai::where('nip', $request->nip)
-                    ->whereNull('id_user')
-                    ->lockForUpdate()
-                    ->first();
+            $pegawai = Pegawai::where('nip', $request->nip)->first();
 
-                if ($pegawai) {
-                    $role = 'dosen';
-                    $pegawaiId = $pegawai->id_pegawai;
-                }
+            if ($pegawai && $pegawai->id_user) {
+                return back()->withErrors([
+                    'nip' => 'NIP ini sudah terhubung ke akun dosen. Silakan login menggunakan email dan kata sandi Anda.',
+                ])->withInput();
+            }
 
-                $user = User::create([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'password' => Hash::make($request->password),
-                    'role' => $role,
+            $role = 'dosen';
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $role,
+        ]);
+
+        if ($role === 'dosen') {
+            if ($pegawai) {
+                $pegawai->update([
+                    'id_user' => $user->id_user,
+                    'nama_pegawai' => $request->name,
                 ]);
+            } else {
+                Pegawai::create([
+                    'id_user' => $user->id_user,
+                    'nip' => $request->nip,
+                    'nama_pegawai' => $request->name,
+                    'jabatan' => 'Dosen',
+                    'posisi' => 'Akun Portal Dosen',
+                ]);
+            }
+        }
 
-                if ($role === 'dosen' && $pegawaiId) {
-                    Pegawai::where('id_pegawai', $pegawaiId)->update(['id_user' => $user->id_user]);
-                }
-
-                return $user;
-            });
-
-            $user = $result;
-        } else {
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'role' => $role,
-            ]);
+        if ($portalDosenFlow && $role === 'dosen') {
+            return redirect()
+                ->route('login.dosen', [
+                    'nip' => $request->nip,
+                    'autocheck' => 1,
+                ])
+                ->with('success', 'Akun dosen berhasil terdaftar. Silakan lanjut masuk dengan kata sandi yang baru dibuat.');
         }
 
         Auth::login($user);
