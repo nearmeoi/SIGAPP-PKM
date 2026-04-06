@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import Toast from '../Components/Toast';
 import CommandPalette from '../Components/CommandPalette';
 import ProfileDropdown from '../Components/ProfileDropdown';
+import NotificationBell from '../Components/NotificationBell';
 import {
     Layout,
     Users,
@@ -79,6 +80,32 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
     }, [flash.success, flash.error]);
 
     const closeToast = useCallback(() => setToast(prev => ({ ...prev, show: false })), []);
+
+    // Listen for new notification events
+    useEffect(() => {
+        const handleNewNotif = (e: Event) => {
+            const detail = (e as CustomEvent).detail as { id_pengajuan: number; judul_kegiatan: string; status_pengajuan: string };
+            setToast({
+                show: true,
+                type: 'info',
+                title: 'Pengajuan Baru',
+                message: detail.judul_kegiatan || 'Tanpa Judul',
+            });
+
+            // Make toast clickable to navigate
+            const toastEl = document.getElementById('notification-toast');
+            if (toastEl) {
+                toastEl.style.cursor = 'pointer';
+                toastEl.onclick = () => {
+                    setToast(prev => ({ ...prev, show: false }));
+                    router.visit(`/admin/pengajuan/${detail.id_pengajuan}`);
+                };
+            }
+        };
+
+        window.addEventListener('new-notification', handleNewNotif);
+        return () => window.removeEventListener('new-notification', handleNewNotif);
+    }, []);
 
     // Command Palette state
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -283,6 +310,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
                     </div>
                     <div className="flex items-center gap-3 lg:gap-6 ml-2 lg:ml-4">
                         <div className="hidden lg:block h-10 w-px bg-slate-200"></div>
+                        <NotificationBell />
                         <ProfileDropdown auth={(props as any).auth} />
                     </div>
                 </header>
@@ -309,13 +337,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
             </main>
 
             {/* Global Toast Notifications */}
+            <div id="notification-toast">
             <Toast
                 show={toast.show}
                 type={toast.type}
                 title={toast.title}
                 message={toast.message}
                 onClose={closeToast}
+                duration={toast.type === 'info' ? 5000 : 3000}
             />
+            </div>
 
             {/* Command Palette */}
             <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

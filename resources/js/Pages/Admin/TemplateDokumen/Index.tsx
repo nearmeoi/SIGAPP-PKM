@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import { FileText, UploadCloud, FileDown, CheckCircle } from 'lucide-react';
 
 interface TemplateProps {
@@ -40,6 +41,7 @@ function TemplateUploaderCard({ title, jenis, templateData, description }: { tit
     });
 
     const [dragActive, setDragActive] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
@@ -72,6 +74,12 @@ function TemplateUploaderCard({ title, jenis, templateData, description }: { tit
         post('/admin/templates', {
             preserveScroll: true,
             onSuccess: () => setData('file', null),
+        });
+    };
+
+    const confirmDelete = () => {
+        router.delete(`/admin/templates/${jenis}`, {
+            onFinish: () => setShowConfirm(false)
         });
     };
 
@@ -114,9 +122,7 @@ function TemplateUploaderCard({ title, jenis, templateData, description }: { tit
                         <button
                             onClick={(e) => {
                                 e.preventDefault();
-                                if (confirm('Yakin ingin menghapus template ini?')) {
-                                    router.delete(`/admin/templates/${jenis}`);
-                                }
+                                setShowConfirm(true);
                             }}
                             className="flex-1 flex justify-center items-center gap-2 px-4 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-xl text-[13px] font-bold transition-all shadow-sm"
                         >
@@ -175,6 +181,15 @@ function TemplateUploaderCard({ title, jenis, templateData, description }: { tit
                     </form>
                 </>
             )}
+
+            <ConfirmDialog 
+                open={showConfirm} 
+                title="Hapus Template" 
+                message={`Yakin ingin menghapus template ${title.toLowerCase()}? Tindakan ini tidak dapat dibatalkan.`} 
+                onConfirm={confirmDelete} 
+                onCancel={() => setShowConfirm(false)} 
+                variant="danger" 
+            />
         </div>
     );
 }

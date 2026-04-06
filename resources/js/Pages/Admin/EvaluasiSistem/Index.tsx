@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import { PageProps } from '@/types';
 import { Trash2, Star, Eye, X } from 'lucide-react';
 
@@ -20,10 +21,17 @@ interface EvaluasiSistem {
 
 export default function EvaluasiSistemIndex({ auth, evaluasi }: any) {
     const [selectedDetail, setSelectedDetail] = useState<EvaluasiSistem | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
 
     const handleDelete = (id: number) => {
-        if (confirm('Yakin ingin menghapus data evaluasi ini?')) {
-            router.delete(`/admin/evaluasi-sistem/${id}`);
+        setDeleteId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteId) {
+            router.delete(`/admin/evaluasi-sistem/${deleteId}`, {
+                onFinish: () => setDeleteId(null)
+            });
         }
     };
 
@@ -181,6 +189,15 @@ export default function EvaluasiSistemIndex({ auth, evaluasi }: any) {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog 
+                open={deleteId !== null} 
+                title="Hapus Evaluasi" 
+                message="Yakin ingin menghapus data evaluasi ini? Tindakan ini tidak dapat dibatalkan." 
+                onConfirm={confirmDelete} 
+                onCancel={() => setDeleteId(null)} 
+                variant="danger" 
+            />
         </AdminLayout>
     );
 }

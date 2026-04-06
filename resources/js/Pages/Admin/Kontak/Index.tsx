@@ -16,6 +16,7 @@ export default function KontakIndex({ auth, kontaks }: any) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
     const [form, setForm] = useState({
         platform: '',
         nilai_kontak: '',
@@ -41,8 +42,14 @@ export default function KontakIndex({ auth, kontaks }: any) {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Yakin ingin menghapus data kontak ini?')) {
-            router.delete(`/admin/kontak/${id}`);
+        setDeleteId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteId) {
+            router.delete(`/admin/kontak/${deleteId}`, {
+                onFinish: () => setDeleteId(null)
+            });
         }
     };
 

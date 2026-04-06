@@ -30,8 +30,8 @@ class LandingController extends Controller
                 'status' => $p->aktivitas
                     ? ($p->aktivitas->status_pelaksanaan === 'selesai' ? 'selesai'
                         : (in_array($p->aktivitas->status_pelaksanaan, ['berjalan', 'persiapan']) ? 'berlangsung' : 'belum_mulai'))
-                    : (in_array($p->status_pengajuan, ['diterima', 'berlangsung']) ? 'belum_mulai' :
-                        ($p->status_pengajuan === 'belum_diajukan' ? 'belum_mulai' : 'ada_pengajuan')),
+                    : ($p->admin_read_at === null ? 'ada_pengajuan' : 
+                        (in_array($p->status_pengajuan, ['diterima', 'berlangsung']) ? 'belum_mulai' : 'belum_mulai')),
                 'deskripsi' => $p->kebutuhan ?? '',
                 'thumbnail' => $p->aktivitas?->url_thumbnail ?? '',
                 'provinsi' => $p->provinsi ?? '',

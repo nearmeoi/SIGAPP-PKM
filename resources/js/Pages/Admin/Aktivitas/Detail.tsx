@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import ConfirmDialog from '../../../Components/ConfirmDialog';
+import Toast from '../../../Components/Toast';
 import {
     Activity, ArrowLeft, Image, CheckCircle, Save,
     MapPin, FileText, Trash2, Search, X, ChevronRight
@@ -181,6 +182,14 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
         });
     };
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [toast, setToast] = useState<{ show: boolean; title: string; message: string }>({ show: false, title: '', message: '' });
+    const closeToast = useCallback(() => setToast(prev => ({ ...prev, show: false })), []);
+
+    const copyToClipboard = (text: string, label: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setToast({ show: true, title: 'Tautan Disalin!', message: `Tautan ${label} berhasil disalin ke clipboard.` });
+        });
+    };
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '—';
@@ -224,7 +233,7 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                         </div>
                                         <div className="flex gap-2 items-center">
                                             <input readOnly value={`${window.location.origin}/kumpul-arsip/${pengajuan.kode_unik || pengajuan.id_pengajuan}`} className="text-xs w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 outline-none text-slate-600 font-medium" />
-                                            <button type="button" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/kumpul-arsip/${pengajuan.kode_unik || pengajuan.id_pengajuan}`); alert('Tautan Arsip disalin ke clipboard!'); }} className="h-8 w-8 flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors rounded-md" title="Salin Tautan">
+                                            <button type="button" onClick={() => copyToClipboard(`${window.location.origin}/kumpul-arsip/${pengajuan.kode_unik || pengajuan.id_pengajuan}`, 'Pengumpulan Arsip')} className="h-8 w-8 flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors rounded-md" title="Salin Tautan">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                             </button>
                                         </div>
@@ -235,7 +244,7 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                                         </div>
                                         <div className="flex gap-2 items-center">
                                             <input readOnly value={`${window.location.origin}/testimoni/${pengajuan.kode_unik || pengajuan.id_pengajuan}`} className="text-xs w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 outline-none text-slate-600 font-medium" />
-                                            <button type="button" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/testimoni/${pengajuan.kode_unik || pengajuan.id_pengajuan}`); alert('Tautan Testimoni disalin ke clipboard!'); }} className="h-8 w-8 flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors rounded-md" title="Salin Tautan">
+                                            <button type="button" onClick={() => copyToClipboard(`${window.location.origin}/testimoni/${pengajuan.kode_unik || pengajuan.id_pengajuan}`, 'Testimoni')} className="h-8 w-8 flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors rounded-md" title="Salin Tautan">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                             </button>
                                         </div>
@@ -490,6 +499,14 @@ const Detail: React.FC<Props> = ({ aktivitas }) => {
                 .leaflet-control-zoom { border: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.15) !important; }
                 .leaflet-control-zoom a { border-radius: 6px !important; }
             `}</style>
+
+            <Toast
+                show={toast.show}
+                type="success"
+                title={toast.title}
+                message={toast.message}
+                onClose={closeToast}
+            />
 
             <ConfirmDialog
                 open={confirmOpen}

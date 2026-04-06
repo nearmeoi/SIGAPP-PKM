@@ -18,6 +18,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Secret\AppreciationController;
 use App\Http\Controllers\User\PengajuanUserController;
+use App\Mail\UndanganMail;
 use App\Models\Aktivitas;
 use App\Models\DeveloperAppreciation;
 use App\Models\DeveloperDocumentation;
@@ -25,6 +26,7 @@ use App\Models\Pegawai;
 use App\Models\Pengajuan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -301,17 +303,64 @@ Route::middleware('auth')->group(function () {
 
             $kegiatanBerjalan = Aktivitas::where('status_pelaksanaan', 'berjalan')->count();
 
+            $items = Pengajuan::notifikasi()
+                ->select('id_pengajuan', 'judul_kegiatan', 'status_pengajuan', 'catatan_admin', 'created_at', 'admin_read_at')
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+
             return response()->json([
-                'pengajuan_baru' => (int) ($counts->pengajuan_baru ?? 0),
-                'perlu_direvisi' => (int) ($counts->perlu_direvisi ?? 0),
-                'pengajuan_diterima' => (int) ($counts->diterima ?? 0),
-                'kegiatan_berjalan' => $kegiatanBerjalan,
+                'counts' => [
+                    'pengajuan_baru' => (int) ($counts->pengajuan_baru ?? 0),
+                    'perlu_direvisi' => (int) ($counts->perlu_direvisi ?? 0),
+                    'pengajuan_diterima' => (int) ($counts->diterima ?? 0),
+                    'kegiatan_berjalan' => $kegiatanBerjalan,
+                ],
+                'items' => $items,
             ]);
         })->name('api.notifications');
+
+        Route::post('/api/notifications/mark-read', function (Request $request) {
+            $validated = $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'required|integer|exists:pengajuan,id_pengajuan',
+            ]);
+
+            Pengajuan::whereIn('id_pengajuan', $validated['ids'])
+                ->notifikasi()
+                ->update(['admin_read_at' => now()]);
+
+            return response()->json(['success' => true]);
+        })->name('api.notifications.mark-read');
+
+        Route::post('/api/notifications/mark-all-read', function () {
+            Pengajuan::belumDibaca()->update(['admin_read_at' => now()]);
+
+            return response()->json(['success' => true]);
+        })->name('api.notifications.mark-all-read');
 
         // Import History (Superadmin only inside controller)
         Route::get('/import-history', [ImportController::class, 'index'])->name('import.index');
         Route::post('/import-history/preview', [ImportController::class, 'preview'])->name('import.preview');
         Route::post('/import-history', [ImportController::class, 'store'])->name('import.store');
+
+        // Test email route (development only)
+        Route::get('/test-email/{email}', function (string $email) {
+            $mail = new UndanganMail(
+                'Akmal Rijal',
+                'PKM Pemberdayaan Masyarakat Desa Telling',
+                'Undangan Kegiatan PKM - Politeknik Tourism Makassar',
+                'Dengan hormat, kami mengundang Anda untuk menghadiri kegiatan Program Kreativitas Masyarakat (PKM) yang akan segera dilaksanakan. Mohon persiapan dan konfirmasi kehadiran Anda sebelum tanggal pelaksanaan.',
+                $email,
+                '15 April 2026',
+                '30 April 2026',
+                'Makassar, Sulawesi Selatan',
+                'PKM Pengabdian'
+            );
+
+            Mail::to($email)->send($mail);
+
+            return response()->json(['success' => true, 'message' => 'Test email sent to '.$email]);
+        });
     });
 });

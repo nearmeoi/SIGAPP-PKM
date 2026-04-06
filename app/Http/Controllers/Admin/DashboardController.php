@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
-use App\Models\Pegawai;
 use App\Models\Pengajuan;
 use Inertia\Inertia;
 
@@ -17,11 +16,18 @@ class DashboardController extends Controller
             COUNT(*)                                    as total,
             SUM(status_pengajuan = 'diproses')          as diproses,
             SUM(status_pengajuan = 'diterima')          as diterima,
-            SUM(status_pengajuan = 'ditolak')           as ditolak
+            SUM(status_pengajuan = 'ditolak')           as ditolak,
+            SUM(status_pengajuan = 'direvisi')          as direvisi,
+            SUM(status_pengajuan = 'selesai')           as selesai
         ")->first();
 
-        $totalPegawai = Pegawai::count();
-        $totalAktivitas = Aktivitas::where('status_pelaksanaan', 'berjalan')->count();
+        $aktivitasCounts = Aktivitas::selectRaw("
+            COUNT(*)                                        as total,
+            SUM(status_pelaksanaan = 'belum_mulai')         as belum_mulai,
+            SUM(status_pelaksanaan = 'persiapan')           as persiapan,
+            SUM(status_pelaksanaan = 'berjalan')            as berjalan,
+            SUM(status_pelaksanaan = 'selesai')             as selesai
+        ")->first();
 
         $recentPengajuan = Pengajuan::with(['user', 'jenisPkm'])
             ->where('status_pengajuan', 'diproses')
@@ -32,7 +38,7 @@ class DashboardController extends Controller
         $pkmMapData = Pengajuan::with(['jenisPkm', 'aktivitas.testimoni', 'aktivitas.arsip', 'timKegiatan.pegawai'])
             ->whereNotNull('latitude')
             ->get()
-            ->map(fn($p) => [
+            ->map(fn ($p) => [
                 'id' => $p->id_pengajuan,
                 'nama' => $p->judul_kegiatan,
                 'jenis_nama' => $p->jenisPkm?->nama_jenis ?? 'Jenis Lainnya',
@@ -54,14 +60,14 @@ class DashboardController extends Controller
                 'lng' => (float) ($p->longitude ?? 0),
                 'total_anggaran' => (float) ($p->total_anggaran ?? 0),
                 'tim_kegiatan' => $p->timKegiatan
-                    ->map(fn($tim) => [
+                    ->map(fn ($tim) => [
                         'nama' => $tim->pegawai ? $tim->pegawai->nama_pegawai : $tim->nama_mahasiswa,
                         'peran' => $tim->peran_tim,
                     ])
                     ->values()
                     ->toArray(),
                 'testimoni' => ($p->aktivitas?->testimoni ?? collect())
-                    ->map(fn($testimoni) => [
+                    ->map(fn ($testimoni) => [
                         'nama_pemberi' => $testimoni->nama_pemberi,
                         'rating' => (int) $testimoni->rating,
                         'pesan_ulasan' => $testimoni->pesan_ulasan,
@@ -71,7 +77,7 @@ class DashboardController extends Controller
                 'arsip_laporan' => $p->aktivitas?->arsip?->where('jenis_arsip', 'laporan_akhir')->first()?->url_dokumen ?? null,
                 'dokumentasi' => $p->aktivitas?->arsip?->where('jenis_arsip', 'foto_kegiatan')->first()?->url_dokumen ?? null,
                 'tambahan' => ($p->aktivitas?->arsip?->where('jenis_arsip', 'dokumen_lain') ?? collect())
-                    ->map(fn($a) => [
+                    ->map(fn ($a) => [
                         'nama' => $a->nama_dokumen ?? 'Dokumen Lainnya',
                         'url' => $a->url_dokumen,
                     ])
@@ -87,7 +93,7 @@ class DashboardController extends Controller
             ->selectRaw('id_jenis_pkm, COUNT(*) as total')
             ->groupBy('id_jenis_pkm')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'label' => $item->jenisPkm?->nama_jenis ?? 'Lainnya',
                 'color' => $item->jenisPkm?->warna_icon ?? '#cbd5e1',
                 'count' => $item->total,
@@ -108,10 +114,10 @@ class DashboardController extends Controller
         }
 
         // Hash-map lookup O(1) menggantikan nested firstWhere() yang O(n²)
-        $lookup = $yearlyRaw->keyBy(fn($r) => "{$r->year}_{$r->id_jenis_pkm}");
+        $lookup = $yearlyRaw->keyBy(fn ($r) => "{$r->year}_{$r->id_jenis_pkm}");
 
         $uniqueJenis = $yearlyRaw
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'id_jenis_pkm' => $item->id_jenis_pkm,
                 'nama_jenis' => $item->jenisPkm?->nama_jenis ?? 'Lainnya',
                 'warna_icon' => $item->jenisPkm?->warna_icon ?? '#cbd5e1',
@@ -123,7 +129,7 @@ class DashboardController extends Controller
             return [
                 'label' => $jenis['nama_jenis'],
                 'data' => array_map(
-                    fn($y) => (int) ($lookup->get("{$y}_{$jenis['id_jenis_pkm']}")?->total ?? 0),
+                    fn ($y) => (int) ($lookup->get("{$y}_{$jenis['id_jenis_pkm']}")?->total ?? 0),
                     $allYears
                 ),
                 'backgroundColor' => $jenis['warna_icon'],
@@ -144,8 +150,12 @@ class DashboardController extends Controller
                 'pengajuanDiproses' => (int) ($statusCounts->diproses ?? 0),
                 'pengajuanDiterima' => (int) ($statusCounts->diterima ?? 0),
                 'pengajuanDitolak' => (int) ($statusCounts->ditolak ?? 0),
-                'totalPegawai' => $totalPegawai,
-                'totalAktivitas' => $totalAktivitas,
+                'pengajuanDirevisi' => (int) ($statusCounts->direvisi ?? 0),
+                'totalAktivitas' => (int) ($aktivitasCounts->total ?? 0),
+                'aktivitasBelumMulai' => (int) ($aktivitasCounts->belum_mulai ?? 0),
+                'aktivitasPersiapan' => (int) ($aktivitasCounts->persiapan ?? 0),
+                'aktivitasBerjalan' => (int) ($aktivitasCounts->berjalan ?? 0),
+                'aktivitasSelesai' => (int) ($aktivitasCounts->selesai ?? 0),
             ],
             'recentPengajuan' => $recentPengajuan,
             'pkmMapData' => $pkmMapData,

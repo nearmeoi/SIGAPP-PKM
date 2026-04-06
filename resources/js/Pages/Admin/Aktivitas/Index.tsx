@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import {
-    Activity, Clock, CheckCircle, Search, Calendar, MapPin,
-    Download, Mail, X, Check, Loader2, Send
+    Search, Calendar, MapPin,
+    Download, Mail, X, Check, Loader2, Send, Eye
 } from 'lucide-react';
 
 interface AktivitasItem {
@@ -28,11 +28,13 @@ interface PaginatedData {
     current_page: number;
     last_page: number;
     total: number;
+    per_page: number;
+    links: { url: string | null; label: string; active: boolean }[];
 }
 
 interface Props {
     listAktivitas: PaginatedData;
-    filters?: { sort?: string; direction?: string };
+    filters?: { sort?: string; direction?: string; status?: string };
 }
 
 const getRecipientName = (act: AktivitasItem): string =>
@@ -41,41 +43,99 @@ const getRecipientName = (act: AktivitasItem): string =>
 const getRecipientEmail = (act: AktivitasItem): string =>
     act.pengajuan?.email_pengusul || act.pengajuan?.user?.email || '';
 
+const formatDate = (dateStr?: string): string => {
+    if (!dateStr) return 'Akan ditentukan';
+    return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'Semua Status' },
+    { value: 'belum_mulai', label: 'Belum Mulai' },
+    { value: 'persiapan', label: 'Persiapan' },
+    { value: 'berjalan', label: 'Berjalan' },
+    { value: 'selesai', label: 'Selesai' },
+];
+
 const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
-    const allData: AktivitasItem[] = listAktivitas.data || [];
     const [search, setSearch] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
+    const [filterStatus, setFilterStatus] = useState(filters?.status || '');
     const [sortField, setSortField] = useState(filters?.sort || 'created_at');
     const [sortDir, setSortDir] = useState(filters?.direction || 'desc');
 
-    // ── Selection state ──
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [showUndangan, setShowUndangan] = useState(false);
-    const [undanganSubject, setUndanganSubject] = useState('Undangan Kegiatan PKM - SIGAPPA');
-    const [undanganBody, setUndanganBody] = useState('Dengan hormat, kami mengundang Anda untuk menghadiri kegiatan Pengabdian Kepada Masyarakat (PKM) yang akan segera dilaksanakan.\n\nMohon persiapan dan konfirmasi kehadiran Anda.\n\nHormat kami,\nTim SIGAP PKM\nPoliteknik Pariwisata Makassar');
+    const [showPreview, setShowPreview] = useState(false);
+    const [undanganSubject, setUndanganSubject] = useState('');
+    const [undanganBody, setUndanganBody] = useState('');
     const [isSending, setIsSending] = useState(false);
+
+    const data = listAktivitas.data || [];
+    const firstSelected = data.find(a => selectedIds.includes(a.id_aktivitas));
+
+    const buildDefaultSubject = useCallback((): string => {
+        const judul = firstSelected?.pengajuan?.judul_kegiatan || 'Kegiatan PKM';
+        return `Undangan: ${judul}`;
+    }, [firstSelected]);
+
+    const buildDefaultBody = useCallback((): string => {
+        const p = firstSelected?.pengajuan;
+        const tglMulai = formatDate(p?.tgl_mulai);
+        const tglSelesai = formatDate(p?.tgl_selesai);
+        const lokasiParts = [p?.kota_kabupaten, p?.provinsi].filter(Boolean);
+        const lokasi = lokasiParts.length > 0 ? lokasiParts.join(', ') : 'Akan ditentukan';
+
+        return `Dengan hormat,
+
+Kami mengundang Bapak/Ibu untuk menghadiri kegiatan Program Kreativitas Masyarakat (PKM) yang akan dilaksanakan pada:
+
+Tanggal: ${tglMulai} s/d ${tglSelesai}
+Lokasi: ${lokasi}
+
+Mohon kehadiran dan persiapan Bapak/Ibu sebelum tanggal pelaksanaan. Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.
+
+Hormat kami,
+Tim SIGAP PKM
+Politeknik Pariwisata Makassar`;
+    }, [firstSelected]);
+
+    const openUndanganModal = useCallback(() => {
+        setUndanganSubject(buildDefaultSubject());
+        setUndanganBody(buildDefaultBody());
+        setShowUndangan(true);
+    }, [buildDefaultSubject, buildDefaultBody]);
+
+    const applyFilters = useCallback((newSortField?: string, newSortDir?: string) => {
+        const params: Record<string, string> = {
+            sort: newSortField !== undefined ? newSortField : sortField,
+            direction: newSortDir !== undefined ? newSortDir : sortDir,
+        };
+        if (filterStatus) params.status = filterStatus;
+        router.get('/admin/aktivitas', params, { preserveState: true, replace: true });
+    }, [filterStatus, sortField, sortDir]);
 
     const handleSort = (field: string) => {
         const isAsc = sortField === field && sortDir === 'asc';
         const newDir = isAsc ? 'desc' : 'asc';
         setSortField(field);
         setSortDir(newDir);
-        router.get('/admin/aktivitas', { sort: field, direction: newDir }, { preserveState: true, replace: true });
+        applyFilters(field, newDir);
     };
 
-    // Client-side filter
-    const data = allData.filter(act => {
-        const title = act.pengajuan?.judul_kegiatan || '';
-        const titleMatch = title.toLowerCase().includes(search.toLowerCase());
-        const statusMatch = !filterStatus || act.status_pelaksanaan === filterStatus;
-        return titleMatch && statusMatch;
-    });
+    const handleStatusChange = (newStatus: string) => {
+        setFilterStatus(newStatus);
+        const params: Record<string, string> = { sort: sortField, direction: sortDir };
+        if (newStatus) params.status = newStatus;
+        router.get('/admin/aktivitas', params, { preserveState: true, replace: true });
+    };
 
-    const countBerjalan = allData.filter(a => !['selesai', 'belum_mulai'].includes(a.status_pelaksanaan)).length;
-    const countSelesai = allData.filter(a => a.status_pelaksanaan === 'selesai').length;
-    const countBelumMulai = allData.filter(a => a.status_pelaksanaan === 'belum_mulai').length;
+    const clearFilters = () => {
+        setSearch('');
+        setFilterStatus('');
+        router.get('/admin/aktivitas', { sort: sortField, direction: sortDir }, { preserveState: true, replace: true });
+    };
 
-    // ── Export ──
+    const hasFilters = filterStatus;
+
     const handleExport = () => {
         const params = new URLSearchParams();
         if (search) params.set('search', search);
@@ -83,17 +143,14 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
         window.location.href = `/admin/aktivitas/export?${params.toString()}`;
     };
 
-    // ── Checkbox helpers (only for belum_mulai in visible data) ──
     const belumMulaiVisible = data.filter(a => a.status_pelaksanaan === 'belum_mulai');
     const belumMulaiVisibleIds = belumMulaiVisible.map(a => a.id_aktivitas);
     const allBelumMulaiChecked = belumMulaiVisibleIds.length > 0 && belumMulaiVisibleIds.every(id => selectedIds.includes(id));
 
     const toggleAll = () => {
         if (allBelumMulaiChecked) {
-            // Uncheck all visible belum_mulai
             setSelectedIds(prev => prev.filter(id => !belumMulaiVisibleIds.includes(id)));
         } else {
-            // Check all visible belum_mulai (merge with existing)
             setSelectedIds(prev => [...new Set([...prev, ...belumMulaiVisibleIds])]);
         }
     };
@@ -104,14 +161,12 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
         );
     };
 
-    // Recipients = selected items that are actually belum_mulai with valid email
-    const undanganRecipients = allData.filter(
+    const undanganRecipients = data.filter(
         a => selectedIds.includes(a.id_aktivitas) && a.status_pelaksanaan === 'belum_mulai'
     );
 
     const recipientsWithEmail = undanganRecipients.filter(a => getRecipientEmail(a).includes('@'));
 
-    // ── Send undangan via backend ──
     const handleSendUndangan = () => {
         if (recipientsWithEmail.length === 0) return;
         setIsSending(true);
@@ -125,6 +180,7 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
             onFinish: () => {
                 setIsSending(false);
                 setShowUndangan(false);
+                setShowPreview(false);
                 setSelectedIds([]);
             },
         });
@@ -132,13 +188,43 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
 
     return (
         <AdminLayout title="">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-[24px] font-bold text-zinc-900 tracking-tight">Aktivitas</h1>
-                    <p className="text-zinc-500 text-[14px] mt-1">Pantau seluruh status pelaksanaan kegiatan PKM.</p>
+                    <p className="text-[14px] text-zinc-500 mt-1">Pantau seluruh status pelaksanaan kegiatan PKM.</p>
                 </div>
+
+                {/* Toolbar */}
                 <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari kegiatan..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && applyFilters()}
+                            className="bg-white border border-zinc-200 rounded-md py-2 pl-9 pr-4 text-[13px] text-zinc-700 placeholder-zinc-400 focus:ring-2 focus:ring-zinc-200 focus:border-zinc-400 outline-none w-56 shadow-sm transition-all"
+                        />
+                    </div>
+
+                    <select
+                        value={filterStatus}
+                        onChange={e => handleStatusChange(e.target.value)}
+                        className="px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 focus:ring-2 focus:ring-zinc-200 outline-none cursor-pointer"
+                    >
+                        {STATUS_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+
+                    {hasFilters && (
+                        <button onClick={clearFilters} className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors" title="Hapus filter">
+                            <X size={14} />
+                        </button>
+                    )}
+
                     <button
                         onClick={handleExport}
                         className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 shadow-sm rounded-md text-[13px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
@@ -148,39 +234,7 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                 </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white rounded-xl p-4 sm:p-5 border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <div className="text-[12px] sm:text-[13px] font-medium text-zinc-500 mb-1">Total</div>
-                        <div className="text-[24px] sm:text-[28px] font-bold text-zinc-900 tracking-tight leading-none">{listAktivitas.total}</div>
-                    </div>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-zinc-100 bg-zinc-50 flex items-center justify-center text-zinc-400"><Activity size={18} /></div>
-                </div>
-                <div className="bg-white rounded-xl p-4 sm:p-5 border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <div className="text-[12px] sm:text-[13px] font-medium text-zinc-500 mb-1">Belum Mulai</div>
-                        <div className="text-[24px] sm:text-[28px] font-bold text-zinc-900 tracking-tight leading-none">{countBelumMulai}</div>
-                    </div>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-zinc-100 bg-zinc-50 flex items-center justify-center text-zinc-400"><Clock size={18} /></div>
-                </div>
-                <div className="bg-white rounded-xl p-4 sm:p-5 border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <div className="text-[12px] sm:text-[13px] font-medium text-zinc-500 mb-1">Berjalan</div>
-                        <div className="text-[24px] sm:text-[28px] font-bold text-zinc-900 tracking-tight leading-none">{countBerjalan}</div>
-                    </div>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-zinc-100 bg-amber-50 flex items-center justify-center text-amber-500"><Activity size={18} /></div>
-                </div>
-                <div className="bg-white rounded-xl p-4 sm:p-5 border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <div className="text-[12px] sm:text-[13px] font-medium text-zinc-500 mb-1">Selesai</div>
-                        <div className="text-[24px] sm:text-[28px] font-bold text-zinc-900 tracking-tight leading-none">{countSelesai}</div>
-                    </div>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-zinc-100 bg-zinc-50 flex items-center justify-center text-emerald-500"><CheckCircle size={18} /></div>
-                </div>
-            </div>
-
-            {/* ── Bulk action bar ── */}
+            {/* Bulk action bar */}
             {selectedIds.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 mb-4 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-[13px] text-indigo-800 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
@@ -190,7 +244,7 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                     <span className="text-indigo-300">|</span>
                     {recipientsWithEmail.length > 0 ? (
                         <button
-                            onClick={() => setShowUndangan(true)}
+                            onClick={openUndanganModal}
                             className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[12px] font-bold hover:bg-indigo-700 transition-all hover:shadow-md active:scale-95"
                         >
                             <Mail size={13} /> Kirim Undangan ({recipientsWithEmail.length})
@@ -208,34 +262,12 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                 </div>
             )}
 
-            {/* Table Container */}
-            <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden flex flex-col">
-                {/* Toolbar */}
-                <div className="p-4 border-b border-zinc-200/80 bg-zinc-50/50 flex flex-wrap gap-3 sm:gap-4">
-                    <div className="relative flex-1 min-w-[200px] max-w-sm">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                        <input
-                            type="text" placeholder="Cari Judul Kegiatan..."
-                            value={search} onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-white border border-zinc-200 pl-9 pr-4 py-1.5 rounded-md text-[13px] outline-none focus:ring-2 focus:ring-zinc-200 text-zinc-900 placeholder-zinc-400 transition-all font-medium"
-                        />
-                    </div>
-                    <select
-                        value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                        className="bg-white border border-zinc-200 rounded-md px-3 py-1.5 text-[13px] font-medium text-zinc-700 outline-none focus:ring-2 focus:ring-zinc-200 cursor-pointer transition-all">
-                        <option value="">Semua Status</option>
-                        <option value="belum_mulai">Belum Mulai</option>
-                        <option value="persiapan">Persiapan</option>
-                        <option value="berjalan">Berjalan</option>
-                        <option value="selesai">Selesai</option>
-                    </select>
-                </div>
-
-                {/* Table */}
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[800px]">
                         <thead>
-                            <tr className="border-b border-zinc-200">
+                            <tr className="border-b border-zinc-200 bg-zinc-50/50">
                                 <th className="py-3 px-4 w-12">
                                     <button
                                         onClick={toggleAll}
@@ -264,7 +296,9 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                         <tbody className="divide-y divide-zinc-100">
                             {data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center text-zinc-400 font-medium text-[13px]">Belum ada aktivitas.</td>
+                                    <td colSpan={5} className="py-12 text-center text-zinc-400 text-[14px]">
+                                        {hasFilters ? 'Tidak ada hasil untuk filter yang dipilih.' : 'Belum ada aktivitas.'}
+                                    </td>
                                 </tr>
                             ) : data.map((act) => {
                                 const isBelumMulai = act.status_pelaksanaan === 'belum_mulai';
@@ -275,7 +309,6 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                                         className={`hover:bg-zinc-50/50 transition-colors group cursor-pointer ${checked ? 'bg-indigo-50/40' : ''}`}
                                         onClick={() => window.location.href = `/admin/aktivitas/${act.id_aktivitas}`}
                                     >
-                                        {/* Checkbox */}
                                         <td className="py-4 px-4" onClick={e => e.stopPropagation()}>
                                             {isBelumMulai ? (
                                                 <button
@@ -340,15 +373,41 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                         </tbody>
                     </table>
                 </div>
-                <div className="px-6 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-                    <span className="text-[12px] font-medium text-zinc-500">{data.length} aktivitas ditampilkan</span>
-                </div>
+
+                {/* Pagination */}
+                {listAktivitas.last_page > 1 && (
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-zinc-200 bg-zinc-50/50">
+                        <div className="text-[12px] font-medium text-zinc-500">
+                            Menampilkan {(listAktivitas.current_page - 1) * listAktivitas.per_page + 1}
+                            –{Math.min(listAktivitas.current_page * listAktivitas.per_page, listAktivitas.total)}
+                            {' '}dari {listAktivitas.total} items
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {listAktivitas.links.map((link, i) => {
+                                const isFirst = i === 0;
+                                const isLast = i === listAktivitas.links.length - 1;
+                                return (
+                                    <button
+                                        key={i}
+                                        disabled={!link.url}
+                                        onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                                        className={`w-8 h-8 flex items-center justify-center rounded-md text-[13px] font-medium transition-colors shadow-sm focus:outline-none disabled:cursor-not-allowed ${link.active
+                                            ? 'bg-zinc-900 text-white'
+                                            : 'border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 disabled:opacity-40'
+                                            }`}
+                                    >
+                                        {isFirst ? '‹' : isLast ? '›' : link.label.replace('&laquo;', '‹').replace('&raquo;', '›').replace('&hellip;', '…')}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* ── Gmail-style compose modal ── */}
-            {showUndangan && (
+            {/* ════════ Undangan Modal ════════ */}
+            {showUndangan && !showPreview && (
                 <>
-                    {/* Backdrop */}
                     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => !isSending && setShowUndangan(false)} />
 
                     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-32px)] sm:w-full max-w-[560px] bg-white rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden" style={{ animation: 'slideUp 0.25s ease-out' }}>
@@ -407,10 +466,15 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                             placeholder="Tulis isi undangan..."
                         />
 
-                        {/* Info + Actions */}
+                        {/* Actions */}
                         <div className="flex items-center justify-between px-5 py-3 bg-zinc-50 border-t border-zinc-100">
-                            <div className="text-[11px] text-zinc-400 leading-snug">
-                                Layanan: <strong>Brevo SMTP</strong> &middot; Limit: 100 email/hari
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setShowPreview(true)}
+                                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-100 transition-colors font-medium"
+                                >
+                                    <Eye size={13} /> Preview
+                                </button>
                             </div>
                             <div className="flex gap-2">
                                 <button
@@ -436,6 +500,140 @@ const AktivitasPage: React.FC<Props> = ({ listAktivitas, filters }) => {
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* ════════ Preview Modal ════════ */}
+            {showPreview && (
+                <>
+                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowPreview(false)} />
+
+                    <div className="fixed inset-4 sm:inset-8 z-50 bg-white rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden" style={{ animation: 'slideUp 0.25s ease-out' }}>
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 py-3.5 bg-zinc-900 text-white flex-shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
+                                    <Eye size={14} />
+                                </div>
+                                <span className="text-[14px] font-bold">Preview Email</span>
+                            </div>
+                            <button onClick={() => setShowPreview(false)} className="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Preview Content */}
+                        <div className="flex-1 overflow-y-auto bg-zinc-100 p-4 sm:p-8">
+                            <div className="max-w-[600px] mx-auto bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
+                                {/* Email Header */}
+                                <div className="bg-gradient-to-br from-[#0D1F3C] via-[#15325F] to-[#1E4A8C] px-8 py-8 text-center">
+                                    <div className="inline-block bg-[rgba(220,175,103,0.15)] border border-[rgba(220,175,103,0.35)] rounded-full px-4 py-1.5 mb-4">
+                                        <span className="text-[10px] font-bold text-[#DCAF67] tracking-[2.5px] uppercase">Politeknik Pariwisata Makassar</span>
+                                    </div>
+                                    <img src="https://poltekparmakassar.ac.id/storage/2020/10/Group-41.png" alt="Logo" className="h-[48px] w-auto mx-auto my-4 block" />
+                                    <h1 className="text-[28px] font-extrabold text-white tracking-tight">SIGAPPA</h1>
+                                    <p className="text-[11px] text-white/50 mt-2">Sistem Informasi Geospasial & Akses Pelayanan PKM</p>
+                                    <div className="w-10 h-[3px] bg-[#DCAF67] rounded-full mx-auto mt-4 opacity-70"></div>
+                                </div>
+
+                                {/* Tag */}
+                                <div className="bg-[#F5E5BC] border-b border-[#e8d09a] px-8 py-3 text-center">
+                                    <span className="text-[11px] font-bold text-[#8a6420] tracking-[2px] uppercase">&#9993; Surat Undangan Kegiatan PKM</span>
+                                </div>
+
+                                {/* Body */}
+                                <div className="px-8 py-8">
+                                    <p className="text-[17px] font-bold text-[#0D1F3C] mb-4">Yth. {recipientsWithEmail.map(getRecipientName).join(', ')},</p>
+                                    <p className="text-[14px] text-[#475569] leading-[1.8] mb-7">
+                                        Dengan hormat, kami mengundang Bapak/Ibu untuk hadir dalam kegiatan Program Kreativitas Masyarakat (PKM) yang akan dilaksanakan dengan rincian sebagai berikut:
+                                    </p>
+
+                                    {/* Detail Card */}
+                                    <div className="bg-gradient-to-br from-[#F8FAFC] to-[#EEF2F7] border border-[#E2E8F0] border-l-4 border-l-[#15325F] rounded-xl p-6 mb-7">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-[6px] h-[6px] bg-[#DCAF67] rounded-full"></div>
+                                            <span className="text-[10px] font-bold text-[#1E4A8C] uppercase tracking-[2px]">Detail Kegiatan</span>
+                                        </div>
+                                        <p className="text-[16px] font-extrabold text-[#0D1F3C] mb-3">{firstSelected?.pengajuan?.judul_kegiatan || '-'}</p>
+                                        {firstSelected?.pengajuan?.jenis_pkm && (
+                                            <span className="inline-block bg-[#EEF2F7] border border-[#E2E8F0] rounded-md px-2.5 py-1 text-[12px] font-semibold text-[#64748B] mb-4">
+                                                {firstSelected.pengajuan.jenis_pkm.nama_jenis}
+                                            </span>
+                                        )}
+                                        <div className="border-t border-[#E2E8F0] mt-4 pt-4 grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Tanggal Mulai</p>
+                                                <p className="text-[14px] font-bold text-[#0D1F3C]">{formatDate(firstSelected?.pengajuan?.tgl_mulai)}</p>
+                                                <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider mt-3 mb-1">Tanggal Selesai</p>
+                                                <p className="text-[14px] font-bold text-[#0D1F3C]">{formatDate(firstSelected?.pengajuan?.tgl_selesai)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Lokasi Kegiatan</p>
+                                                <p className="text-[14px] font-bold text-[#0D1F3C]">
+                                                    {[firstSelected?.pengajuan?.kota_kabupaten, firstSelected?.pengajuan?.provinsi].filter(Boolean).join(', ') || 'Akan ditentukan'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Message */}
+                                    <div className="bg-[#FAFAFA] border border-[#F1F5F9] rounded-xl p-5 mb-7">
+                                        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-[2px] mb-3">Pesan dari Penyelenggara</p>
+                                        <p className="text-[14px] text-[#334155] leading-[1.85] whitespace-pre-wrap">{undanganBody}</p>
+                                    </div>
+
+                                    {/* CTA */}
+                                    <div className="text-center mb-8">
+                                        <div className="inline-block bg-gradient-to-r from-[#15325F] to-[#1E4A8C] rounded-xl px-10 py-3.5">
+                                            <span className="text-[14px] font-bold text-white">Lihat Detail Kegiatan →</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Signature */}
+                                    <div className="border-t border-[#F1F5F9] pt-6 flex items-center gap-4">
+                                        <img src="https://poltekparmakassar.ac.id/storage/2020/10/Group-41.png" alt="Logo" className="w-12 h-12 rounded-lg object-contain" />
+                                        <div>
+                                            <p className="text-[14px] font-bold text-[#0D1F3C]">Tim SIGAP PKM</p>
+                                            <p className="text-[12px] text-[#64748B]">Politeknik Pariwisata Makassar</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="bg-[#F8FAFC] border-t border-[#F1F5F9] px-8 py-7 text-center">
+                                    <p className="text-[12px] font-bold text-[#15325F] mb-1.5">
+                                        SIGAPPA <span className="inline-block w-1 h-1 bg-[#DCAF67] rounded-full mx-2 align-middle"></span> Politeknik Pariwisata Makassar
+                                    </p>
+                                    <p className="text-[11px] text-[#94A3B8]">Email ini dikirim otomatis oleh sistem SIGAPPA. Mohon tidak membalas email ini.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="flex items-center justify-end gap-2 px-5 py-3 bg-white border-t border-zinc-200 flex-shrink-0">
+                            <button
+                                onClick={() => setShowPreview(false)}
+                                className="px-5 py-2 text-[12px] text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-100 transition-colors font-medium"
+                            >
+                                Kembali Edit
+                            </button>
+                            <button
+                                onClick={handleSendUndangan}
+                                disabled={isSending || recipientsWithEmail.length === 0}
+                                className="px-5 py-2 text-[12px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-95"
+                            >
+                                {isSending ? (
+                                    <>
+                                        <Loader2 size={13} className="animate-spin" /> Mengirim...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send size={13} /> Kirim Sekarang
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\UndanganMail;
 use App\Models\Aktivitas;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
@@ -21,8 +22,11 @@ class AktivitasController extends Controller
             'pengajuan.user',
             'pengajuan.jenisPkm',
         ])
+            ->when($request->status, function ($query, $status) {
+                $query->where('status_pelaksanaan', $status);
+            })
             ->when($sortField === 'status_pelaksanaan', function ($query) use ($sortDir) {
-                $query->orderByRaw("FIELD(status_pelaksanaan, 'belum_mulai', 'persiapan', 'berjalan', 'selesai') " . $sortDir);
+                $query->orderByRaw("FIELD(status_pelaksanaan, 'belum_mulai', 'persiapan', 'berjalan', 'selesai') ".$sortDir);
             }, function ($query) use ($sortField, $sortDir) {
                 $query->orderBy($sortField, $sortDir);
             })
@@ -34,6 +38,7 @@ class AktivitasController extends Controller
             'filters' => [
                 'sort' => $sortField,
                 'direction' => $sortDir,
+                'status' => $request->status,
             ],
         ]);
     }
@@ -119,9 +124,9 @@ class AktivitasController extends Controller
         ]);
 
         // Daily rate limiting via cache
-        $cacheKey = 'undangan_email_count_' . now()->toDateString();
+        $cacheKey = 'undangan_email_count_'.now()->toDateString();
         $sentToday = (int) Cache::get($cacheKey, 0);
-        $dailyLimit = 100;
+        $dailyLimit = 300;
 
         $aktivitasList = Aktivitas::with(['pengajuan.user'])
             ->whereIn('id_aktivitas', $request->ids)
@@ -144,20 +149,28 @@ class AktivitasController extends Controller
             }
 
             $pengajuan = $aktivitas->pengajuan;
-            if (!$pengajuan) continue;
+            if (! $pengajuan) {
+                continue;
+            }
 
             $recipientEmail = $pengajuan->email_pengusul ?? $pengajuan->user?->email;
             $recipientName = $pengajuan->nama_pengusul ?? $pengajuan->user?->name ?? 'Bapak/Ibu';
             $judulKegiatan = $pengajuan->judul_kegiatan ?? '-';
+            $tglMulai = $pengajuan->tgl_mulai ? Carbon::parse($pengajuan->tgl_mulai)->locale('id')->isoFormat('D MMMM YYYY') : 'Akan ditentukan';
+            $tglSelesai = $pengajuan->tgl_selesai ? Carbon::parse($pengajuan->tgl_selesai)->locale('id')->isoFormat('D MMMM YYYY') : 'Akan ditentukan';
+            $lokasiParts = array_filter([$pengajuan->kota_kabupaten, $pengajuan->provinsi]);
+            $lokasi = ! empty($lokasiParts) ? implode(', ', $lokasiParts) : 'Akan ditentukan';
+            $jenisPkm = $pengajuan->jenisPkm?->nama_jenis ?? 'PKM';
 
-            if (!$recipientEmail || !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            if (! $recipientEmail || ! filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
                 $skippedNoEmail++;
+
                 continue;
             }
 
             try {
                 Mail::to($recipientEmail)->send(
-                    new UndanganMail($recipientName, $judulKegiatan, $request->subject, $request->body)
+                    new UndanganMail($recipientName, $judulKegiatan, $request->subject, $request->body, $recipientEmail, $tglMulai, $tglSelesai, $lokasi, $jenisPkm)
                 );
                 $successCount++;
             } catch (\Throwable $e) {
@@ -173,8 +186,8 @@ class AktivitasController extends Controller
         if ($skippedNoEmail > 0) {
             $message .= " ({$skippedNoEmail} dilewati karena tidak ada email.)";
         }
-        if (!empty($failedEmails)) {
-            $message .= ' Gagal: ' . implode('; ', array_slice($failedEmails, 0, 3));
+        if (! empty($failedEmails)) {
+            $message .= ' Gagal: '.implode('; ', array_slice($failedEmails, 0, 3));
         }
 
         $remaining = $dailyLimit - ($sentToday + $successCount);
@@ -191,14 +204,14 @@ class AktivitasController extends Controller
         $query = Aktivitas::with(['pengajuan.user', 'pengajuan.jenisPkm', 'pengajuan.timKegiatan.pegawai', 'arsip'])
             ->when($request->search, function ($query, $search) {
                 $escaped = addcslashes($search, '\\%_');
-                $query->whereHas('pengajuan', fn($q) => $q->where('judul_kegiatan', 'like', "%{$escaped}%"));
+                $query->whereHas('pengajuan', fn ($q) => $q->where('judul_kegiatan', 'like', "%{$escaped}%"));
             })
             ->when($request->status, function ($query, $status) {
                 $query->where('status_pelaksanaan', $status);
             })
             ->latest();
 
-        $filename = 'aktivitas_' . now()->format('Y-m-d_His') . '.csv';
+        $filename = 'aktivitas_'.now()->format('Y-m-d_His').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -207,7 +220,7 @@ class AktivitasController extends Controller
 
         $callback = function () use ($query) {
             $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
 
             fputcsv($file, [
                 'No',
@@ -230,6 +243,7 @@ class AktivitasController extends Controller
                     $namaTim = $p ? $p->timKegiatan->map(function ($anggota) {
                         $nama = $anggota->pegawai?->nama_pegawai ?? $anggota->nama_mahasiswa ?? '-';
                         $peran = $anggota->peran_tim ?? '';
+
                         return $peran ? "{$nama} ({$peran})" : $nama;
                     })->implode('; ') : '-';
 

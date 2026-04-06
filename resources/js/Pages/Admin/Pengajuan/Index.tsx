@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link, router } from '@inertiajs/react';
-import AdminLayout from '../../../Layouts/AdminLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import {
     Filter, Search, ChevronRight, Clock, X,
     Trash2, AlertCircle
@@ -149,9 +150,19 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
     };
 
     // ── Delete ──────────────────────────────────────────
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number; judul: string } | null>(null);
+
     const handleDelete = (id: number, judul: string) => {
-        if (!confirm(`Hapus pengajuan "${judul}"? Tindakan ini tidak dapat dibatalkan.`)) return;
-        router.delete(`/admin/pengajuan/${id}`);
+        setDeleteTarget({ id, judul });
+    };
+
+    const confirmDelete = () => {
+        if (deleteTarget) {
+            router.delete(`/admin/pengajuan/${deleteTarget.id}`, {
+                onSuccess: () => setDeleteTarget(null),
+                onError: () => setDeleteTarget(null),
+            });
+        }
     };
 
     const hasFilters = search || status;
@@ -356,6 +367,16 @@ const Index: React.FC<IndexProps> = ({ listPengajuan, filters }) => {
                     </div>
                 )}
             </div>
+
+            {/* Confirm Delete Dialog */}
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                title="Hapus Pengajuan"
+                message={`Hapus pengajuan "${deleteTarget?.judul}"? Tindakan ini tidak dapat dibatalkan.`}
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+                variant="danger"
+            />
         </AdminLayout>
     );
 };

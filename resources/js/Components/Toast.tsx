@@ -28,10 +28,13 @@ export default function Toast({
 
     const iconClass = type === 'success' 
         ? 'fa-solid fa-circle-check text-emerald-500' 
+        : type === 'info'
+        ? 'fa-solid fa-bell text-blue-500'
         : 'fa-solid fa-circle-exclamation text-red-500';
 
-    const bgColor = type === 'success' ? 'bg-emerald-50' : 'bg-red-50';
-    const borderColor = type === 'success' ? 'border-emerald-200' : 'border-red-200';
+    const bgColor = type === 'success' ? 'bg-emerald-50' : type === 'info' ? 'bg-blue-50' : 'bg-red-50';
+    const borderColor = type === 'success' ? 'border-emerald-200' : type === 'info' ? 'border-blue-200' : 'border-red-200';
+    const ringColor = type === 'success' ? 'ring-emerald-100' : type === 'info' ? 'ring-blue-100' : 'ring-red-100';
 
     return (
         <div
@@ -39,7 +42,7 @@ export default function Toast({
                 show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full pointer-events-none'
             }`}
         >
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-white shadow ${type === 'success' ? 'ring-4 ring-emerald-100' : 'ring-4 ring-red-100'}`}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-white shadow ring-4 ${ringColor}`}>
                 <i className={`${iconClass} text-xl`}></i>
             </div>
             

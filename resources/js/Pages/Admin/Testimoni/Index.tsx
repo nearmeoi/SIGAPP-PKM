@@ -58,6 +58,7 @@ const TestimoniPage: React.FC<Props> = ({ listGroupedTestimoni, filters }) => {
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
     const [editingTestimoni, setEditingTestimoni] = useState<TestimoniItem | null>(null);
     const [editForm, setEditForm] = useState({ nama_pemberi: '', rating: 5, pesan_ulasan: '', masukan: '' });
+    const [deleteId, setDeleteId] = useState<number | null>(null);
 
     // Get user role for permission checks
     const { props } = usePage();
@@ -73,8 +74,16 @@ const TestimoniPage: React.FC<Props> = ({ listGroupedTestimoni, filters }) => {
     };
 
     const handleDelete = (id: number) => {
-        if (!confirm('Yakin ingin menghapus testimoni ini?')) return;
-        router.delete(`/admin/testimoni/${id}`, { preserveScroll: true });
+        setDeleteId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteId) {
+            router.delete(`/admin/testimoni/${deleteId}`, { 
+                preserveScroll: true,
+                onFinish: () => setDeleteId(null)
+            });
+        }
     };
 
     const openEditModal = (t: TestimoniItem) => {

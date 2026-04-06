@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Pengajuan extends Model
 {
@@ -21,7 +22,7 @@ class Pengajuan extends Model
 
         static::creating(function ($model) {
             if (empty($model->kode_unik)) {
-                $model->kode_unik = \Illuminate\Support\Str::random(12);
+                $model->kode_unik = Str::random(12);
             }
         });
     }
@@ -57,6 +58,7 @@ class Pengajuan extends Model
         'tgl_selesai',
         'status_pengajuan',
         'catatan_admin',
+        'admin_read_at',
     ];
 
     const STATUS_DIPROSES = 'diproses';
@@ -84,6 +86,7 @@ class Pengajuan extends Model
             'tgl_selesai' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
+            'admin_read_at' => 'datetime',
         ];
     }
 
@@ -133,5 +136,15 @@ class Pengajuan extends Model
             $this->kota_kabupaten,
             $this->provinsi,
         ])->filter()->implode(', ');
+    }
+
+    public function scopeNotifikasi($query)
+    {
+        return $query->whereIn('status_pengajuan', [self::STATUS_DIPROSES, self::STATUS_DIREVISI]);
+    }
+
+    public function scopeBelumDibaca($query)
+    {
+        return $query->notifikasi()->whereNull('admin_read_at');
     }
 }

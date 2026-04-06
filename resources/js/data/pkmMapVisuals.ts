@@ -25,8 +25,8 @@ export const PKM_STATUS_META: Record<string, PkmStatusMeta> = {
     },
     ada_pengajuan: {
         key: 'ada_pengajuan',
-        label: 'Ada Pengajuan',
-        markerIcon: 'fa-file-circle-plus',
+        label: 'Pengajuan Baru',
+        markerIcon: 'fa-file-import',
     },
     belum_mulai: {
         key: 'belum_mulai',
@@ -94,21 +94,21 @@ export const getPkmStatusMeta = (status: any): PkmStatusMeta => {
 // Menggunakan tipe meta statis bila hanya 1 elemen (fallback), tapi lebih baik kirim color statis override dari caller
 export const createPkmMarkerIcon = (status: string, color: string) => {
     const statusMeta = getPkmStatusMeta(status);
+    const isNew = status === 'ada_pengajuan' || status === 'belum_mulai';
 
     return L.divIcon({
-        className: 'custom-leaflet-marker',
+        className: `custom-leaflet-marker${isNew ? ' pkm-marker--new' : ''}`,
         html: `
             <div class="pkm-map-marker-wrap" style="--pkm-marker-color: ${color}">
-                <div class="pkm-map-marker">
+                <div class="pkm-map-marker${isNew ? ' pkm-map-marker--large' : ''}">
                     <span class="pkm-map-marker__inner">
                         <i class="fa-solid ${statusMeta.markerIcon}"></i>
                     </span>
                 </div>
-                <div class="pkm-map-marker__pulse"></div>
             </div>
         `,
-        iconSize: [30, 40],
-        iconAnchor: [15, 34],
+        iconSize: isNew ? [38, 52] : [30, 40],
+        iconAnchor: isNew ? [19, 44] : [15, 34],
         popupAnchor: [0, -32],
     });
 };

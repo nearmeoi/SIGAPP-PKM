@@ -48,6 +48,23 @@ export default {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
         'glow': '0 0 40px -10px rgba(0, 162, 255, 0.3)',
       },
+      keyframes: {
+        shake: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '10%': { transform: 'rotate(-14deg)' },
+          '20%': { transform: 'rotate(14deg)' },
+          '30%': { transform: 'rotate(-10deg)' },
+          '40%': { transform: 'rotate(10deg)' },
+          '50%': { transform: 'rotate(-6deg)' },
+          '60%': { transform: 'rotate(6deg)' },
+          '70%': { transform: 'rotate(-3deg)' },
+          '80%': { transform: 'rotate(3deg)' },
+          '90%': { transform: 'rotate(0deg)' },
+        },
+      },
+      animation: {
+        shake: 'shake 0.8s ease-in-out',
+      },
     },
   },
   plugins: [],
